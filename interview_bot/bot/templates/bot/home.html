@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Home Page</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.3.1/dist/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
+    <style>
+        /* General Styles */
+        body {
+            font-family: 'Poppins', sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #000; /* Black background */
+            color: #fff; /* White text for contrast */
+        }
+
+        /* Header Section */
+        header {
+            background: #121212; /* Slightly lighter black for the header */
+            padding: 20px 30px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .logo img {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%; /* Circular logo */
+        }
+
+        .logo h1 {
+            font-size: 1.8rem;
+            margin: 0;
+            color: #007BFF; /* Blue color for logo text */
+        }
+
+        .buttons-container {
+            display: flex;
+            gap: 10px;
+            position: relative;
+        }
+
+        .btn-primary-custom {
+            padding: 10px 20px;
+            background: #28a745; /* Green button */
+            color: white;
+            border: none;
+            border-radius: 25px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        .btn-primary-custom:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.5);
+        }
+
+        .btn-primary-custom:focus {
+            outline: none;
+        }
+
+        .dropdown-container {
+            display: none;
+            position: absolute;
+            top: 50px;
+            left: 0;
+            background-color: #1f1f1f;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);
+            padding: 10px;
+            z-index: 10;
+        }
+
+        .dropdown-container a {
+            display: block;
+            padding: 10px;
+            color: #28a745;
+            text-decoration: none;
+            transition: background-color 0.3s ease;
+        }
+
+        .dropdown-container a:hover {
+            background-color: #333;
+        }
+
+        /* Hero Section */
+        .hero-section {
+            position: relative;
+            background: url('https://i.ibb.co/bFvpG8q/Whats-App-Image-2024-12-05-at-1-44-32-PM.jpg') no-repeat center center/cover; /* Replace with your image */
+            height: 60vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            color: white;
+        }
+
+        .hero-section::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7); /* Black overlay for better readability */
+            z-index: 1;
+        }
+
+        .hero-section-content {
+            position: relative;
+            z-index: 2;
+        }
+
+        .hero-section-content h1 {
+            font-size: 3rem;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .hero-section-content p {
+            font-size: 1.3rem;
+            margin-bottom: 20px;
+        }
+
+        .cards-container {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            padding: 50px 20px;
+            flex-wrap: wrap;
+        }
+
+        .card {
+            background: #1f1f1f; /* Darker black for cards */
+            border-radius: 20px;
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+            max-width: 350px;
+            text-align: left;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.5);
+        }
+
+        .card img {
+            width: 100%;
+            height: auto;
+            border-radius: 20px 20px 0 0;
+        }
+
+        .card-content {
+            padding: 25px;
+        }
+
+        .card-content h4 {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #28a745; /* Green text for card headings */
+            margin-bottom: 15px;
+        }
+
+        .card-content p {
+            font-size: 1rem;
+            color: #cccccc; /* Light gray text for descriptions */
+        }
+
+        .card-content a {
+            display: inline-block;
+            margin-top: 15px;
+            padding: 10px 20px;
+            background: #28a745; /* Green button inside cards */
+            color: white;
+            text-decoration: none;
+            border-radius: 15px;
+            transition: background-color 0.3s ease;
+        }
+
+        .card-content a:hover {
+            background: #1e7e34; /* Darker green on hover */
+        }
+
+        /* Floating Button for AI Assistant */
+        .ai-assistant {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            background: #28a745; /* Green for the assistant button */
+            color: white;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .ai-assistant:hover {
+            transform: scale(1.1);
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.6);
+        }
+
+        .ai-assistant i {
+            font-size: 1.5rem;
+        }
+
+        .logo {
+            object-fit: cover;
+        }
+    </style>
+</head>
+<script src="//code.tidio.co/bcomm3thuuztjxulplg3yz4rv71fahc0.js" async></script>
+<body>
+    <!-- Header Section -->
+    <header>
+        <div class="logo">
+            <img src="https://i.ibb.co/jypTzyw/Whats-App-Image-2024-12-05-at-1-44-31-PM.jpg" alt="Logo" class="logo">
+            <h1>InterXAI</h1>
+        </div>
+        <div class="buttons-container">
+            <button class="btn-primary-custom" id="startNewInterview">Start New Interview</button>
+            <div class="dropdown-container" id="roleDropdown">
+                <a href="{% url 'chatcreate' 'Software Developer' %}">Software Engineer</a>
+                <a href="{% url 'chatcreate' 'Data Analyst' %}">Data Scientist</a>
+                <a href="{% url 'chatcreate' 'Aiml Engineer' %}">Aiml Engineer</a>
+                <a href="{% url 'chatcreate' 'ios Developer' %}">ios developer</a>
+                <a href="{% url 'chatcreate' 'Cloud Engineer' %}">Cloud Engineer</a>
+            </div>
+            <a href="{% url 'previous_interviews' %}"><button class="btn-primary-custom" id="showOldInterviews">Show Old Interviews</button></a>
+            <a href="{% url 'interview_simulator' %}"><button class="btn-primary-custom" id="simpleInterview">Simple Interview</button></a>
+        </div>
+    </header>
+
+    <!-- Hero Section -->
+    <section class="hero-section">
+        <div class="hero-section-content">
+            <h1>Welcome to AI-Powered Interviews</h1>
+            <p>Prepare confidently with our advanced tools and insights</p>
+        </div>
+    </section>
+
+    <!-- Cards Section -->
+    <div class="cards-container">
+        <!-- Card 1 -->
+        <div class="card">
+            <img src="https://i.ibb.co/k0btjRY/Whats-App-Image-2024-12-05-at-1-44-32-PM-2.jpg" alt="AI-Driven Mock Interviews">
+            <div class="card-content">
+                <h4>AI-Driven mock interviews</h4>
+                <p>Experience realistic mock interviews powered by AI.</p>
+                <a href="#">Learn More</a>
+            </div>
+        </div>
+
+        <!-- Card 2 -->
+        <div class="card">
+            <img src="https://i.ibb.co/bFvpG8q/Whats-App-Image-2024-12-05-at-1-44-32-PM.jpg" alt="Job Role Discovery">
+            <div class="card-content">
+                <h4>Job role discovery</h4>
+                <p>Easily explore and find job roles that match your skills.</p>
+                <a href="#">Explore Roles</a>
+            </div>
+        </div>
+
+        <!-- Card 3 -->
+        <div class="card">
+            <img src="https://i.ibb.co/09S47SW/Whats-App-Image-2024-12-05-at-1-44-33-PM.jpg" alt="AI Interview Analytics">
+            <div class="card-content">
+                <h4>AI interview analytics</h4>
+                <p>Get detailed analytics and feedback after each interview.</p>
+                <a href="#">View Analytics</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript -->
+    <script>
+        // Toggle dropdown visibility when clicking the Start New Interview button
+        document.getElementById('startNewInterview').addEventListener('click', function() {
+            const dropdown = document.getElementById('roleDropdown');
+            dropdown.style.display = dropdown.style.display === 'block' ? 'none' : 'block';
+        });
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', function(event) {
+            const dropdown = document.getElementById('roleDropdown');
+            const button = document.getElementById('startNewInterview');
+            if (!button.contains(event.target) && !dropdown.contains(event.target)) {
+                dropdown.style.display = 'none';
+            }
+        });
+    </script>
+</body>
+</html>

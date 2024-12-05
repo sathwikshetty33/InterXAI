@@ -1,0 +1,303 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat with Speech-to-Text and Text-to-Speech</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&display=swap" rel="stylesheet">
+    <script type="module" src="https://unpkg.com/@splinetool/viewer@1.9.48/build/spline-viewer.js"></script>
+    <style>
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: #000000;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            color: #ffffff;
+        }
+
+        .main-container {
+            width: 95%;
+            max-width: 1400px;
+            display: flex;
+            gap: 40px;
+            align-items: stretch;
+            justify-content: space-between;
+            padding: 20px;
+        }
+
+        .spline-viewer-container {
+            flex: 1;
+            height: 700px;
+            background-color: #1e1e1e;
+            border-radius: 12px;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .chat-container {
+            flex: 1;
+            max-width: 45%;
+            background-color: #1e1e1e;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.5);
+            border-radius: 12px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            height: 700px;
+        }
+
+        .chat-header {
+            padding: 15px;
+            background-color: #006400;
+            color: #ffffff;
+            text-align: center;
+            font-size: 1.4em;
+            font-weight: 500;
+        }
+
+        .chat-messages {
+            padding: 20px;
+            max-height: 550px;
+            overflow-y: auto;
+            background-color: #2e2e2e;
+            flex: 1;
+            scrollbar-width: thin;
+            scrollbar-color: #00cc00 #2e2e2e;
+        }
+
+        .message {
+            margin: 15px 0;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+        }
+
+        .message.user {
+            align-items: flex-end;
+        }
+
+        .message .content {
+            max-width: 75%;
+            padding: 12px 18px;
+            border-radius: 16px;
+            font-size: 0.95em;
+            line-height: 1.4;
+            word-wrap: break-word;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        .message.user .content {
+            background-color: #00cc00;
+            color: #ffffff;
+            text-align: right;
+        }
+
+        .message.ai .content {
+            background-color: #333;
+            color: #ffffff;
+            text-align: left;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        .message.ai .content:hover {
+            background-color: #444;
+        }
+
+        .message .time {
+            font-size: 0.75em;
+            color: #b0b0b0;
+            margin-top: 5px;
+        }
+
+        .chat-footer {
+            padding: 15px;
+            background-color: #1e1e1e;
+            border-top: 1px solid #333;
+            display: flex;
+            gap: 10px;
+        }
+
+        .chat-footer input[type="text"] {
+            flex: 1;
+            padding: 12px;
+            border: 1px solid #555;
+            border-radius: 24px;
+            font-size: 1em;
+            outline: none;
+            background-color: #2e2e2e;
+            color: #ffffff;
+            transition: all 0.3s ease;
+        }
+
+        .chat-footer input[type="text"]:focus {
+            border-color: #00cc00;
+            box-shadow: 0 0 5px rgba(0, 204, 0, 0.5);
+        }
+
+        .chat-footer button {
+            padding: 12px 18px;
+            background-color: #00cc00;
+            color: #ffffff;
+            border: none;
+            border-radius: 24px;
+            cursor: pointer;
+            font-size: 1em;
+            transition: background-color 0.3s ease;
+        }
+
+        .chat-footer button:hover {
+            background-color: #009900;
+        }
+    </style>
+</head>
+<body>
+    <div class="main-container">
+        <div class="spline-viewer-container">
+            <spline-viewer url="https://prod.spline.design/oYiuUSnOHJTzdcPg/scene.splinecode"></spline-viewer>
+        </div>
+        <div class="chat-container">
+            <div class="chat-header">
+                Conversation for {{ convo.post.post }} with InterXAI
+            </div>
+            <div class="chat-messages" id="chat-messages">
+                {% for question in questions %}
+                    <div class="message {% if question.user == 'user' %}user{% else %}ai{% endif %}">
+                        <div class="content" data-speak="{{ question.question }}">
+                            {{ question.question }}
+                        </div>
+                        <div class="time">
+                            {{ question.created_at|date:"D, d M Y H:i" }}
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+            <div class="chat-footer">
+                <form method="POST">
+                    {% csrf_token %}
+                    <input id="response-input" type="text" name="response" placeholder="Type your response..." required>
+                    <div id="mic-button" class="mic-button">
+                        <img src="{% static 'mic-icon.png' %}" alt="Mic">
+                    </div>
+                    <button type="submit">Send</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const micButton = document.getElementById('mic-button');
+        const responseInput = document.getElementById('response-input');
+        const chatMessages = document.getElementById('chat-messages');
+        let recognition;
+
+        // Speech-to-Text (Web Speech API)
+        if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            recognition = new SpeechRecognition();
+            recognition.continuous = false;
+            recognition.interimResults = false;
+            recognition.lang = 'en-US';
+
+            micButton.addEventListener('click', () => {
+                if (micButton.classList.contains('mic-active')) {
+                    recognition.stop();
+                } else {
+                    recognition.start();
+                }
+                micButton.classList.toggle('mic-active');
+            });
+
+            recognition.onresult = (event) => {
+                const transcript = event.results[0][0].transcript;
+                responseInput.value = transcript;
+                micButton.classList.remove('mic-active');
+            };
+
+            recognition.onerror = (event) => {
+                console.error('Speech recognition error:', event.error);
+                micButton.classList.remove('mic-active');
+            };
+
+            recognition.onend = () => {
+                micButton.classList.remove('mic-active');
+            };
+        } else {
+            console.warn('Speech Recognition API not supported in this browser.');
+        }
+
+       // Text-to-Speech with improved voice loading
+function speakText(text) {
+    if ('speechSynthesis' in window) {
+        const synth = window.speechSynthesis;
+
+        // Load available voices asynchronously
+        const loadVoices = () => {
+            return new Promise((resolve) => {
+                const voices = synth.getVoices();
+                if (voices.length) {
+                    resolve(voices);
+                } else {
+                    synth.onvoiceschanged = () => resolve(synth.getVoices());
+                }
+            });
+        };
+
+        loadVoices().then((voices) => {
+            // Select a voice based on language preference
+            const selectedVoice = voices.find((voice) => voice.lang === 'en-US') || voices[0];
+
+            if (!selectedVoice) {
+                console.error("No suitable voice found for Text-to-Speech.");
+                return;
+            }
+
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.voice = selectedVoice; // Set the selected voice
+            utterance.lang = 'en-US'; // Set language
+            utterance.rate = 1; // Set speaking rate (1 is normal speed)
+            utterance.pitch = 1; // Set pitch (1 is normal)
+            utterance.volume = 1; // Set volume (0 to 1)
+
+            // Handle errors during speech
+            utterance.onerror = (event) => {
+                console.error("Text-to-Speech error:", event.error);
+            };
+
+            // Speak the text
+            synth.speak(utterance);
+        });
+    } else {
+        console.warn('Text-to-Speech API not supported in this browser.');
+    }
+}
+
+// Add event listeners to AI messages for Text-to-Speech
+document.addEventListener("DOMContentLoaded", () => {
+    const chatMessages = document.getElementById('chat-messages');
+    chatMessages.querySelectorAll('.message.ai .content').forEach((message) => {
+        message.addEventListener('click', () => {
+            const text = message.dataset.speak;
+            speakText(text);
+        });
+    });
+});
+
+
+        // Add event listeners to AI messages for Text-to-Speech
+        chatMessages.querySelectorAll('.message.ai .content').forEach((message) => {
+            message.addEventListener('click', () => {
+                const text = message.dataset.speak;
+                speakText(text);
+            });
+        });
+    </script>
+</body>
+</html>
