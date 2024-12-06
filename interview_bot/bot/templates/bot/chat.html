@@ -4,10 +4,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chat with Speech-to-Text and Text-to-Speech</title>
+    <title>Chat with Speech-to-Text</title>
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&display=swap" rel="stylesheet">
+    <!-- Unified Material Symbols Link -->
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet">
     <script type="module" src="https://unpkg.com/@splinetool/viewer@1.9.48/build/spline-viewer.js"></script>
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&icon_names=mic" />
+
     <style>
         .material-symbols-outlined {
             font-variation-settings:
@@ -33,10 +35,11 @@
             width: 95%;
             max-width: 1400px;
             display: flex;
-            gap: 40px;
+            gap: 20px;
             align-items: stretch;
             justify-content: space-between;
             padding: 20px;
+            box-sizing: border-box;
         }
 
         .spline-viewer-container {
@@ -48,6 +51,12 @@
             display: flex;
             justify-content: center;
             align-items: center;
+        }
+
+        spline-viewer {
+            width: 100%;
+            height: 100%;
+            display: block;
         }
 
         .chat-container {
@@ -81,6 +90,45 @@
             scrollbar-color: #00cc00 #2e2e2e;
         }
 
+        .message {
+            margin-bottom: 15px;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 5px;
+        }
+
+        .message.user {
+            align-items: flex-end;
+        }
+
+        .message .content {
+            max-width: 75%;
+            padding: 12px 18px;
+            border-radius: 12px;
+            font-size: 0.95em;
+            line-height: 1.4;
+            word-wrap: break-word;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+        }
+
+        .message.user .content {
+            background-color: #00cc00;
+            color: #ffffff;
+            text-align: right;
+        }
+
+        .message.ai .content {
+            background-color: #333;
+            color: #ffffff;
+            text-align: left;
+        }
+
+        .message .time {
+            font-size: 0.75em;
+            color: #b0b0b0;
+        }
+
         .chat-footer {
             padding: 15px;
             background-color: #1e1e1e;
@@ -105,7 +153,7 @@
 
         #response-input {
             width: 100%;
-            padding: 12px 48px 12px 18px; /* Room for the mic icon */
+            padding: 12px 48px 12px 18px;
             border: 1px solid #555;
             border-radius: 24px;
             font-size: 1em;
@@ -127,10 +175,6 @@
             cursor: pointer;
             font-size: 1.5em;
             transition: color 0.3s ease;
-        }
-
-        #mic-button:hover {
-            color: #00cc00;
         }
 
         .send-button {
@@ -201,24 +245,24 @@
                 recognition.start();
             }
             micButton.classList.toggle('recording');
-            micButton.textContent = micButton.classList.contains('recording') ? 'radio_button_checked' : 'mic';
+            micButton.innerHTML = micButton.classList.contains('recording') ? 'radio_button_checked' : 'mic';
         });
 
         recognition.onresult = (event) => {
             const transcript = event.results[0][0].transcript;
             responseInput.value = transcript;
             micButton.classList.remove('recording');
-            micButton.textContent = 'mic';
+            micButton.innerHTML = 'mic';
         };
 
         recognition.onerror = () => {
             micButton.classList.remove('recording');
-            micButton.textContent = 'mic';
+            micButton.innerHTML = 'mic';
         };
 
         recognition.onend = () => {
             micButton.classList.remove('recording');
-            micButton.textContent = 'mic';
+            micButton.innerHTML = 'mic';
         };
     } else {
         console.warn('Speech Recognition API not supported in this browser.');
