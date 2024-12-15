@@ -22,6 +22,7 @@ def llm(questions, convoid, ques, post, stage="general"):
     - Provide a concise, objective evaluation of the candidate's response
     - Create a conversational reply that does not repeat the evaluation
     - Craft a follow-up question that advances the interview
+    - After your 3 general questions ask more post related technical questions including problems if necesaary.
 
     Evaluation Criteria:
     - Clarity of communication
