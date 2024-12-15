@@ -22,7 +22,8 @@ from django.urls import path, include
 urlpatterns = [
     # Your other URL patterns
     path('admin/', admin.site.urls),
-    path('', include('bot.urls')),  # Include app-specific URLs
+    path('', include('bot.urls')),
+    path("accounts/", include("allauth.urls"))# Include app-specific URLs
 ]
 
 # Serve media files during development

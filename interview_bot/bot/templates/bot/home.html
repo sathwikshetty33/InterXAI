@@ -236,11 +236,9 @@
         <div class="buttons-container">
             <button class="btn-primary-custom" id="startNewInterview">Start New Interview</button>
             <div class="dropdown-container" id="roleDropdown">
-                <a href="{% url 'chatcreate' 'Software Developer' %}">Software Engineer</a>
-                <a href="{% url 'chatcreate' 'Data Analyst' %}">Data Scientist</a>
-                <a href="{% url 'chatcreate' 'Aiml Engineer' %}">Aiml Engineer</a>
-                <a href="{% url 'chatcreate' 'ios Developer' %}">ios developer</a>
-                <a href="{% url 'chatcreate' 'Cloud Engineer' %}">Cloud Engineer</a>
+                {% for p in post %}
+                <a href="{% url 'chatcreate' p.id %}">{{p.post}}</a>
+                {% endfor %}
             </div>
             <a href="{% url 'previous_interviews' %}"><button class="btn-primary-custom" id="showOldInterviews">Show Old Interviews</button></a>
             <a href="{% url 'interview_simulator' %}"><button class="btn-primary-custom" id="simpleInterview">Simple Interview</button></a>

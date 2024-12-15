@@ -1,3 +1,4 @@
+{% load socialaccount %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -131,7 +132,9 @@
                     </div>
                 {% endif %}
             </div>
-
+        <!--   <a href="{% provider_login_url 'google' %}?next=/home"> <button class="btn btn-primary" type="button">
+                continue with google
+            </button></a> -->
             <button class="btn btn-primary" type="submit">
                 Create account
             </button>

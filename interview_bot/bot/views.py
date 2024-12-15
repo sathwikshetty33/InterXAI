@@ -2,13 +2,16 @@ from django.contrib.auth import authenticate, login
 from django.contrib.auth.decorators import login_required
 from django.http import HttpResponse
 from django.shortcuts import render, redirect, get_object_or_404
+from django.views.decorators.csrf import csrf_protect, csrf_exempt
 from groq import Groq
 from .models import *
 from .forms import CustomAuthenticationForm, CustomUserCreationForm
+import json
+from django.http import JsonResponse
 
 key = "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"
 
-def llm(questions, convoid, ques, post):
+def llm(questions, convoid, ques, post, stage="general"):
     """
     Function to interact with the Groq API for generating AI responses.
     """
@@ -16,25 +19,32 @@ def llm(questions, convoid, ques, post):
 
     prompt = f"""
     You are an AI interviewer conducting a professional interview. Your task is to:
-    1. Evaluate the candidate's response.
-    2. Provide a reply to the candidate, either acknowledging or giving constructive feedback.
-    3. Ask a relevant follow-up question to continue the interview.
+    - Provide a concise, objective evaluation of the candidate's response
+    - Create a conversational reply that does not repeat the evaluation
+    - Craft a follow-up question that advances the interview
+
+    Evaluation Criteria:
+    - Clarity of communication
+    - Relevance to the question
+    - Depth of insight
+    - Demonstration of relevant skills/knowledge
+    - Alignment with the job role: {post}
 
     Context:
     - Interview Role: {post}
     - Conversation ID: {convoid}
+    - Current Stage: {stage}
     - Previous Questions and Answers:
     {previous_questions}
 
     Candidate's Input:
     Q: {ques}
 
-    Your Response:
-    1. Evaluation: [Your evaluation here]
-    2. Reply: [Your reply here]
-    3. Next Question: [Your follow-up question here]
+    Your Response Format:
+    Evaluation: [Provide a brief, professional assessment of the candidate's response and evaluate]
+    Reply: [Provide a conversational response that acknowledges the candidate's input and please do not ask any questions here as you will ask it in the next_question segment and just acknowledge the user's response.]
+    Next Question: [Ask a focused follow-up question that builds on the conversation]
     """
-
     try:
         # Initialize Groq client
         client = Groq(api_key=key)
@@ -45,88 +55,55 @@ def llm(questions, convoid, ques, post):
                 "role": "user",
                 "content": prompt,
             }],
-            temperature=0.7,  # Adjust temperature for consistent responses
+            temperature=0.7,  # Balanced temperature for consistent yet creative responses
             top_p=1,
         )
-
-        # Print the raw response object for debugging
-        print("Groq API Completion Object:", completion)
 
         response_text = completion.choices[0].message.content
         print("Groq API Raw Response Content:", response_text)  # Debug the response text
 
         # Parse response
         evaluation, reply, next_question = parse_ai_response(response_text)
-
         return evaluation, reply, next_question
 
     except Exception as e:
         print(f"Error with Groq API: {e}")
-        return "Error", "Sorry, I could not process the response.", "Can you elaborate further?"
-
+        return "Unable to evaluate response.", "Sorry, there was an issue processing the response.", "Can we discuss this further?"
 
 def parse_ai_response(response_text):
     """
     Parse the AI response text into evaluation, reply, and next question.
     """
     try:
-        # Initialize variables
-        evaluation = reply = next_question = ""
+        # Split the response into lines
+        lines = response_text.strip().split('\n')
 
-        # Extract sections using reliable markers
-        if "Evaluation:" in response_text:
-            evaluation = response_text.split("Evaluation:")[1].split("Reply:")[0].strip()
-        if "Reply:" in response_text:
-            reply = response_text.split("Reply:")[1].split("Next Question:")[0].strip()
-        if "Next Question:" in response_text:
-            next_question = response_text.split("Next Question:")[1].strip()
+        # Find the index of the line that starts with "Evaluation:"
+        eval_index = next((i for i, line in enumerate(lines) if line.startswith("Evaluation:")), None)
+        if eval_index is not None:
+            # Extract the evaluation
+            evaluation = lines[eval_index].split("Evaluation:")[1].strip()
 
-        # Return extracted content
-        return evaluation, reply, next_question
+            # Find the index of the line that starts with "Reply:"
+            reply_index = next((i for i, line in enumerate(lines[eval_index+1:]) if line.startswith("Reply:")), None)
+            if reply_index is not None:
+                # Extract the reply
+                reply = lines[eval_index+reply_index+1].split("Reply:")[1].strip()
+
+                # Find the index of the line that starts with "Next Question:"
+                next_question_index = next((i for i, line in enumerate(lines[eval_index+reply_index+2:]) if line.startswith("Next Question:")), None)
+                if next_question_index is not None:
+                    # Extract the next question
+                    next_question = lines[eval_index+reply_index+next_question_index+2].split("Next Question:")[1].strip()
+
+                    return evaluation, reply, next_question
+
+        # If any of the required sections are not found, return default values
+        return "Error in evaluation.", "Error processing response.", "Could you provide more details?"
 
     except Exception as e:
         print(f"Error parsing AI response: {e}")
-        # Fallback messages
-        return "Error parsing evaluation.", "Error parsing reply.", "Error parsing next question."
-
-@login_required
-def chat(request, convoid):
-    convo = get_object_or_404(conversation, id=convoid)
-
-    if request.method == 'POST':
-        user_response = request.POST.get('response')
-        if user_response:
-            # Save the user's question
-            questions.objects.create(convo=convo, question=user_response, user='user')
-
-            # Fetch all questions for this conversation
-            questions_list = list(questions.objects.filter(convo=convo).values_list('question', flat=True))
-
-            # Generate AI response
-            post_title = convo.post.post
-            evaluation, reply, next_question = llm(questions_list, convoid, user_response, post_title)
-
-            # Save AI responses
-            questions.objects.create(convo=convo, question=f"Evaluation: {evaluation}", user='ai-evaluation')
-            questions.objects.create(convo=convo, question=reply, user='ai')
-            questions.objects.create(convo=convo, question=next_question, user='ai')
-
-            return redirect('chat', convoid=convo.id)
-
-    # Fetch all questions for this conversation
-    questions_list = questions.objects.filter(convo=convo)
-
-    # If no questions exist, ask the first question
-    if not questions_list.exists():
-        first_question = "Tell me about your experience related to this role."
-        questions.objects.create(convo=convo, question=first_question, user='ai')
-        questions_list = questions.objects.filter(convo=convo)
-
-    return render(request, 'bot/chat.html', {
-        'convo': convo,
-        'questions': questions_list,
-    })
-
+        return "Error in evaluation.", "Error processing response.", "Could you provide more details?"
 
 def register(request):
     form = CustomUserCreationForm()
@@ -161,20 +138,24 @@ def home_view(request):
 @login_required
 def chatcreate(request, post):
     try:
-        poste = posts.objects.get(post=post)
+        poste = posts.objects.get(id=post)
         convo = conversation.objects.create(user=request.user,post=poste)
         return redirect('chat', convoid=convo.id)
     except posts.DoesNotExist:
         return HttpResponse("Post not found", status=404)
 
 @login_required
+@csrf_exempt
 def chat(request, convoid):
     convo = get_object_or_404(conversation, id=convoid)
 
-    if request.method == 'POST':
-        user_response = request.POST.get('response')
+    if request.method == 'POST' and request.headers.get('Content-Type') == 'application/json':
+        import json
+        data = json.loads(request.body)
+        user_response = data.get('response')
+
         if user_response:
-            # Save the user's response as a question
+            # Save the user's response
             questions.objects.create(convo=convo, question=user_response, user='user')
 
             # Fetch all questions for this conversation
@@ -184,23 +165,41 @@ def chat(request, convoid):
             post_title = convo.post.post
             evaluation, reply, next_question = llm(questions_list, convoid, user_response, post_title)
 
-            # Save evaluation as an AI evaluation
+            # Save evaluation
             questions.objects.create(convo=convo, question=f"Evaluation: {evaluation}", user='ai-evaluation')
 
-            # Check if a reply is needed first, then ask the next question
+            # Save reply or next question
             if reply:
-                # Save reply first and wait for the user's response
                 questions.objects.create(convo=convo, question=reply, user='ai')
-            elif next_question:
-                # If no reply is needed, ask the next question
+            if next_question:
                 questions.objects.create(convo=convo, question=next_question, user='ai')
 
-            return redirect('chat', convoid=convo.id)
+            # Return AI responses as JSON
+            return JsonResponse({
+                "evaluation" : evaluation,
+                "reply": reply,
+                "next_question": next_question,
+            })
+
+        return JsonResponse({"error": "Invalid response"}, status=400)
 
     # Fetch all questions for this conversation
     questions_list = questions.objects.filter(convo=convo)
 
-    # If no questions exist, initialize with a default question
+    # Initialize with a default question if no questions exist
+    if not questions_list.exists():
+        first_question = "Welcome to the interview! Can you tell me about your experience in this field?"
+        questions.objects.create(convo=convo, question=first_question, user='ai')
+        questions_list = questions.objects.filter(convo=convo)
+
+    return render(request, 'bot/chat.html', {
+        'convo': convo,
+        'questions': questions_list,
+    })
+    # Fetch all questions for this conversation
+    questions_list = questions.objects.filter(convo=convo)
+
+    # Initialize with a default question if no questions exist
     if not questions_list.exists():
         first_question = "Welcome to the interview! Can you tell me about your experience in this field?"
         questions.objects.create(convo=convo, question=first_question, user='ai')

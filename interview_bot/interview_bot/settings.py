@@ -27,7 +27,7 @@ DEBUG = True
 
 ALLOWED_HOSTS = []
 
-
+SITE_ID=2
 # Application definition
 
 INSTALLED_APPS = [
@@ -38,7 +38,22 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'bot',
+    'django.contrib.sites',
+    'allauth',
+    'allauth.account',
+    'allauth.socialaccount',
+    'allauth.socialaccount.providers.google'
 ]
+
+SOCIAL_ACCOUNT_PROVIDERS = {
+    "google" : {
+        "SCOPE" :[
+            "profile",
+            "email"
+        ],
+        "AUTH_PARAMS" : { "access_type" : "online"}
+    }
+}
 MEDIA_URL = '/media/'  # URL to access media files
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 MIDDLEWARE = [
@@ -49,6 +64,8 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'django_htmx.middleware.HtmxMiddleware',
+    'allauth.account.middleware.AccountMiddleware',
 ]
 
 ROOT_URLCONF = 'interview_bot.urls'
@@ -69,7 +86,8 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = 'interview_bot.wsgi.application'
+# WSGI_APPLICATION = 'interview_bot.wsgi.application'
+ASGI_APPLICATION = 'interview_bot.asgi.application'
 
 ALLOWED_HOSTS = []
 # CELERY_BROKER_URL = "redis://localhost:6380"
@@ -98,7 +116,11 @@ DATABASES = {
 #         'PORT' : '3306'
 #     }
 # }
-
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels.layers.InMemoryChannelLayer",
+    },
+}
 # Password validation
 # https://docs.djangoproject.com/en/5.1/ref/settings/#auth-password-validators
 
@@ -145,3 +167,9 @@ STATICFILES_DIRS = [
     BASE_DIR / "static",  # Optional: Additional directories for static files
 ]
 STATIC_ROOT = BASE_DIR / "staticfiles"  # Directory where static files are collected
+AUTHENTICATION_BACKENDS = {
+    "django.contrib.auth.backends.ModelBackend",
+    "allauth.account.auth_backends.AuthenticationBackend"
+}
+LOGIN_REDIRECT_URL="/"
+LOGOUT_REDIRECT_URL="/"

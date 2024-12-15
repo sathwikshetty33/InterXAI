@@ -215,58 +215,152 @@
             {% endfor %}
         </div>
         <div class="chat-footer">
-            <form method="POST" class="input-container">
-                {% csrf_token %}
+            <div class="input-container">
                 <div class="input-wrapper">
-                    <input id="response-input" type="text" name="response" placeholder="Type your response..." required>
+                    <input id="response-input" type="text" placeholder="Type your response..." required>
                     <span id="mic-button" class="material-symbols-outlined">mic</span>
                 </div>
-                <button type="submit" class="send-button">Send</button>
-            </form>
+                <button id="send-button" class="send-button">Send</button>
+            </div>
         </div>
     </div>
 </div>
 
 <script>
-    const micButton = document.getElementById('mic-button');
-    const responseInput = document.getElementById('response-input');
+const sendButton = document.getElementById('send-button');
+const responseInput = document.getElementById('response-input');
+const chatMessages = document.getElementById('chat-messages');
+const micButton = document.getElementById('mic-button');
 
-    if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
-        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-        const recognition = new SpeechRecognition();
-        recognition.continuous = false;
-        recognition.interimResults = false;
-        recognition.lang = 'en-US';
+/**
+ * Sends a message to the server and handles the response.
+ */
+async function sendMessage() {
+    const responseText = responseInput.value.trim();
+    if (!responseText) return;
 
-        micButton.addEventListener('click', () => {
-            if (micButton.classList.contains('recording')) {
-                recognition.stop();
-            } else {
-                recognition.start();
-            }
-            micButton.classList.toggle('recording');
-            micButton.innerHTML = micButton.classList.contains('recording') ? 'radio_button_checked' : 'mic';
+    // Append user message to the chat
+    const userMessage = createMessageElement(responseText, 'user');
+    chatMessages.innerHTML += userMessage;
+    responseInput.value = '';
+    scrollToBottom();
+
+    try {
+        // Make the API call to the server
+        const response = await fetch("{% url 'chat' convo.id %}", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "X-CSRFToken": "{{ csrf_token }}",
+            },
+            body: JSON.stringify({ response: responseText }),
         });
 
-        recognition.onresult = (event) => {
-            const transcript = event.results[0][0].transcript;
-            responseInput.value = transcript;
-            micButton.classList.remove('recording');
-            micButton.innerHTML = 'mic';
-        };
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
 
-        recognition.onerror = () => {
-            micButton.classList.remove('recording');
-            micButton.innerHTML = 'mic';
-        };
+        const data = await response.json();
+        console.log("Server response:", data);
 
-        recognition.onend = () => {
-            micButton.classList.remove('recording');
-            micButton.innerHTML = 'mic';
-        };
-    } else {
-        console.warn('Speech Recognition API not supported in this browser.');
+        // Append AI evaluation, reply, and next question
+        if (data.evaluation) {
+            const evaluationMessage = createMessageElement(
+                `Evaluation:${data.evaluation}`,
+                'ai'
+            );
+            chatMessages.innerHTML += evaluationMessage;
+        }
+        if (data.reply) {
+            const replyMessage = createMessageElement(data.reply, 'ai');
+            chatMessages.innerHTML += replyMessage;
+        }
+        if (data.next_question) {
+            const nextQuestionMessage = createMessageElement(data.next_question, 'ai');
+            chatMessages.innerHTML += nextQuestionMessage;
+        }
+
+        scrollToBottom();
+    } catch (error) {
+        console.error("Error sending message:", error);
+
+        // Append error message to chat
+        const errorMessage = createMessageElement(
+            `Error: ${error.message}`,
+            'ai'
+        );
+        chatMessages.innerHTML += errorMessage;
+        scrollToBottom();
     }
+}
+
+/**
+ * Creates a chat message element with the given content and type.
+ * @param {string} content - The message content.
+ * @param {string} type - The type of message ('user' or 'ai').
+ * @returns {string} - The HTML string for the message.
+ */
+function createMessageElement(content, type) {
+    return `
+        <div class="message ${type}">
+            <div class="content">${content}</div>
+            <div class="time">${new Date().toLocaleString()}</div>
+        </div>
+    `;
+}
+
+/**
+ * Scrolls the chat messages container to the bottom.
+ */
+function scrollToBottom() {
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+}
+
+/**
+ * Starts the speech recognition process and populates the input field.
+ */
+function startSpeechRecognition() {
+    if (!('webkitSpeechRecognition' in window)) {
+        alert("Speech recognition is not supported in this browser.");
+        return;
+    }
+
+    const recognition = new webkitSpeechRecognition();
+    recognition.continuous = false;
+    recognition.interimResults = false;
+    recognition.lang = "en-US";
+
+    recognition.onstart = function () {
+        micButton.textContent = 'mic_off';
+        micButton.style.color = 'red';
+    };
+
+    recognition.onresult = function (event) {
+        const transcript = event.results[0][0].transcript;
+        responseInput.value = transcript;
+    };
+
+    recognition.onerror = function (event) {
+        console.error("Speech recognition error:", event.error);
+    };
+
+    recognition.onend = function () {
+        micButton.textContent = 'mic';
+        micButton.style.color = 'white';
+    };
+
+    recognition.start();
+}
+
+// Event Listeners
+sendButton.addEventListener('click', sendMessage);
+responseInput.addEventListener('keypress', (event) => {
+    if (event.key === 'Enter') sendMessage();
+});
+micButton.addEventListener('click', startSpeechRecognition);
+
+// Ensure the chat automatically scrolls to the bottom on load
+window.onload = scrollToBottom;
 </script>
 </body>
 </html>
