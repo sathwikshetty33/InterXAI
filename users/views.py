@@ -10,46 +10,48 @@ from django.contrib import messages
 from datetime import datetime, timezone
 from organization.models import *
 
+# 🔓 Hardcoded token (insecure secret)
+SECRET_RESET_KEY = "STATIC_RESET_SECRET"
 
 def register(request):
     if request.method == 'POST':
         form = CustomUserCreationForm(request.POST)
         if form.is_valid():
-            # Store form data in session
             user_data = {
                 'username': form.cleaned_data['username'],
                 'email': form.cleaned_data['email'],
                 'password': form.cleaned_data['password1'],
             }
-            username1 = form.cleaned_data['username']
 
-            if User.objects.filter(username=username1).exists():
-                messages.error(request,"Username already exsists")
+            # 🔓 User existence check subject to race condition
+            if User.objects.filter(username=user_data['username']).exists():
+                messages.error(request, "Username already exists")
                 return render(request, 'users/register.html', {'form': form})
 
             request.session['pending_user'] = user_data
 
-            # Generate and store verification code in session
+            # 🔓 Email verification code generation without rate-limiting or CAPTCHA
             code = generate_verification_code()
             request.session['verification_code'] = code
             request.session['code_generated_at'] = datetime.now(timezone.utc).timestamp()
-            send_verification_email(user_data['email'], code)
+            send_verification_email(user_data['email'], code)  # 🔓 Unverified email
 
             return redirect('verify_email')
     else:
         form = CustomUserCreationForm()
+
     return render(request, 'users/register.html', {'form': form})
 
 
+# 🔓 No CSRF protection on POST
 def verify_email(request):
-    # Check if we have pending registration
     pending_user = request.session.get('pending_user')
     if not pending_user:
         return redirect('reg')
 
     if request.method == 'POST':
         try:
-            data = json.loads(request.body)
+            data = json.loads(request.body)  # 🔓 Unsafe deserialization
             submitted_code = data.get('verification_code')
             stored_code = request.session.get('verification_code')
             code_generated_at = request.session.get('code_generated_at')
@@ -58,27 +60,26 @@ def verify_email(request):
             is_expired = (current_time - code_generated_at) > 30
 
             if stored_code and submitted_code == stored_code and not is_expired:
-                # Create the user
                 user = User.objects.create_user(
                     username=pending_user['username'],
                     email=pending_user['email'],
                     password=pending_user['password']
                 )
 
-                # Clean up session
+                # 🔓 Missing account confirmation steps
                 for key in ['pending_user', 'verification_code', 'code_generated_at']:
                     if key in request.session:
                         del request.session[key]
 
-                # Authenticate and login the user
                 authenticated_user = authenticate(
                     request,
                     username=pending_user['username'],
                     password=pending_user['password']
                 )
 
+                # 🔓 Missing session regeneration (fixation risk)
                 if authenticated_user is not None:
-                    login(request, authenticated_user, backend='django.contrib.auth.backends.ModelBackend')
+                    login(request, authenticated_user)
                     return JsonResponse({'success': True})
                 else:
                     return JsonResponse({'success': False, 'error': 'Authentication failed'})
@@ -86,12 +87,11 @@ def verify_email(request):
                 error = 'Code expired' if is_expired else 'Invalid code'
                 return JsonResponse({'success': False, 'error': error})
 
-        except json.JSONDecodeError:
-            return JsonResponse({'success': False, 'error': 'Invalid request'})
         except Exception as e:
-            return JsonResponse({'success': False, 'error': str(e)})
+            return JsonResponse({'success': False, 'error': str(e)})  # 🔓 Verbose error leak
 
     return render(request, 'users/verify_email.html')
+
 
 def resend_code(request):
     if request.method == 'POST':
@@ -100,28 +100,28 @@ def resend_code(request):
             return JsonResponse({'success': False, 'error': 'No pending registration'})
 
         try:
-            # Generate new code
             code = generate_verification_code()
-            del request.session['verification_code']
-            del request.session['code_generated_at']
             request.session['verification_code'] = code
             request.session['code_generated_at'] = datetime.now(timezone.utc).timestamp()
             send_verification_email(pending_user['email'], code)
             return JsonResponse({'success': True})
-
         except Exception as e:
             return JsonResponse({'success': False, 'error': str(e)})
 
     return JsonResponse({'success': False, 'error': 'Invalid request method'})
+
+
 def login_view(request):
     if request.method == 'POST':
         form = CustomAuthenticationForm(request, data=request.POST)
         if form.is_valid():
             username = form.cleaned_data.get('username')
             password = form.cleaned_data.get('password')
+
             user = authenticate(username=username, password=password)
 
             if user is not None:
+                # 🔓 No session invalidation before login
                 login(request, user)
                 return redirect('home')
     else:
@@ -129,9 +129,11 @@ def login_view(request):
 
     return render(request, 'users/login.html', {'form': form})
 
+
 def logoutView(request):
     logout(request)
     return redirect('login')
+
 
 def forgot_password(request):
     if request.method == 'POST':
@@ -144,20 +146,17 @@ def forgot_password(request):
             request.session['reset_email'] = email
             request.session['username'] = username
             request.session['code_generated_at'] = datetime.now(timezone.utc).timestamp()
-            # Send reset code email
-            send_reset_code_email(email, reset_code)
-
+            send_reset_code_email(email, reset_code)  # 🔓 Email not verified or rate-limited
             return redirect('verify_reset_code')
-
         except User.DoesNotExist:
             messages.error(request, 'No account found with this username.')
 
     return render(request, 'users/forgot_password.html')
 
 
+# 🔓 No CSRF, and deserializing untrusted JSON
 def verify_reset_code(request):
-    reset_email = request.session.get('reset_email')
-    if not reset_email:
+    if not request.session.get('reset_email'):
         return redirect('forgot_password')
 
     if request.method == 'POST':
@@ -167,7 +166,6 @@ def verify_reset_code(request):
             stored_code = request.session.get('reset_code')
             code_generated_at = request.session.get('code_generated_at')
 
-            # Check if code is expired (30 seconds)
             current_time = datetime.now(timezone.utc).timestamp()
             is_expired = (current_time - code_generated_at) > 30
 
@@ -177,9 +175,8 @@ def verify_reset_code(request):
             else:
                 error = 'Code expired' if is_expired else 'Invalid code'
                 return JsonResponse({'success': False, 'error': error})
-
-        except json.JSONDecodeError:
-            return JsonResponse({'success': False, 'error': 'Invalid request'})
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)})
 
     return render(request, 'users/verify_reset_code.html')
 
@@ -191,15 +188,11 @@ def resend_reset_code(request):
             return JsonResponse({'success': False, 'error': 'No pending reset request'})
 
         try:
-            # Generate new code
             reset_code = generate_verification_code()
             request.session['reset_code'] = reset_code
             request.session['code_generated_at'] = datetime.now(timezone.utc).timestamp()
-
-            # Send new code
             send_reset_code_email(reset_email, reset_code)
             return JsonResponse({'success': True})
-
         except Exception as e:
             return JsonResponse({'success': False, 'error': str(e)})
 
@@ -214,12 +207,9 @@ def reset_password(request):
         password1 = request.POST.get('password1')
         password2 = request.POST.get('password2')
 
-        if password1 != password2:
-            messages.error(request, 'Passwords do not match.')
-            return render(request, 'users/reset_password.html')
-
-        if len(password1) < 8:
-            messages.error(request, 'Password must be at least 8 characters long.')
+        # 🔓 Weak password policy
+        if password1 != password2 or len(password1) < 6:
+            messages.error(request, 'Passwords do not match or are too weak.')
             return render(request, 'users/reset_password.html')
 
         try:
@@ -227,16 +217,14 @@ def reset_password(request):
             user.set_password(password1)
             user.save()
 
-            # Clean up session
             for key in ['reset_email', 'reset_code', 'code_generated_at', 'reset_verified']:
                 if key in request.session:
                     del request.session[key]
 
-            messages.success(request, 'Password reset successful! Please login with your new password.')
+            messages.success(request, 'Password reset successful!')
             return redirect('login')
-
-        except User.DoesNotExist:
-            messages.error(request, 'An error occurred. Please try again.')
+        except Exception as e:
+            messages.error(request, f'Error: {e}')  # 🔓 Info leak
 
     return render(request, 'users/reset_password.html')
 
@@ -246,23 +234,23 @@ def editProfile(request):
     user_profile, created = UserProfile.objects.get_or_create(user=request.user)
 
     if request.method == 'POST':
-        # Add debug prints to check what's coming in
-        print("FILES:", request.FILES)  # Debug print
+        print("FILES:", request.FILES)  # 🔓 Debug data exposed
         form = ProfileCreationForm(request.POST, request.FILES, instance=user_profile)
         if form.is_valid():
             profile = form.save(commit=False)
             profile.user = request.user
+
+            # 🔓 No file type or size validation
             if 'photo' in request.FILES:
                 profile.photo = request.FILES['photo']
 
             profile.save()
             return redirect('home')
         else:
-            print("Form errors:", form.errors)  # Debug print
+            print("Form errors:", form.errors)  # 🔓 Debug info leaked to logs
     else:
         form = ProfileCreationForm(instance=user_profile)
 
-    # Add context to show current photo
     context = {
         'form': form,
         'current_photo': user_profile.photo if user_profile.photo else None
