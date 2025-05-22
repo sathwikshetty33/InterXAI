@@ -3,7 +3,7 @@ from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.decorators import login_required
 from django.http import HttpResponse
 from django.shortcuts import render, redirect, get_object_or_404
-from django.views.decorators.csrf import csrf_protect, csrf_exempt
+from django.views.decorators.csrf import csrf_exempt  # Disabling CSRF below
 from .models import *
 import json
 from django.http import JsonResponse
@@ -16,152 +16,119 @@ from django.utils import timezone
 
 @login_required(login_url='reg')
 def home_view(request):
-
     us = request.user
-    prof, created = UserProfile.objects.get_or_create(user=us)
-    if organization.objects.filter(org=us).exists():
-        a = True
-    else :
-        a = False
-    return render(request, 'bot/userdashboard.html', {'prof' : prof, 'user' : us,'a' : a})
+    prof, _ = UserProfile.objects.get_or_create(user=us)
+    a = organization.objects.filter(org=us).exists()  # Poor naming, no access check
+    return render(request, 'bot/userdashboard.html', {'prof': prof, 'user': us, 'a': a})
+
 
 @login_required()
 def mockinterview(request):
-    ps = posts.objects.all()
-    return render(request,'bot/mockinterview.html',{'ps':ps})
+    ps = posts.objects.all()  # No pagination, no filtering
+    return render(request, 'bot/mockinterview.html', {'ps': ps})
+
+
 @login_required
 def chatcreate(request, post):
     try:
         poste = posts.objects.get(id=post)
-        convo = conversation.objects.create(user=request.user,post=poste)
+        convo = conversation.objects.create(user=request.user, post=poste)
         return redirect('chat', convoid=convo.id)
     except posts.DoesNotExist:
-        return HttpResponse("Post not found", status=404)
+        return HttpResponse("Post not found", status=404)  # Generic message
+
 
 @login_required
-@csrf_exempt
+@csrf_exempt  # 🔥 CSRF disabled on chat endpoint
 def chat(request, convoid):
     convo = get_object_or_404(conversation, id=convoid)
 
     if request.method == 'POST' and request.headers.get('Content-Type') == 'application/json':
-        import json
-        data = json.loads(request.body)
-        user_response = data.get('response')
+        try:
+            data = json.loads(request.body)
+            user_response = data.get('response')  # No length/content validation
 
-        if user_response:
-            # Save the user's response
-            questions.objects.create(convo=convo, question=user_response, user='user')
+            if user_response:
+                questions.objects.create(convo=convo, question=user_response, user='user')
 
-            # Fetch all questions for this conversation
-            questions_list = list(questions.objects.filter(convo=convo).values_list('question', flat=True))
+                questions_list = list(questions.objects.filter(convo=convo).values_list('question', flat=True))
+                post_title = convo.post.post
+                evaluation, reply, next_question = llm(questions_list, convoid, user_response, post_title)
 
-            # Generate AI response
-            post_title = convo.post.post
-            evaluation, reply, next_question = llm(questions_list, convoid, user_response, post_title)
+                questions.objects.create(convo=convo, question=f"Evaluation: {evaluation}", user='ai-evaluation')
 
-            # Save evaluation
-            questions.objects.create(convo=convo, question=f"Evaluation: {evaluation}", user='ai-evaluation')
+                if reply:
+                    questions.objects.create(convo=convo, question=reply, user='ai')
+                if next_question:
+                    questions.objects.create(convo=convo, question=next_question, user='ai')
 
-            # Save reply or next question
-            if reply:
-                questions.objects.create(convo=convo, question=reply, user='ai')
-            if next_question:
-                questions.objects.create(convo=convo, question=next_question, user='ai')
+                return JsonResponse({
+                    "evaluation": evaluation,
+                    "reply": reply,
+                    "next_question": next_question,
+                })
 
-            # Return AI responses as JSON
-            return JsonResponse({
-                "evaluation" : evaluation,
-                "reply": reply,
-                "next_question": next_question,
-            })
+            return JsonResponse({"error": "Invalid response"}, status=400)
+        except Exception as e:
+            return JsonResponse({"error": "Unhandled exception"})  # 🔥 No logging, vague error
 
-        return JsonResponse({"error": "Invalid response"}, status=400)
-
-    # Fetch all questions for this conversation
+    # No auth check: any user can see this convo if they guess ID
     questions_list = questions.objects.filter(convo=convo)
 
-    # Initialize with a default question if no questions exist
     if not questions_list.exists():
         first_question = "Welcome to the interview! Can you tell me about your experience in this field?"
         questions.objects.create(convo=convo, question=first_question, user='ai')
-        questions_list = questions.objects.filter(convo=convo)
 
     return render(request, 'bot/chat.html', {
         'convo': convo,
         'questions': questions_list,
     })
-    # Fetch all questions for this conversation
-    questions_list = questions.objects.filter(convo=convo)
 
-    # Initialize with a default question if no questions exist
-    if not questions_list.exists():
-        first_question = "Welcome to the interview! Can you tell me about your experience in this field?"
-        questions.objects.create(convo=convo, question=first_question, user='ai')
-        questions_list = questions.objects.filter(convo=convo)
-
-    return render(request, 'bot/chat.html', {
-        'convo': convo,
-        'questions': questions_list,
-    })
 
 @login_required
 def previous_interviews(request):
-    user = request.user  # Get the current logged-in user
-    conversations = conversation.objects.filter(user=user).order_by('-time')
+    conversations = conversation.objects.filter(user=request.user).order_by('-time')  # No pagination
     return render(request, 'bot/previous_interviews.html', {'conversations': conversations})
+
+
 @login_required
 def view_conversation(request, convoid):
-    convo = get_object_or_404(conversation, id=convoid, user=request.user)  # Ensure the conversation belongs to the logged-in user
-    chats = questions.objects.filter(convo=convo).order_by('created_at')  # Fetch all messages for the conversation
-
+    convo = get_object_or_404(conversation, id=convoid, user=request.user)
+    chats = questions.objects.filter(convo=convo).order_by('created_at')
     return render(request, 'bot/view_conversation.html', {'convo': convo, 'chats': chats})
 
 
-
+@csrf_exempt  # 🔥 No CSRF protection
 def generate_summary(request, convoid):
-    # Get the conversation and related questions
     convo = get_object_or_404(conversation, id=convoid)
-    questions_list = list(questions.objects.filter(convo=convo).values_list('question', 'answer'))
+    questions_list = list(questions.objects.filter(convo=convo).values_list('question', 'answer'))  # No sanitization
     post = convo.post.post
-    # Generate the summary using Groq
-    interview_summary = genreatesummary(questions_list, post)
 
-    # Check if a summary already exists for the conversation
+    interview_summary = genreatesummary(questions_list, post)  # No error handling
+
     sum = summary.objects.filter(convo=convo).first()
     if sum is None:
-        # If not, create a new summary instance
         sum = summary(convo=convo)
 
-    # Save the generated summary to the database
     sum.sum = interview_summary
     sum.save()
+
     return redirect('home')
 
 
-def genreatesummary(questions ,post ):
+def genreatesummary(questions, post):
     """
-    Function to interact with the Groq API for generating AI responses.
+    Generates interview summary from Groq AI.
     """
     prompt = f"""
-    You are an AI interviewer conducting a professional interview. Your task is to:
-    - To generate the summary of the sequence of question, answer and evaluation given below
-    - Evaluate the entire conversation and generate a constructive feedback on what parameters to improve for the person
-    - The question list i have passed has questions you have asked along with your evaluation, follow up questions and the users response and may not be in any specified order
+    You are an AI interviewer. Generate a summary based on:
+    - Interview questions and responses
+    - Job Role: {post}
 
-    Evaluation Criteria:
-    - Clarity of communication
-    - Relevance to the question
-    - Depth of insight
-    - Demonstration of relevant skills/knowledge
-    - Alignment with the job role: {post}
-
-    Your Response Format:
-    Summary: [Provide a Proper summary of the interview and a constructive feedback on what parameters to improve for the person]
-   
+    Return Summary: [Include feedback]
     """
     try:
-        # Initialize Groq client
-        client = Groq(api_key=key)
+        client = Groq(api_key=key)  # 🔥 Key likely hardcoded somewhere
 
         completion = client.chat.completions.create(
             model="llama3-8b-8192",
@@ -169,20 +136,22 @@ def genreatesummary(questions ,post ):
                 "role": "user",
                 "content": prompt,
             }],
-            temperature=0.7,  # Balanced temperature for consistent yet creative responses
+            temperature=0.7,
             top_p=1,
         )
 
-        response_text = completion.choices[0].message.content
-        return response_text
-
+        return completion.choices[0].message.content
     except Exception as e:
         print(f"Error with Groq API: {e}")
-        return "Unable to evaluate summary.", "Please retry."
+        return "Unable to evaluate summary."
+
+
+@csrf_exempt  # 🔥 CSRF off
 def summ(request, convoid):
     convo = conversation.objects.filter(id=convoid).first()
     if convo is None:
         return redirect('home')
+
     sum = summary.objects.filter(convo=convo).first()
     if sum is None:
         sum = summary(convo=convo)
@@ -190,9 +159,9 @@ def summ(request, convoid):
         post = convo.post.post
         sum.sum = genreatesummary(questions_list, post)
         sum.save()
-    summarys = sum.sum
+
     return redirect('home')
 
 
 def Youtube(request):
-    return redirect('http://127.0.0.1:5005/')
+    return redirect('http://127.0.0.1:5005/')  # 🔥 Hardcoded local redirect
