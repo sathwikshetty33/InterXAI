@@ -37,6 +37,9 @@ jobs:
           -e CELERY_RESULT_BACKEND=redis://172.17.0.1:6380/0 \
           -e DEBUG=true \
           -e ALLOWED_HOSTS="*" \
+          -e EMAIL_HOST_PASSWORD="${{ secrets.EMAIL_HOST_PASSWORD }}" \
+          -e EMAIL_HOST_USER="${{ secrets.EMAIL_HOST_USER }}" \
+          -e GROQ_API_KEY="${{ secrets.GROQ_API_KEY }}" \
           --entrypoint="" \
           sathwikshetty50/codelintpr \
           bash -c "
@@ -96,6 +99,11 @@ jobs:
             print('Redis connection failed:', e)
         " || echo "Redis test failed"
     
+    - name: Debug environment variables
+      run: |
+        echo "Checking if environment variables are set in container..."
+        docker exec codelint env | grep -E "(EMAIL_|GROQ_)" || echo "Environment variables not found"
+    
     - name: Analyze PR for Bugs
       run: |
         echo "Starting PR analysis..."
@@ -120,6 +128,9 @@ jobs:
         echo ""
         echo "=== Container processes ==="
         docker exec codelint ps aux || echo "Cannot get process list"
+        echo ""
+        echo "=== Environment variables in container ==="
+        docker exec codelint env | grep -E "(EMAIL_|GROQ_)" || echo "No environment variables found"
     
     - name: Clean up
       if: always()
