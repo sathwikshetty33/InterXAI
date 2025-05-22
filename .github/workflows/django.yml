@@ -1,65 +1,47 @@
-name: Analyze PR or Push
-
-on: 
-  push:
-    branches:
-      - main
-  pull_request_target:
+name: PR Analysis
+on:
+  pull_request:
     types: [opened, synchronize, reopened]
 
 jobs:
-  analyze_pr:
+  analyze-pr:
     runs-on: ubuntu-latest
-
+    
+    services:
+      codelint:
+        image: sathwikshetty50/codelintpr
+        ports:
+          - 8000:8000
+        options: >-
+          --health-cmd "curl -f http://localhost:8000/health || exit 1"
+          --health-interval 30s
+          --health-timeout 10s
+          --health-retries 5
+    
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v2
-
-      - name: Send PR analysis request
-        env:
-          AUTH_TOKEN: ${{ secrets.AUTH_TOKEN }}
-          GH_TOKEN: ${{ secrets.GITHUBSS_TOKEN }}
-        run: |
-          # Extract PR number from event context
-          if [[ "${{ github.event_name }}" == "pull_request_target" ]]; then
-            PR_NUM="${{ github.event.pull_request.number }}"
-          else
-            PR_NUM="0"
-          fi
-
-          # Debugging extracted variables
-          echo "Repository: ${{ github.repository }}"
-          echo "PR Number: $PR_NUM"
-          echo "GitHub Token (masked): ***"
-
-          # Create JSON payload using jq for proper formatting
-          echo '{}' | jq --arg repo_url "https://github.com/${{ github.repository }}" \
-                         --arg pr_num "$PR_NUM" \
-                         --arg github_token "$GH_TOKEN" \
-                         '.repo_url = $repo_url | .pr_num = $pr_num | .github_token = $github_token' > payload.json
-
-          # Debugging the payload
-          echo "Payload contents:"
-          cat payload.json
-
-          # Check if the payload file exists
-          if [[ ! -f payload.json ]]; then
-            echo "Error: payload.json not found"
-            exit 1
-          fi
-
-          # Debugging payload size
-          echo "Payload size:"
-          stat -c%s payload.json
-
-          # Send the request using curl
-          curl -v -X POST "http://20.97.210.43:8000/start-task/" \
-            -H "Content-Type: application/json" \
-            -H "Authorization: Token $AUTH_TOKEN" \
-            --data-binary @payload.json || {
-              echo "Curl failed with exit code $?"
-              exit 1
-            }
-
-          # Print curl exit code for debugging
-          echo "Curl exit code: $?"
+    - name: Wait for service to be ready
+      run: |
+        echo "Waiting for CodeLint service to be ready..."
+        timeout 60s bash -c 'until curl -f http://localhost:8000/health; do sleep 5; done' || echo "Service may not be ready"
+    
+    - name: Analyze PR for Bugs
+      run: |
+        curl -X POST "http://localhost:8000/github-actions-analyze-pr/" \
+          -H "Content-Type: application/json" \
+          -d '{
+            "repo_url": "${{ github.repository }}",
+            "pr_num": "${{ github.event.pull_request.number }}",
+            "github_token": "${{ secrets.GITHUB_TOKEN }}",
+            "email": "${{ secrets.NOTIFICATION_EMAIL }}"
+          }'
+      
+    - name: Comment on PR (Optional)
+      uses: actions/github-script@v6
+      with:
+        script: |
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: '🔍 PR analysis has been triggered. Results will be sent via email to the configured address.'
+          })
