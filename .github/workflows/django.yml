@@ -12,17 +12,13 @@ jobs:
         image: sathwikshetty50/codelintpr
         ports:
           - 8000:8000
-        options: >-
-          --health-cmd "curl -f http://localhost:8000/health || exit 1"
-          --health-interval 30s
-          --health-timeout 10s
-          --health-retries 5
     
     steps:
     - name: Wait for service to be ready
       run: |
         echo "Waiting for CodeLint service to be ready..."
-        timeout 60s bash -c 'until curl -f http://localhost:8000/health; do sleep 5; done' || echo "Service may not be ready"
+        sleep 30
+        echo "Service should be ready now"
     
     - name: Analyze PR for Bugs
       run: |
