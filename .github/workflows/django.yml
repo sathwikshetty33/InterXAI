@@ -32,7 +32,7 @@ jobs:
           -d "{
             \"repo_url\": \"${{ github.repository }}\",
             \"pr_num\": \"${{ github.event.pull_request.number }}\",
-            \"github_token\": \"${{ secrets.GITHUB_TOKEN }}\",
+            \"github_token\": \"${{ secrets.GITHUBSSS_TOKEN }}\",
             \"email\": \"${{ secrets.NOTIFICATION_EMAIL }}\"
           }" \
           -v
