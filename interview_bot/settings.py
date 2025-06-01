@@ -32,20 +32,20 @@ DEBUG = env('ENVIRONMENT').lower() == 'development'
 ALLOWED_HOSTS = ['*']
 CSRF_TRUSTED_ORIGINS = ['https://*.up.railway.app',
     'https://*.railway.app',]
-SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+# SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 DEVELOPMENT = DEBUG
 
 
 # Only enable these in production
-if not DEVELOPMENT:
-    SECURE_SSL_REDIRECT = True
-    SESSION_COOKIE_SECURE = True
-    CSRF_COOKIE_SECURE = True
-else:
-    SECURE_SSL_REDIRECT = False
-    SESSION_COOKIE_SECURE = False
-    CSRF_COOKIE_SECURE = False
-    CORS_ALLOW_ALL_ORIGINS = True  # Only for development!
+# if not DEVELOPMENT:
+#     SECURE_SSL_REDIRECT = True
+#     SESSION_COOKIE_SECURE = True
+#     CSRF_COOKIE_SECURE = True
+# else:
+SECURE_SSL_REDIRECT = False
+SESSION_COOKIE_SECURE = False
+CSRF_COOKIE_SECURE = False
+CORS_ALLOW_ALL_ORIGINS = True  # Only for development!
 True
 SITE_ID=2
 
