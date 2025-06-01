@@ -1,5 +1,4 @@
 from datetime import timezone
-from enum import UNIQUE
 
 from django.contrib.auth.models import User
 from django.db import models
