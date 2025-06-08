@@ -1,0 +1,74 @@
+name: Auto Deploy Django Application
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+    types: [closed]
+
+jobs:
+  deploy:
+    if: github.event_name == 'push' || (github.event_name == 'pull_request' && github.event.pull_request.merged == true)
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Deploy to server
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: 172.172.146.254
+        username: azureuser
+        key: ${{ secrets.SSH_PRIVATE_KEY }}
+        script: |
+          echo "Starting auto-deployment..."
+          
+          # Navigate to app directory
+          cd /home/azureuser/app
+          
+          # Stop the Django server
+          sudo supervisorctl stop django-server || true
+          
+          # Pull latest changes
+          git pull origin main || git pull origin master
+          
+          # Activate virtual environment and install/update dependencies
+          source venv/bin/activate
+          
+          # Install any new dependencies
+          if [ -f requirements.txt ]; then
+            pip install -r requirements.txt --no-cache-dir
+          elif [ -f */requirements.txt ]; then
+            pip install -r */requirements.txt --no-cache-dir
+          fi
+          
+          # Set environment variables from GitHub secrets
+
+          
+          # Find Django project directory
+          MANAGE_PY=$(find . -name "manage.py" | head -1)
+          if [ -n "$MANAGE_PY" ]; then
+            PROJECT_DIR=$(dirname "$MANAGE_PY")
+            cd "$PROJECT_DIR"
+            
+            # Run migrations
+            python manage.py migrate --noinput
+            
+            # Collect static files
+            python manage.py collectstatic --noinput || true
+            
+            # Run additional commands if any
+            # Additional commands
+            pip install requirements.txt
+
+          fi
+          
+          # Start the Django server
+          sudo supervisorctl start django-server
+          
+          # Wait a moment and check status
+          sleep 5
+          sudo supervisorctl status django-server
+          
+          echo "Auto-deployment completed!"
+      env:
+
