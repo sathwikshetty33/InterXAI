@@ -14,6 +14,7 @@ import Footer from "../components/ui/footer";
 import { getAuthToken } from "../utils/handleToken";
 import ImageModal from "../../src/pages/ImageModal"
 import Appp from "../../src/pages/ImageModal"
+import { toast } from 'react-toastify';
 ChartJS.register(...registerables);
 
 const Leaderboard = () => {
@@ -386,28 +387,49 @@ Answer questions about this candidate's interview performance, application detai
         // Update local state
         setLeaderboardData(prev => prev.map(c => 
           c.id === candidate.id 
-            ? { ...c, Application: { ...c.Application, shortlisting_decision: decision === 'select' } }
+            ? { ...c, Application: { ...c.Application, shortlisting_decision: decision === 'select', final_decision: decision === 'select' ? 'accepted' : 'rejected' } }
             : c
         ));
-        alert(`Candidate ${decision === 'select' ? 'selected' : 'rejected'} successfully!`);
+        if (decision === 'select') {
+          toast.success(`🎉 ${candidate.Application?.user?.username || 'Candidate'} has been selected!`, {
+            icon: '✅',
+            autoClose: 3000
+          });
+        } else {
+          toast.info(`${candidate.Application?.user?.username || 'Candidate'} has been rejected. Feedback sent.`, {
+            icon: '📝',
+            autoClose: 3000
+          });
+        }
       } else {
         const data = await response.json();
-        alert(data.error || 'Failed to process decision');
+        toast.error(data.error || 'Failed to process decision');
       }
     } catch (err) {
       console.error('Decision error:', err);
-      alert('Error processing decision');
+      toast.error('Error processing decision. Please try again.');
     } finally {
       setProcessingDecision(null);
       setShowRejectModal(false);
       setRejectFeedback('');
       setRejectCandidate(null);
+      setShowSelectModal(false);
+      setSelectCandidate(null);
     }
   };
 
+  // State for select confirmation modal
+  const [showSelectModal, setShowSelectModal] = useState(false);
+  const [selectCandidate, setSelectCandidate] = useState(null);
+
   const handleSelectCandidate = (candidate) => {
-    if (window.confirm(`Select ${candidate.Application?.user?.username || 'this candidate'}?`)) {
-      handleCandidateDecision(candidate, 'select');
+    setSelectCandidate(candidate);
+    setShowSelectModal(true);
+  };
+
+  const confirmSelectCandidate = () => {
+    if (selectCandidate) {
+      handleCandidateDecision(selectCandidate, 'select');
     }
   };
 
@@ -1740,6 +1762,60 @@ console.log("Sorted Data:", sortedData);
                   <ThumbsDown className="w-4 h-4" />
                 )}
                 Reject Candidate
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Select Confirmation Modal */}
+      {showSelectModal && selectCandidate && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                <CheckCircle className="w-5 h-5 text-green-500" />
+                Select Candidate
+              </h3>
+              <button
+                onClick={() => setShowSelectModal(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="text-center py-4">
+              <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <ThumbsUp className="w-8 h-8 text-green-600" />
+              </div>
+              <p className="text-gray-600 mb-2">
+                You are about to <span className="text-green-600 font-semibold">accept</span>
+              </p>
+              <p className="text-xl font-bold text-gray-900">
+                {selectCandidate.Application?.user?.username || 'Candidate'}
+              </p>
+              <p className="text-sm text-gray-500 mt-2">
+                for {selectCandidate.Application?.interview?.post || 'this position'}
+              </p>
+            </div>
+            <div className="flex gap-3 justify-end mt-4">
+              <button
+                onClick={() => setShowSelectModal(false)}
+                className="px-4 py-2 text-gray-600 hover:text-gray-800 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmSelectCandidate}
+                disabled={processingDecision}
+                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2 disabled:opacity-50"
+              >
+                {processingDecision ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <ThumbsUp className="w-4 h-4" />
+                )}
+                Confirm Selection
               </button>
             </div>
           </div>

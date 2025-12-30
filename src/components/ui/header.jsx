@@ -96,7 +96,7 @@ const baseUrl=import.meta.env.VITE_API_URL;
           {/* Career Co-Pilot - for authenticated users */}
           {(viewerType === 'owner' || viewerType === 'authenticated') && (
             <a href="/career" className="text-purple-600 hover:text-purple-700 font-medium transition-colors duration-200">
-              🚀 Career Co-Pilot
+              Career Co-Pilot
             </a>
           )}
 

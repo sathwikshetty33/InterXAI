@@ -644,11 +644,186 @@ class CandidateDecisionView(APIView):
     authentication_classes = [TokenAuthentication]
 
     def generate_ai_feedback(self, session, org_feedback):
-        """Generate AI feedback using Groq based on interview performance"""
+        """Generate comprehensive feedback using actual per-question feedback from the interview"""
         import requests
         import os
         import json
         
+        # Gather actual per-question feedback from the interview
+        from .models import Interaction, resumeconvo, DSAInteractions
+        
+        # Get dev/technical question feedback - NO TRUNCATION
+        dev_feedback = []
+        interactions = Interaction.objects.filter(session=session).select_related('Customquestion')
+        for interaction in interactions:
+            if interaction.feedback:
+                dev_feedback.append({
+                    'question': interaction.Customquestion.question if interaction.Customquestion else 'Question',
+                    'score': interaction.score or 0,
+                    'feedback': interaction.feedback
+                })
+        
+        # Get resume question feedback - NO TRUNCATION
+        resume_feedback = []
+        resume_convos = resumeconvo.objects.filter(session=session)
+        for convo in resume_convos:
+            if convo.feedback:
+                resume_feedback.append({
+                    'question': convo.question if convo.question else 'Resume Question',
+                    'score': convo.score or 0,
+                    'feedback': convo.feedback
+                })
+        
+        # Get DSA question feedback - NO TRUNCATION
+        dsa_feedback = []
+        dsa_interactions = DSAInteractions.objects.filter(session=session).select_related('topic')
+        for dsa in dsa_interactions:
+            dsa_feedback.append({
+                'question': dsa.question if dsa.question else 'DSA Problem',
+                'topic': dsa.topic.topic if dsa.topic else 'General',
+                'score': dsa.score or 0
+            })
+        
+        # Build comprehensive feedback if we have real feedback
+        if dev_feedback or resume_feedback or dsa_feedback:
+            # Compile all feedback for AI analysis - FULL TEXT
+            all_feedback_text = []
+            for fb in dev_feedback:
+                if fb['feedback']:
+                    all_feedback_text.append(f"Q: {fb['question']} | Feedback: {fb['feedback']}")
+            for fb in resume_feedback:
+                if fb['feedback']:
+                    all_feedback_text.append(f"Q: {fb['question']} | Feedback: {fb['feedback']}")
+            
+            # Use Groq to analyze feedback and generate improvement areas
+            groq_api_key = os.environ.get('GROQ_API_KEY')
+            improvement_areas = []
+            action_items = []
+            strengths = []
+            ai_summary = None
+            
+            if groq_api_key and all_feedback_text:
+                try:
+                    feedback_text = "\n".join(all_feedback_text[:10])  # Limit for API but keep full text
+                    
+                    analysis_prompt = f"""Analyze this interview feedback and generate insights.
+
+Interview Feedback:
+{feedback_text}
+
+Scores: Dev={session.Devscore or 0}/10, Resume={session.Resumescore or 0}/10, DSA={session.DsaScore or 0}/10
+
+Generate JSON with:
+{{
+    "improvement_areas": ["3-5 specific, actionable areas to improve based on the feedback patterns (e.g., 'Practice explaining technical concepts clearly', 'Prepare examples of past projects')"],
+    "action_items": ["3-5 concrete next steps the candidate should take"],
+    "strengths": ["2-3 things the candidate did well if any"],
+    "summary": "2 sentence personalized summary"
+}}
+
+Focus on PATTERNS across the feedback. Be specific and actionable, not generic."""
+
+                    response = requests.post(
+                        'https://api.groq.com/openai/v1/chat/completions',
+                        headers={
+                            'Authorization': f'Bearer {groq_api_key}',
+                            'Content-Type': 'application/json'
+                        },
+                        json={
+                            'model': 'llama-3.1-8b-instant',
+                            'messages': [{'role': 'user', 'content': analysis_prompt}],
+                            'temperature': 0.7
+                        },
+                        timeout=30
+                    )
+                    
+                    if response.status_code == 200:
+                        result = response.json()
+                        content = result['choices'][0]['message']['content']
+                        
+                        # Parse JSON
+                        content = content.strip()
+                        if content.startswith('```json'):
+                            content = content[7:]
+                        if content.startswith('```'):
+                            content = content[3:]
+                        if content.endswith('```'):
+                            content = content[:-3]
+                        content = content.strip()
+                        
+                        try:
+                            ai_analysis = json.loads(content)
+                            improvement_areas = ai_analysis.get('improvement_areas', [])
+                            action_items = ai_analysis.get('action_items', [])
+                            strengths = ai_analysis.get('strengths', [])
+                            ai_summary = ai_analysis.get('summary', '')
+                        except json.JSONDecodeError:
+                            pass
+                except Exception as e:
+                    print(f"Groq analysis error: {e}")
+            
+            # Fallback if AI analysis failed - use scores to generate feedback
+            if not improvement_areas:
+                for fb in dev_feedback:
+                    if fb['score'] and fb['score'] < 5 and fb['feedback']:
+                        improvement_areas.append(fb['feedback'])
+                for fb in resume_feedback:
+                    if fb['score'] and fb['score'] < 5 and fb['feedback']:
+                        improvement_areas.append(fb['feedback'])
+                        
+            if not strengths:
+                for fb in dev_feedback:
+                    if fb['score'] and fb['score'] >= 7:
+                        strengths.append(f"Strong performance on technical questions")
+                        break
+                for fb in resume_feedback:
+                    if fb['score'] and fb['score'] >= 7:
+                        strengths.append(f"Clear articulation of experience")
+                        break
+                if not strengths:
+                    strengths = ['Completed the interview process', 'Showed effort in attempting all questions']
+            
+            if not action_items:
+                # Analyze DSA feedback
+                low_dsa = [d for d in dsa_feedback if d['score'] and d['score'] < 5]
+                if low_dsa:
+                    topics = list(set([d['topic'] for d in low_dsa]))
+                    action_items.append(f"Practice problems in: {', '.join(topics[:3])}")
+                action_items.extend([
+                    "Review the specific feedback for each question below",
+                    "Practice similar interview questions",
+                    "Continue applying to other positions"
+                ])
+            
+            # Generate summary
+            summary = ai_summary or f"Based on your interview for {session.Application.interview.post} at {session.Application.interview.org.orgname}, "
+            if not ai_summary and session.overallScore:
+                if session.overallScore >= 7:
+                    summary += "you demonstrated strong capabilities but other candidates were a better fit."
+                elif session.overallScore >= 5:
+                    summary += "you showed potential in several areas with room for improvement."
+                else:
+                    summary += "there are areas where you can strengthen your skills."
+            
+            if org_feedback:
+                summary += f" {org_feedback}"
+            
+            return {
+                'summary': summary,
+                'strengths': strengths[:5],
+                'improvement_areas': improvement_areas[:5],
+                'action_items': action_items[:5],
+                'encouragement': 'Every interview is a learning opportunity. Review the feedback below and keep improving!',
+                'detailed_feedback': all_feedback_text[:10],
+                'scores': {
+                    'dev_score': session.Devscore or 0,
+                    'resume_score': session.Resumescore or 0,
+                    'dsa_score': session.DsaScore or 0,
+                    'overall_score': session.overallScore or 0
+                }
+            }
+        
+        # Fallback to Groq AI if no per-question feedback exists
         groq_api_key = os.environ.get('GROQ_API_KEY')
         if not groq_api_key:
             return None

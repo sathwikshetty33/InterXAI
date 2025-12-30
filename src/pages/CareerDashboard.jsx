@@ -5,7 +5,7 @@ import Header from '../components/ui/header';
 import Footer from '../components/ui/footer';
 import {
   Loader2, Target, BookOpen, Briefcase, 
-  ChevronRight, RefreshCw, Sparkles, BarChart3,
+  ChevronRight, ChevronDown, RefreshCw, Sparkles, BarChart3,
   AlertCircle, Zap, Brain, Plus, X,
   Upload, FileText, Save, User, ExternalLink, Search
 } from "lucide-react";
@@ -815,9 +815,60 @@ export default function CareerDashboard() {
                           
                           {/* Encouragement */}
                           {feedback.ai_analyzed_feedback.encouragement && (
-                            <p className="text-xs text-purple-300 italic mt-2">
+                            <p className="text-xs text-purple-600 italic mt-2">
                               💪 {feedback.ai_analyzed_feedback.encouragement}
                             </p>
+                          )}
+
+                          {/* Detailed Per-Question Feedback */}
+                          {feedback.ai_analyzed_feedback.detailed_feedback && feedback.ai_analyzed_feedback.detailed_feedback.length > 0 && (
+                            <div className="mt-4 border-t border-gray-200 pt-3">
+                              <h5 className="text-xs font-semibold text-gray-700 mb-2">📝 Question-by-Question Feedback</h5>
+                              <div className="space-y-2">
+                                {feedback.ai_analyzed_feedback.detailed_feedback.map((fb, i) => {
+                                  // Parse Q and Feedback
+                                  const parts = fb.split(' | Feedback: ');
+                                  const question = parts[0]?.replace('Q: ', '') || 'Question';
+                                  const feedbackText = parts[1] || fb;
+                                  
+                                  return (
+                                    <details 
+                                      key={i} 
+                                      className="group bg-gray-50 rounded-lg border border-gray-200 overflow-hidden"
+                                    >
+                                      <summary className="cursor-pointer px-3 py-2 flex items-center justify-between text-xs font-medium text-gray-700 hover:bg-gray-100 transition-colors">
+                                        <span className="truncate pr-2">{question}</span>
+                                        <ChevronDown className="w-4 h-4 flex-shrink-0 text-gray-400 group-open:rotate-180 transition-transform" />
+                                      </summary>
+                                      <div className="px-3 py-3 bg-white border-t border-gray-100">
+                                        <p className="text-xs text-gray-700 leading-relaxed whitespace-pre-wrap">{feedbackText}</p>
+                                      </div>
+                                    </details>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Scores Summary */}
+                          {feedback.ai_analyzed_feedback.scores && (
+                            <div className="mt-3 flex flex-wrap gap-2">
+                              {feedback.ai_analyzed_feedback.scores.dev_score > 0 && (
+                                <span className="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded">
+                                  Dev: {feedback.ai_analyzed_feedback.scores.dev_score}/10
+                                </span>
+                              )}
+                              {feedback.ai_analyzed_feedback.scores.resume_score > 0 && (
+                                <span className="px-2 py-1 bg-green-100 text-green-700 text-xs rounded">
+                                  Resume: {feedback.ai_analyzed_feedback.scores.resume_score}/10
+                                </span>
+                              )}
+                              {feedback.ai_analyzed_feedback.scores.dsa_score > 0 && (
+                                <span className="px-2 py-1 bg-purple-100 text-purple-700 text-xs rounded">
+                                  DSA: {feedback.ai_analyzed_feedback.scores.dsa_score}/10
+                                </span>
+                              )}
+                            </div>
                           )}
                         </div>
                       )}
