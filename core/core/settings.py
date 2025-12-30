@@ -33,7 +33,7 @@ SECRET_KEY = os.getenv('SECRET_KEY')
 DEBUG = True
 
 ALLOWED_HOSTS = ["interxai.onrender.com","127.0.0.1","localhost"]
-CSRF_TRUSTED_ORIGINS = ['http://*','https://*',"https://interxai.onrender.com","https://inter-xai.vercel.app"]
+CSRF_TRUSTED_ORIGINS = ['http://*','https://*',"https://interxai.onrender.com","https://inter-xai.vercel.app","https://interxai.vercel.app"]
 
 
 # Application definition
