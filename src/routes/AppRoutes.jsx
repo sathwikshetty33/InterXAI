@@ -3,6 +3,7 @@ import Home from '../pages/Home';
 import About from '../pages/About';
 import Login from '../pages/Login';
 import Signup from '../pages/SignUp';
+import CompanySignup from '../pages/CompanySignup';
 import UserDashboard from '../pages/UserDashboard';
 import ProfileSetup from '../pages/ProfileSetup';
 import OrgSignup from '../pages/OrgSignup'
@@ -28,6 +29,7 @@ export default function AppRoutes() {
       <Route path="/about" element={<About />} />
       <Route path="/login" element={<Login />} />
       <Route path="/signup" element={<Signup />} />
+      <Route path="/company-signup" element={<CompanySignup />} />
       <Route path="/profile/:id" element={<UserDashboard />} />
       <Route path="/profile-setup" element={<ProfileSetup />} />
       <Route path="/register-org" element={<OrgSignup />} />

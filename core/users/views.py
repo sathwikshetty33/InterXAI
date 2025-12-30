@@ -84,6 +84,67 @@ class RegisterAPIView(APIView):
 
 
 @method_decorator(csrf_exempt, name='dispatch')
+class SimpleRegisterAPIView(APIView):
+    """Simple registration without OTP verification"""
+    permission_classes = [AllowAny]
+    authentication_classes = []
+    
+    def post(self, request):
+        serializer = UserRegistrationSerializer(data=request.data)
+        if serializer.is_valid():
+            username = serializer.validated_data['username']
+            email = serializer.validated_data['email']
+            password = serializer.validated_data['password']
+            
+            # Check if username already exists
+            if User.objects.filter(username=username).exists():
+                return Response({
+                    'success': False,
+                    'error': 'Username already exists'
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            if User.objects.filter(email=email).exists():
+                return Response({
+                    'success': False,
+                    'error': 'Email already registered'
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            try:
+                # Directly create user without OTP
+                user = User.objects.create_user(
+                    username=username,
+                    email=email,
+                    password=password
+                )
+                
+                # Create user profile
+                UserProfile.objects.create(user=user)
+                
+                # Create authentication token
+                token, created = Token.objects.get_or_create(user=user)
+                
+                return Response({
+                    'success': True,
+                    'message': 'User registered successfully',
+                    'token': token.key,
+                    'user_id': user.id,
+                    'username': user.username,
+                    'email': user.email
+                }, status=status.HTTP_201_CREATED)
+                
+            except Exception as e:
+                return Response({
+                    'success': False,
+                    'error': f'Registration failed: {str(e)}'
+                }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+        return Response({
+            'success': False,
+            'errors': serializer.errors
+        }, status=status.HTTP_400_BAD_REQUEST)
+
+
+@method_decorator(csrf_exempt, name='dispatch')
 class VerifyEmailAPIView(APIView):
     permission_classes = [AllowAny]
     authentication_classes = [] 

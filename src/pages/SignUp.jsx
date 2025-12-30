@@ -420,7 +420,8 @@ const SignUp = () => {
     setIsLoading(true);
 
     try {
-      const response = await fetch(`${baseUrl}/users/register/`, {
+      // Use simple-register endpoint (no OTP)
+      const response = await fetch(`${baseUrl}/users/simple-register/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -436,9 +437,21 @@ const SignUp = () => {
       const data = await response.json();
 
       if (response.ok) {
-        setVerificationId(data.verification_id);
-        setVerificationMode(true);
-        showSignupMessage('Verification code sent to your email!', 'success');
+        showSignupMessage('Account created successfully! Redirecting...', 'success');
+        
+        // Auto-login - store token
+        localStorage.setItem("authToken", data.token);
+        sessionStorage.setItem("email", signupEmail);
+        
+        setTimeout(() => {
+          navigate('/profile-setup');
+        }, 1500);
+
+        // Clear fields
+        setSignupUsername('');
+        setSignupEmail('');
+        setSignupPassword('');
+        setSignupConfirmPassword('');
       } else {
         showSignupMessage(data.error || JSON.stringify(data.errors) || 'Registration failed', 'error');
       }

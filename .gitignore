@@ -28,3 +28,4 @@ dist-ssr
 build/
 dist/
 build/assets/index-3oBceVxF.js
+core/.env

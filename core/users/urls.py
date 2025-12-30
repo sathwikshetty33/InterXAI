@@ -3,6 +3,7 @@ from . import views
 
 urlpatterns = [
     path('register/', views.RegisterAPIView.as_view(), name='api_register'),
+    path('simple-register/', views.SimpleRegisterAPIView.as_view(), name='api_simple_register'),
     path('verify-email/', views.VerifyEmailAPIView.as_view(), name='api_verify_email'),
     path('resend-code/', views.ResendCodeAPIView.as_view(), name='api_resend_code'),
     path('login/', views.LoginAPIView.as_view(), name='api_login'),
