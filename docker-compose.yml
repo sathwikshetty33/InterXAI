@@ -1,0 +1,101 @@
+# version: '3.8'
+
+services:
+  # Frontend Service
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    container_name: interxai-frontend
+    ports:
+      - "3000:80"
+    environment:
+      - VITE_API_URL=http://backend:8000
+    depends_on:
+      - backend
+    networks:
+      - interxai-network
+    restart: unless-stopped
+
+  # Backend Service
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    container_name: interxai-backend
+    ports:
+      - "8000:8000"
+    env_file:
+      - ./core/.env
+    environment:
+      - DATABASE_URL=postgresql://postgres:postgres@db:5432/interxai
+      - REDIS_URL=redis://redis:6379/0
+    # depends_on:
+    #   - db
+    #   - redis
+    networks:
+      - interxai-network
+    restart: unless-stopped
+    # volumes:
+    #   - static_volume:/app/staticfiles
+    #   - media_volume:/app/media
+
+  # # PostgreSQL Database
+  # db:
+  #   image: postgres:15-alpine
+  #   container_name: interxai-db
+  #   environment:
+  #     - POSTGRES_DB=interxai
+  #     - POSTGRES_USER=postgres
+  #     - POSTGRES_PASSWORD=postgres
+  #   volumes:
+  #     - postgres_data:/var/lib/postgresql/data
+  #   networks:
+  #     - interxai-network
+  #   restart: unless-stopped
+  #   healthcheck:
+  #     test: ["CMD-SHELL", "pg_isready -U postgres"]
+  #     interval: 10s
+  #     timeout: 5s
+  #     retries: 5
+
+  # Redis Cache (for session storage and caching)
+  # redis:
+  #   image: redis:7-alpine
+  #   container_name: interxai-redis
+  #   ports:
+  #     - "6379:6379"
+  #   networks:
+  #     - interxai-network
+  #   restart: unless-stopped
+  #   healthcheck:
+  #     test: ["CMD", "redis-cli", "ping"]
+  #     interval: 10s
+  #     timeout: 5s
+  #     retries: 5
+
+  # Nginx Reverse Proxy (Optional - for production)
+  # nginx:
+  #   image: nginx:alpine
+  #   container_name: interxai-nginx
+  #   ports:
+  #     - "80:80"
+  #     - "443:443"
+  #   volumes:
+  #     - ./nginx/nginx.conf:/etc/nginx/nginx.conf
+  #     - static_volume:/app/staticfiles
+  #   depends_on:
+  #     - frontend
+  #     - backend
+  #   networks:
+  #     - interxai-network
+  #   restart: unless-stopped
+
+networks:
+  interxai-network:
+    driver: bridge
+
+# volumes:
+#   postgres_data:
+#   static_volume:
+#   media_volume:
