@@ -7,7 +7,7 @@ const InterviewScreenshotCapture = () => {
   const navigate = useNavigate();
   const hasStarted = useRef(false);
 
-  const PINATA_JWT = import.meta.env.VITE_PINATA_JWT;
+  const PINATA_JWT = import.meta.env.VITE_PINATAJWT;
 
   const log = (message, type = 'info', data = null) => {
     const timestamp = new Date().toISOString();

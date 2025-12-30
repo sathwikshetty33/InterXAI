@@ -3438,8 +3438,8 @@ const ProctoredContent = ({ children }) => {
   const location = useLocation();
   const navigate = useNavigate();
 
-  const PINATA_API_KEY =import.meta.env.PINATA_API_KEY;
-  const PINATA_SECRET_KEY =import.meta.env.PINATA_SECRET_KEY;
+  const PINATA_API_KEY =import.meta.env.VITE_PINATAAPIKEY;
+  const PINATA_SECRET_KEY =import.meta.env.VITE_PINATAAPISECRET;
 
   const getSessionInfo = () => {
     if (location.pathname.includes('/interview/start/')) {

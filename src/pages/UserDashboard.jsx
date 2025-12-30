@@ -1177,7 +1177,7 @@ export default function UserDashboard() {
       const res = await fetch("https://api.pinata.cloud/pinning/pinFileToIPFS", {
         method: "POST",
         headers: {
-          'Authorization': `Bearer ${import.meta.env.VITE_PINATA_JWT_TOKEN}`,
+          'Authorization': `Bearer ${import.meta.env.VITE_PINATAJWT}`,
         },
         body: form,
       });
@@ -1455,50 +1455,129 @@ export default function UserDashboard() {
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 w-full mt-6">
-                <div className="bg-white border border-gray-200 rounded-2xl shadow-xl p-4">
-                  <h3 className="text-gray-800 text-lg font-semibold mb-2 flex items-center gap-2">
-                    <Github className="w-5 h-5" /> GitHub Stats
-                    {viewerType === "owner" && editingField !== "github" && (
-                      <Pencil className="w-4 h-4 cursor-pointer ml-auto hover:text-blue-600 transition-colors" onClick={() => setEditingField("github")} />
-                    )}
-                  </h3>
-                  {viewerType === "owner" && editingField === "github" ? (
-                    <div className="space-y-2">
-                      <input
-                        name="github"
-                        value={formData.github}
-                        onChange={handleChange}
-                        className="bg-blue-50 text-gray-800 p-2 rounded border border-blue-200 w-full"
-                        placeholder="Enter GitHub username"
-                      />
-                      <div className="flex gap-2">
-                        <button onClick={() => handleSave("github")} className="text-sm bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700">Save</button>
-                        <button onClick={() => setEditingField(null)} className="text-sm bg-gray-400 text-white px-3 py-1 rounded hover:bg-gray-500">Cancel</button>
-                      </div>
-                    </div>
-                  ) : (
-                    <>
-                      <p className="text-sm text-gray-600 mb-2">Username:</p>
-                      <a
-                        href={`https://github.com/${githubUsername}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-blue-600 hover:underline break-all"
-                      >
-                        {githubUsername || "Not set"}
-                      </a>
-                      {githubUsername && (
-                        <div className="mt-4 rounded-xl overflow-hidden">
-                          <img
-                            src={`https://github-readme-stats.vercel.app/api?username=${githubUsername}&show_icons=true&theme=default`}
-                            alt="GitHub Stats"
-                            className="w-full object-cover"
-                          />
-                        </div>
-                      )}
-                    </>
-                  )}
-                </div>
+              <div className="bg-white border border-gray-200 rounded-2xl shadow-xl p-5">
+  {/* Header */}
+  <div className="flex items-center gap-3 mb-4">
+    <Github className="w-6 h-6 text-gray-800" />
+    <h3 className="text-lg font-semibold text-gray-800">
+      GitHub Profile
+    </h3>
+
+    {viewerType === "owner" && editingField !== "github" && (
+      <Pencil
+        className="w-4 h-4 ml-auto cursor-pointer text-gray-500 hover:text-blue-600"
+        onClick={() => setEditingField("github")}
+      />
+    )}
+  </div>
+
+  {/* Edit Mode */}
+  {viewerType === "owner" && editingField === "github" ? (
+    <div className="space-y-2">
+      <input
+        name="github"
+        value={formData.github}
+        onChange={handleChange}
+        placeholder="GitHub username"
+        className="w-full p-2 border border-blue-200 rounded-lg bg-blue-50 text-gray-800"
+      />
+      <div className="flex gap-2">
+        <button
+          onClick={() => handleSave("github")}
+          className="px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700"
+        >
+          Save
+        </button>
+        <button
+          onClick={() => setEditingField(null)}
+          className="px-3 py-1 text-sm bg-gray-400 text-white rounded hover:bg-gray-500"
+        >
+          Cancel
+        </button>
+      </div>
+    </div>
+  ) : (
+    <>
+      {githubUsername ? (
+        <>
+          {/* Profile Row */}
+          <div className="flex items-center gap-4 mb-4">
+            {/* Avatar */}
+            <img
+              src={`https://github.com/${githubUsername}.png`}
+              alt="GitHub Avatar"
+              className="w-16 h-16 rounded-full border border-gray-300"
+            />
+
+            {/* Username */}
+            <div>
+              <a
+                href={`https://github.com/${githubUsername}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-blue-600 font-medium hover:underline"
+              >
+                @{githubUsername}
+              </a>
+              <p className="text-xs text-gray-500">
+                github.com/{githubUsername}
+              </p>
+            </div>
+          </div>
+
+          {/* Stats Grid */}
+          <div className="grid grid-cols-3 gap-3 mb-4">
+            <div className="bg-gray-50 border rounded-xl p-3 text-center">
+              <img
+                src={`https://img.shields.io/github/repos/${githubUsername}?label=&style=flat`}
+                alt="Repos"
+                className="mx-auto mb-1"
+              />
+              <p className="text-xs text-gray-500">Repositories</p>
+            </div>
+
+            <div className="bg-gray-50 border rounded-xl p-3 text-center">
+              <img
+                src={`https://img.shields.io/github/followers/${githubUsername}?label=&style=flat`}
+                alt="Followers"
+                className="mx-auto mb-1"
+              />
+              <p className="text-xs text-gray-500">Followers</p>
+            </div>
+
+            <div className="bg-gray-50 border rounded-xl p-3 text-center">
+              <img
+                src={`https://img.shields.io/github/stars/${githubUsername}?affiliations=OWNER&label=&style=flat`}
+                alt="Stars"
+                className="mx-auto mb-1"
+              />
+              <p className="text-xs text-gray-500">Stars</p>
+            </div>
+          </div>
+
+          {/* Contribution Activity */}
+          <div className="rounded-xl overflow-hidden border">
+            <img
+              src={`https://github-readme-activity-graph.vercel.app/graph?username=${githubUsername}&theme=github-light&hide_border=true`}
+              alt="GitHub Activity"
+              className="w-full"
+            />
+          </div>
+        </>
+      ) : (
+        <div className="border border-dashed border-gray-300 rounded-xl p-6 text-center">
+          <p className="text-sm text-gray-500">
+            GitHub profile not added
+          </p>
+          <p className="text-xs text-gray-400 mt-1">
+            Add your username to display GitHub activity
+          </p>
+        </div>
+      )}
+    </>
+  )}
+</div>
+
 
                 <div className="bg-white border border-orange-200 rounded-2xl shadow-xl p-4">
                   <h3 className="text-gray-800 text-lg font-semibold mb-2 flex items-center gap-2">
