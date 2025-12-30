@@ -128,11 +128,15 @@ class InterviewSerializer(serializers.ModelSerializer):
     has_applied = serializers.SerializerMethodField()
     application_status = serializers.SerializerMethodField()
     attempted = serializers.SerializerMethodField()
+    final_decision = serializers.SerializerMethodField()
+    final_feedback = serializers.SerializerMethodField()
+    
     class Meta:
         model = Custominterviews
         fields = [
             "id", "desc", "post", "experience", "submissionDeadline",
-            "startTime", "endTime", "has_applied","application_status","attempted",
+            "startTime", "endTime", "has_applied", "application_status", "attempted",
+            "final_decision", "final_feedback",
         ]
 
     def get_has_applied(self, obj):
@@ -146,6 +150,7 @@ class InterviewSerializer(serializers.ModelSerializer):
                 interview=obj
             ).exists()
         return False
+    
     def get_application_status(self, obj):
         """
         Returns the application status for the authenticated user.
@@ -161,6 +166,7 @@ class InterviewSerializer(serializers.ModelSerializer):
             except Application.DoesNotExist:
                 return False
         return False
+    
     def get_attempted(self, obj):
         """
         Checks if the authenticated user has attempted this interview.
@@ -172,6 +178,38 @@ class InterviewSerializer(serializers.ModelSerializer):
                 Application__interview=obj
             ).exists()
         return False
+    
+    def get_final_decision(self, obj):
+        """
+        Returns the org's final decision for the authenticated user's application.
+        """
+        request = self.context.get("request")
+        if request and hasattr(request, "user") and request.user.is_authenticated:
+            try:
+                application = Application.objects.get(
+                    user=request.user,
+                    interview=obj
+                )
+                return application.final_decision
+            except Application.DoesNotExist:
+                return None
+        return None
+    
+    def get_final_feedback(self, obj):
+        """
+        Returns the org's feedback for the authenticated user's application.
+        """
+        request = self.context.get("request")
+        if request and hasattr(request, "user") and request.user.is_authenticated:
+            try:
+                application = Application.objects.get(
+                    user=request.user,
+                    interview=obj
+                )
+                return application.final_feedback
+            except Application.DoesNotExist:
+                return None
+        return None
 
 class UserSerializer(serializers.ModelSerializer):
     class Meta:

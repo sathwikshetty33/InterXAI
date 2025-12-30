@@ -643,6 +643,98 @@ class CandidateDecisionView(APIView):
     permission_classes = [IsAuthenticated]
     authentication_classes = [TokenAuthentication]
 
+    def generate_ai_feedback(self, session, org_feedback):
+        """Generate AI feedback using Groq based on interview performance"""
+        import requests
+        import os
+        import json
+        
+        groq_api_key = os.environ.get('GROQ_API_KEY')
+        if not groq_api_key:
+            return None
+            
+        # Gather interview performance data
+        interview_data = {
+            'dev_score': session.Devscore or 0,
+            'resume_score': session.Resumescore or 0,
+            'dsa_score': session.DsaScore or 0,
+            'overall_score': session.overallScore or 0,
+            'confidence_score': session.confidenceScore or 0,
+            'job_title': session.Application.interview.post,
+            'company': session.Application.interview.org.orgname,
+            'org_feedback': org_feedback or 'No specific feedback provided'
+        }
+        
+        prompt = f"""You are a career coach providing constructive feedback to a job candidate who was not selected.
+
+Interview Performance Data:
+- Position: {interview_data['job_title']} at {interview_data['company']}
+- Development Skills Score: {interview_data['dev_score']}/10
+- Resume Match Score: {interview_data['resume_score']}/10
+- DSA/Problem Solving Score: {interview_data['dsa_score']}/10
+- Overall Score: {interview_data['overall_score']}/10
+- Confidence Score: {interview_data['confidence_score']}/10
+- Interviewer's Feedback: {interview_data['org_feedback']}
+
+Generate a constructive, encouraging feedback response in JSON format with these fields:
+{{
+    "summary": "2-3 sentence summary of the interview outcome focusing on growth opportunities",
+    "strengths": ["list of 2-3 things the candidate did well based on their scores"],
+    "improvement_areas": ["list of 2-3 specific areas to improve based on low scores"],
+    "action_items": ["list of 3-4 concrete actionable steps to improve skills"],
+    "encouragement": "1-2 sentences of encouragement for future applications"
+}}
+
+Be constructive and helpful, not harsh. Focus on growth mindset."""
+
+        try:
+            response = requests.post(
+                'https://api.groq.com/openai/v1/chat/completions',
+                headers={
+                    'Authorization': f'Bearer {groq_api_key}',
+                    'Content-Type': 'application/json'
+                },
+                json={
+                    'model': 'llama-3.1-8b-instant',
+                    'messages': [{'role': 'user', 'content': prompt}],
+                    'temperature': 0.7
+                },
+                timeout=30
+            )
+            
+            if response.status_code == 200:
+                result = response.json()
+                content = result['choices'][0]['message']['content']
+                
+                # Parse JSON from response
+                try:
+                    # Clean up response to extract JSON
+                    content = content.strip()
+                    if content.startswith('```json'):
+                        content = content[7:]
+                    if content.startswith('```'):
+                        content = content[3:]
+                    if content.endswith('```'):
+                        content = content[:-3]
+                    content = content.strip()
+                    
+                    feedback_json = json.loads(content)
+                    return feedback_json
+                except json.JSONDecodeError:
+                    return {
+                        'summary': content[:500],
+                        'strengths': ['Completed the interview process'],
+                        'improvement_areas': ['Continue developing technical skills'],
+                        'action_items': ['Practice coding problems', 'Review interview feedback', 'Apply to more positions'],
+                        'encouragement': 'Keep learning and improving!'
+                    }
+            else:
+                print(f"Groq API error: {response.status_code}")
+                return None
+        except Exception as e:
+            print(f"Error generating AI feedback: {e}")
+            return None
+
     def post(self, request, session_id):
         """
         Select or reject a candidate
@@ -671,34 +763,42 @@ class CandidateDecisionView(APIView):
         application.final_feedback = feedback_text
         application.save()
         
-        # If rejected, create feedback for the candidate's Career Dashboard
+        ai_feedback = None
+        
+        # If rejected, generate AI feedback and create records for Career Dashboard
         if decision == 'reject':
             try:
                 from feedback.models import RejectionFeedback, FeedbackInsight
                 
-                # Create rejection analysis
+                # Generate AI feedback using Groq
+                ai_feedback = self.generate_ai_feedback(session, feedback_text)
+                
+                # Create rejection feedback with correct field names
                 RejectionFeedback.objects.create(
                     user=application.user,
-                    interview_session_id=session.id,
-                    opportunity_title=session.Application.interview.post,
-                    company_name=session.Application.interview.org.orgname,
-                    rejection_stage='interview',
-                    feedback_given=feedback_text or 'No specific feedback provided',
-                    ai_analysis={'summary': feedback_text} if feedback_text else {},
-                    is_analyzed=False
+                    interview_session=session,
+                    feedback_type='interview_rejection',
+                    raw_feedback=feedback_text or 'No specific feedback provided',
+                    ai_analyzed_feedback=ai_feedback or {'summary': feedback_text or 'Review your interview performance.'},
+                    severity='medium',
+                    is_processed=True if ai_feedback else False
                 )
                 
-                # Create insight for the user
+                # Create actionable insight for the user
+                action_items = ai_feedback.get('action_items', [
+                    'Review the interview feedback',
+                    'Identify areas for improvement',
+                    'Practice related skills'
+                ]) if ai_feedback else ['Review feedback', 'Practice skills', 'Apply to more positions']
+                
+                summary = ai_feedback.get('summary', feedback_text or 'Review your interview performance for improvement areas.') if ai_feedback else feedback_text or 'Review your interview performance.'
+                
                 FeedbackInsight.objects.create(
                     user=application.user,
-                    insight_type='rejection_pattern',
+                    insight_type='interview',
                     title=f'Feedback from {session.Application.interview.org.orgname}',
-                    description=feedback_text or 'Review your interview performance for improvement areas.',
-                    action_items=[
-                        'Review the interview feedback',
-                        'Identify areas for improvement',
-                        'Practice related skills'
-                    ],
+                    pattern_description=summary,
+                    recommended_actions=action_items,
                     priority='high' if session.Devscore and session.Devscore < 5 else 'medium'
                 )
                 
@@ -711,5 +811,6 @@ class CandidateDecisionView(APIView):
             "candidate": application.user.username,
             "decision": decision,
             "final_decision": application.final_decision,
-            "feedback_saved": bool(feedback_text) if decision == 'reject' else False
+            "feedback_saved": bool(feedback_text) if decision == 'reject' else False,
+            "ai_feedback_generated": bool(ai_feedback)
         }, status=status.HTTP_200_OK)

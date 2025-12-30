@@ -3,13 +3,26 @@ from .models import RejectionFeedback, FeedbackInsight, SkillProgress, Readiness
 
 
 class RejectionFeedbackSerializer(serializers.ModelSerializer):
+    opportunity_title = serializers.SerializerMethodField()
+    company_name = serializers.SerializerMethodField()
+    
     class Meta:
         model = RejectionFeedback
         fields = [
             'id', 'feedback_type', 'raw_feedback', 'ai_analyzed_feedback',
-            'severity', 'is_processed', 'created_at'
+            'severity', 'is_processed', 'created_at', 'opportunity_title', 'company_name'
         ]
         read_only_fields = ['id', 'ai_analyzed_feedback', 'created_at']
+    
+    def get_opportunity_title(self, obj):
+        if obj.interview_session and obj.interview_session.Application:
+            return obj.interview_session.Application.interview.post
+        return 'Unknown Position'
+    
+    def get_company_name(self, obj):
+        if obj.interview_session and obj.interview_session.Application:
+            return obj.interview_session.Application.interview.org.orgname
+        return 'Unknown Company'
 
 
 class RejectionFeedbackCreateSerializer(serializers.Serializer):
