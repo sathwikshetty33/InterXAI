@@ -12,22 +12,22 @@ InterXAI follows a **microservice architecture** designed for horizontal scalabi
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────┐
-│                        InterXAI Microservice Architecture                │
+│                        InterXAI Microservice Architecture               │
 ├─────────────────────────────────────────────────────────────────────────┤
-│                                                                          │
-│   ┌──────────────┐     ┌──────────────┐     ┌──────────────────────┐   │
-│   │   Frontend   │────▶│   Backend    │────▶│   AI Agent Service   │   │
-│   │   (React)    │     │   (Django)   │     │     (Groq LLM)       │   │
-│   └──────────────┘     └──────────────┘     └──────────────────────┘   │
-│          │                    │                                          │
-│          │                    ▼                                          │
-│          │             ┌──────────────┐     ┌──────────────────────┐   │
-│          │             │  PostgreSQL  │     │        Redis         │   │
-│          │             │  (Database)  │     │  (Cache/Sessions)    │   │
-│          │             └──────────────┘     └──────────────────────┘   │
-│          │                                                               │
+│                                                                         │
+│   ┌──────────────┐     ┌──────────────┐     ┌──────────────────────┐    │
+│   │   Frontend   │────▶│   Backend    │────▶│   AI Agent Service  │    │
+│   │   (React)    │     │   (Django)   │     │     (Groq LLM)       │    │
+│   └──────────────┘     └──────────────┘     └──────────────────────┘    │
+│          │                    │                                         │
+│          │                    ▼                                         │
+│          │             ┌──────────────┐     ┌──────────────────────┐    │
+│          │             │  PostgreSQL  │     │        Redis         │    │
+│          │             │  (Database)  │     │  (Cache/Sessions)    │    │
+│          │             └──────────────┘     └──────────────────────┘    │
+│          │                                                              │
 │          └──────────────────────────────────────────────────────────────│
-│                              Nginx Reverse Proxy                         │
+│                              Nginx Reverse Proxy                        │
 └─────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -129,13 +129,7 @@ InterXAI is designed for enterprise-scale deployments:
 - **Connection Pooling** - Efficient database connection management
 - **Async Processing** - Long-running AI tasks can be queued
 
-### Recommended Production Setup
 
-| Scale  | Frontend     | Backend      | Database               | Redis         |
-| ------ | ------------ | ------------ | ---------------------- | ------------- |
-| Small  | 1 instance   | 2 instances  | 1 primary              | 1 instance    |
-| Medium | 2 instances  | 4 instances  | 1 primary + 1 replica  | 2 instances   |
-| Large  | 3+ instances | 8+ instances | 1 primary + 2 replicas | Redis Cluster |
 
 ---
 
@@ -311,14 +305,6 @@ Production-ready Django container:
 5. Set up database backups
 6. Configure monitoring and logging
 
-### Cloud Deployment Options
-
-| Platform         | Frontend        | Backend        | Database           |
-| ---------------- | --------------- | -------------- | ------------------ |
-| AWS              | S3 + CloudFront | ECS/EKS        | RDS PostgreSQL     |
-| GCP              | Cloud Storage   | Cloud Run      | Cloud SQL          |
-| Azure            | Blob Storage    | Container Apps | Azure PostgreSQL   |
-| Vercel + Railway | Vercel          | Railway        | Railway PostgreSQL |
 
 ---
 
