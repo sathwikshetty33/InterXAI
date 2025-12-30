@@ -22,4 +22,7 @@ urlpatterns = [
     
     # Matched Interviews (based on skills)
     path('matched-interviews/', views.MatchedInterviewsView.as_view(), name='matched_interviews'),
+    
+    # External Job Search (Tavily)
+    path('external-jobs/', views.ExternalJobSearchView.as_view(), name='external_jobs'),
 ]

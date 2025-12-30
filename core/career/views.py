@@ -412,3 +412,52 @@ class MatchedInterviewsView(APIView):
             reasons.append("General opportunity")
         
         return reasons
+
+
+class ExternalJobSearchView(APIView):
+    """Search for external job opportunities using Tavily API"""
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [IsAuthenticated]
+    
+    def get(self, request):
+        """
+        Search for jobs matching user's skills.
+        Query params:
+        - target_role: Optional specific role to search for
+        - max_results: Number of results (default 10)
+        """
+        from .external_jobs import TavilyJobSearcher
+        
+        # Get user's skill profile
+        try:
+            profile = UserSkillProfile.objects.get(user=request.user)
+            skills = profile.skills or []
+            target_roles = profile.target_roles or []
+        except UserSkillProfile.DoesNotExist:
+            skills = []
+            target_roles = []
+        
+        # Get query parameters
+        target_role = request.query_params.get('target_role')
+        if not target_role and target_roles:
+            target_role = target_roles[0] if isinstance(target_roles, list) else target_roles
+        
+        max_results = int(request.query_params.get('max_results', 10))
+        
+        # Flatten skills if they're objects
+        skill_list = []
+        for skill in skills:
+            if isinstance(skill, dict):
+                skill_list.append(skill.get('name', skill.get('skill', '')))
+            else:
+                skill_list.append(str(skill))
+        
+        # Search for jobs
+        searcher = TavilyJobSearcher()
+        result = searcher.search_jobs(
+            skills=skill_list,
+            target_role=target_role,
+            max_results=max_results
+        )
+        
+        return Response(result, status=status.HTTP_200_OK)
