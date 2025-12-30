@@ -3,8 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { getAuthToken } from "../utils/handleToken";
 import Header from '../components/ui/header';
 import Footer from '../components/ui/footer';
-import { 
-  Loader2, AlertCircle, CheckCircle, TrendingUp, 
+import {
+  Loader2, AlertCircle, CheckCircle, TrendingUp,
   BarChart3, Target, ChevronRight, RefreshCw,
   Lightbulb, ArrowUpRight
 } from "lucide-react";
@@ -19,7 +19,7 @@ export default function FeedbackInsights() {
   const [actionLogs, setActionLogs] = useState([]);
   const [showAddressed, setShowAddressed] = useState(false);
   const [updatingRoadmap, setUpdatingRoadmap] = useState(false);
-  
+
   const API_URL = import.meta.env.VITE_API_URL;
 
   useEffect(() => {
@@ -36,10 +36,10 @@ export default function FeedbackInsights() {
     setLoading(true);
     try {
       const [insightsRes, progressRes, rejectionsRes, logsRes] = await Promise.all([
-        fetch(`${API_URL}/feedback/insights/`, { headers: { Authorization: `Token ${token}` }}),
-        fetch(`${API_URL}/feedback/skill-progress/`, { headers: { Authorization: `Token ${token}` }}),
-        fetch(`${API_URL}/feedback/rejections/`, { headers: { Authorization: `Token ${token}` }}),
-        fetch(`${API_URL}/feedback/action-logs/`, { headers: { Authorization: `Token ${token}` }}),
+        fetch(`${API_URL}/feedback/insights/`, { headers: { Authorization: `Token ${token}` } }),
+        fetch(`${API_URL}/feedback/skill-progress/`, { headers: { Authorization: `Token ${token}` } }),
+        fetch(`${API_URL}/feedback/rejections/`, { headers: { Authorization: `Token ${token}` } }),
+        fetch(`${API_URL}/feedback/action-logs/`, { headers: { Authorization: `Token ${token}` } }),
       ]);
 
       if (insightsRes.ok) setInsights(await insightsRes.json());
@@ -98,16 +98,16 @@ export default function FeedbackInsights() {
   };
 
   const getPriorityColor = (priority) => {
-    switch(priority) {
-      case 'critical': return 'border-red-500 bg-red-500/10';
-      case 'high': return 'border-amber-500 bg-amber-500/10';
-      case 'medium': return 'border-blue-500 bg-blue-500/10';
-      default: return 'border-gray-500 bg-gray-500/10';
+    switch (priority) {
+      case 'critical': return 'border-red-500 bg-red-50';
+      case 'high': return 'border-yellow-500 bg-yellow-50';
+      case 'medium': return 'border-blue-500 bg-blue-50';
+      default: return 'border-gray-300 bg-gray-50';
     }
   };
 
   const getInsightTypeIcon = (type) => {
-    switch(type) {
+    switch (type) {
       case 'skill_gap': return <Target className="w-5 h-5" />;
       case 'technical': return <BarChart3 className="w-5 h-5" />;
       case 'communication': return <Lightbulb className="w-5 h-5" />;
@@ -119,28 +119,28 @@ export default function FeedbackInsights() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
-        <Loader2 className="w-8 h-8 animate-spin text-purple-400" />
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-blue-50">
+        <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 text-white">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-50 text-gray-900">
       <Header />
-      
+
       <main className="max-w-7xl mx-auto px-4 py-8">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8">
           <div>
-            <h1 className="text-3xl font-bold bg-gradient-to-r from-amber-400 to-orange-400 bg-clip-text text-transparent">
+            <h1 className="text-3xl font-bold bg-gradient-to-r from-yellow-600 to-orange-600 bg-clip-text text-transparent">
               Feedback & Insights
             </h1>
-            <p className="text-gray-400 mt-1">Transform rejections into growth opportunities</p>
+            <p className="text-gray-500 mt-1">Transform rejections into growth opportunities</p>
           </div>
           <button
             onClick={handleUpdateRoadmap}
             disabled={updatingRoadmap}
-            className="px-4 py-2 bg-purple-600 hover:bg-purple-700 rounded-lg flex items-center gap-2 transition-colors disabled:opacity-50 mt-4 md:mt-0"
+            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg flex items-center gap-2 transition-colors disabled:opacity-50 mt-4 md:mt-0"
           >
             {updatingRoadmap ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
             Update Roadmaps from Feedback
@@ -151,13 +151,13 @@ export default function FeedbackInsights() {
           {/* Main Column - Insights */}
           <div className="lg:col-span-2 space-y-6">
             {/* Insights Section */}
-            <div className="bg-white/5 backdrop-blur-xl rounded-xl p-6 border border-white/10">
+            <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
               <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl font-semibold flex items-center gap-2">
-                  <AlertCircle className="w-5 h-5 text-amber-400" />
+                <h2 className="text-xl font-semibold flex items-center gap-2 text-gray-900">
+                  <AlertCircle className="w-5 h-5 text-yellow-600" />
                   Action Items ({filteredInsights.length})
                 </h2>
-                <label className="flex items-center gap-2 text-sm text-gray-400">
+                <label className="flex items-center gap-2 text-sm text-gray-500">
                   <input
                     type="checkbox"
                     checked={showAddressed}
@@ -169,24 +169,23 @@ export default function FeedbackInsights() {
               </div>
 
               {filteredInsights.length === 0 ? (
-                <div className="text-center py-8 text-gray-400">
-                  <CheckCircle className="w-16 h-16 mx-auto mb-4 opacity-50 text-green-400" />
+                <div className="text-center py-8 text-gray-500">
+                  <CheckCircle className="w-16 h-16 mx-auto mb-4 opacity-50 text-green-600" />
                   <p>No pending action items!</p>
                 </div>
               ) : (
                 <div className="space-y-4">
                   {filteredInsights.map((insight) => (
-                    <div 
-                      key={insight.id} 
+                    <div
+                      key={insight.id}
                       className={`rounded-lg p-4 border-l-4 ${getPriorityColor(insight.priority)} ${insight.addressed ? 'opacity-50' : ''}`}
                     >
                       <div className="flex items-start justify-between mb-2">
                         <div className="flex items-start gap-3">
-                          <div className={`p-2 rounded-lg ${
-                            insight.priority === 'critical' ? 'bg-red-500/20 text-red-400' :
+                          <div className={`p-2 rounded-lg ${insight.priority === 'critical' ? 'bg-red-500/20 text-red-400' :
                             insight.priority === 'high' ? 'bg-amber-500/20 text-amber-400' :
-                            'bg-blue-500/20 text-blue-400'
-                          }`}>
+                              'bg-blue-500/20 text-blue-400'
+                            }`}>
                             {getInsightTypeIcon(insight.insight_type)}
                           </div>
                           <div>
@@ -195,11 +194,11 @@ export default function FeedbackInsights() {
                           </div>
                         </div>
                         <div className="flex items-center gap-2">
-                          <span className="px-2 py-1 text-xs rounded-full bg-white/10 text-gray-400">
+                          <span className="px-2 py-1 text-xs rounded-full bg-gray-100 text-gray-600">
                             {insight.occurrences}x
                           </span>
                           {insight.addressed && (
-                            <CheckCircle className="w-5 h-5 text-green-400" />
+                            <CheckCircle className="w-5 h-5 text-green-600" />
                           )}
                         </div>
                       </div>
@@ -207,7 +206,7 @@ export default function FeedbackInsights() {
                       {insight.related_skills?.length > 0 && (
                         <div className="flex flex-wrap gap-1 mb-3 ml-11">
                           {insight.related_skills.map((skill, i) => (
-                            <span key={i} className="px-2 py-0.5 text-xs rounded bg-purple-500/20 text-purple-400">
+                            <span key={i} className="px-2 py-0.5 text-xs rounded bg-blue-100 text-blue-700">
                               {skill}
                             </span>
                           ))}
@@ -303,7 +302,7 @@ export default function FeedbackInsights() {
                         </div>
                       </div>
                       <div className="h-2 bg-white/10 rounded-full overflow-hidden">
-                        <div 
+                        <div
                           className="h-full bg-gradient-to-r from-green-500 to-emerald-400 rounded-full transition-all"
                           style={{ width: `${skill.current_score}%` }}
                         />
@@ -342,7 +341,7 @@ export default function FeedbackInsights() {
           </div>
         </div>
       </main>
-      
+
       <Footer />
     </div>
   );

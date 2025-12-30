@@ -3,9 +3,9 @@ import { useNavigate } from "react-router-dom";
 import { getAuthToken } from "../utils/handleToken";
 import Header from '../components/ui/header';
 import Footer from '../components/ui/footer';
-import { 
-  Loader2, Briefcase, MapPin, Timer, DollarSign, 
-  Bookmark, Send, Filter, Search, Building, 
+import {
+  Loader2, Briefcase, MapPin, Timer, DollarSign,
+  Bookmark, Send, Filter, Search, Building,
   ChevronDown, ExternalLink, CheckCircle, X, Star
 } from "lucide-react";
 import { toast } from 'react-toastify';
@@ -25,7 +25,7 @@ export default function Opportunities() {
   });
   const [selectedOpp, setSelectedOpp] = useState(null);
   const [applying, setApplying] = useState(false);
-  
+
   const API_URL = import.meta.env.VITE_API_URL;
 
   useEffect(() => {
@@ -123,7 +123,7 @@ export default function Opportunities() {
   };
 
   const getTypeColor = (type) => {
-    switch(type) {
+    switch (type) {
       case 'job': return 'bg-blue-500/20 text-blue-400';
       case 'internship': return 'bg-green-500/20 text-green-400';
       case 'hackathon': return 'bg-purple-500/20 text-purple-400';
@@ -133,7 +133,7 @@ export default function Opportunities() {
   };
 
   const getStatusColor = (status) => {
-    switch(status) {
+    switch (status) {
       case 'submitted': return 'bg-blue-500/20 text-blue-400';
       case 'shortlisted': return 'bg-green-500/20 text-green-400';
       case 'interview_scheduled': return 'bg-purple-500/20 text-purple-400';
@@ -150,7 +150,7 @@ export default function Opportunities() {
     if (filters.search) {
       const search = filters.search.toLowerCase();
       if (!m.opportunity?.title.toLowerCase().includes(search) &&
-          !m.opportunity?.company.toLowerCase().includes(search)) {
+        !m.opportunity?.company.toLowerCase().includes(search)) {
         return false;
       }
     }
@@ -159,28 +159,28 @@ export default function Opportunities() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
-        <Loader2 className="w-8 h-8 animate-spin text-purple-400" />
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-blue-50">
+        <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 text-white">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-50 text-gray-900">
       <Header />
-      
+
       <main className="max-w-7xl mx-auto px-4 py-8">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8">
           <div>
-            <h1 className="text-3xl font-bold bg-gradient-to-r from-green-400 to-blue-400 bg-clip-text text-transparent">
+            <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text text-transparent">
               Opportunities
             </h1>
-            <p className="text-gray-400 mt-1">AI-matched jobs, internships, and hackathons</p>
+            <p className="text-gray-500 mt-1">AI-matched jobs, internships, and hackathons</p>
           </div>
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-2 mb-6 border-b border-white/10 pb-2">
+        <div className="flex gap-2 mb-6 border-b border-gray-200 pb-2">
           {[
             { id: 'matches', label: 'Matched', count: matches.length },
             { id: 'applications', label: 'Applications', count: applications.length },
@@ -189,14 +189,13 @@ export default function Opportunities() {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`px-4 py-2 rounded-lg transition-colors flex items-center gap-2 ${
-                activeTab === tab.id 
-                  ? 'bg-purple-600 text-white' 
-                  : 'bg-white/5 text-gray-400 hover:bg-white/10'
-              }`}
+              className={`px-4 py-2 rounded-lg transition-colors flex items-center gap-2 ${activeTab === tab.id
+                ? 'bg-blue-600 text-white'
+                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
             >
               {tab.label}
-              <span className="px-2 py-0.5 text-xs rounded-full bg-white/10">
+              <span className="px-2 py-0.5 text-xs rounded-full bg-white/20">
                 {tab.count}
               </span>
             </button>
@@ -212,14 +211,14 @@ export default function Opportunities() {
               placeholder="Search by title or company..."
               value={filters.search}
               onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
-              className="w-full pl-10 pr-4 py-2 bg-white/10 border border-white/20 rounded-lg focus:outline-none focus:border-purple-500 text-white placeholder-gray-400"
+              className="w-full pl-10 pr-4 py-2 bg-white border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-gray-900 placeholder-gray-400"
             />
           </div>
-          
+
           <select
             value={filters.type}
             onChange={(e) => setFilters(prev => ({ ...prev, type: e.target.value }))}
-            className="px-4 py-2 bg-white/10 border border-white/20 rounded-lg focus:outline-none focus:border-purple-500 text-white"
+            className="px-4 py-2 bg-white border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500 text-gray-900"
           >
             <option value="">All Types</option>
             <option value="job">Jobs</option>
@@ -230,11 +229,10 @@ export default function Opportunities() {
 
           <button
             onClick={() => setFilters(prev => ({ ...prev, remote: !prev.remote }))}
-            className={`px-4 py-2 rounded-lg flex items-center gap-2 border transition-colors ${
-              filters.remote 
-                ? 'bg-green-500/20 border-green-500 text-green-400' 
-                : 'bg-white/10 border-white/20 text-gray-400'
-            }`}
+            className={`px-4 py-2 rounded-lg flex items-center gap-2 border transition-colors ${filters.remote
+              ? 'bg-green-100 border-green-500 text-green-700'
+              : 'bg-white border-gray-300 text-gray-600'
+              }`}
           >
             <MapPin className="w-4 h-4" />
             Remote Only
@@ -245,74 +243,74 @@ export default function Opportunities() {
         {activeTab === 'matches' && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {filteredMatches.length === 0 ? (
-              <div className="col-span-full text-center py-12 text-gray-400">
+              <div className="col-span-full text-center py-12 text-gray-500">
                 <Briefcase className="w-16 h-16 mx-auto mb-4 opacity-50" />
                 <p>No matching opportunities found</p>
               </div>
             ) : (
               filteredMatches.map((match) => (
-                <div 
-                  key={match.id} 
-                  className="bg-white/5 backdrop-blur-xl rounded-xl p-5 border border-white/10 hover:border-purple-500/50 transition-all cursor-pointer"
+                <div
+                  key={match.id}
+                  className="bg-white rounded-xl p-5 border border-gray-200 shadow-sm hover:border-blue-300 hover:shadow-md transition-all cursor-pointer"
                   onClick={() => setSelectedOpp(match)}
                 >
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-lg bg-white/10 flex items-center justify-center">
-                        <Building className="w-5 h-5 text-gray-400" />
+                      <div className="w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center">
+                        <Building className="w-5 h-5 text-gray-500" />
                       </div>
                       <div>
-                        <h3 className="font-medium text-white">{match.opportunity?.title}</h3>
-                        <p className="text-sm text-gray-400">{match.opportunity?.company}</p>
+                        <h3 className="font-medium text-gray-900">{match.opportunity?.title}</h3>
+                        <p className="text-sm text-gray-500">{match.opportunity?.company}</p>
                       </div>
                     </div>
                     <div className="flex items-center gap-1">
-                      <Star className="w-4 h-4 text-amber-400 fill-amber-400" />
-                      <span className="text-amber-400 font-medium">{Math.round(match.match_score)}%</span>
+                      <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" />
+                      <span className="text-yellow-600 font-medium">{Math.round(match.match_score)}%</span>
                     </div>
                   </div>
-                  
+
                   <div className="flex flex-wrap gap-2 mb-3">
                     <span className={`px-2 py-1 text-xs rounded-full ${getTypeColor(match.opportunity?.type)}`}>
                       {match.opportunity?.type}
                     </span>
                     {match.opportunity?.remote && (
-                      <span className="px-2 py-1 text-xs rounded-full bg-green-500/20 text-green-400">
+                      <span className="px-2 py-1 text-xs rounded-full bg-green-100 text-green-700">
                         Remote
                       </span>
                     )}
-                    <span className="px-2 py-1 text-xs rounded-full bg-white/10 text-gray-400 flex items-center gap-1">
+                    <span className="px-2 py-1 text-xs rounded-full bg-gray-100 text-gray-600 flex items-center gap-1">
                       <MapPin className="w-3 h-3" />
                       {match.opportunity?.location}
                     </span>
                   </div>
-                  
+
                   {match.skill_gaps?.length > 0 && (
                     <div className="mb-3">
                       <p className="text-xs text-gray-500 mb-1">Skills to develop:</p>
                       <div className="flex flex-wrap gap-1">
                         {match.skill_gaps.slice(0, 3).map((skill, i) => (
-                          <span key={i} className="px-2 py-0.5 text-xs rounded bg-red-500/10 text-red-400">
+                          <span key={i} className="px-2 py-0.5 text-xs rounded bg-red-100 text-red-700">
                             {skill}
                           </span>
                         ))}
                       </div>
                     </div>
                   )}
-                  
+
                   <div className="flex gap-2 mt-4">
                     <button
                       onClick={(e) => { e.stopPropagation(); handleApply(match.opportunity?.id); }}
-                      className="flex-1 py-2 bg-purple-600 hover:bg-purple-700 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2"
+                      className="flex-1 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2"
                     >
                       <Send className="w-4 h-4" />
                       Apply
                     </button>
                     <button
                       onClick={(e) => { e.stopPropagation(); handleSave(match.opportunity?.id); }}
-                      className="p-2 bg-white/10 hover:bg-white/20 rounded-lg transition-colors"
+                      className="p-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
                     >
-                      <Bookmark className="w-4 h-4" />
+                      <Bookmark className="w-4 h-4 text-gray-600" />
                     </button>
                   </div>
                 </div>
@@ -324,21 +322,21 @@ export default function Opportunities() {
         {activeTab === 'applications' && (
           <div className="space-y-4">
             {applications.length === 0 ? (
-              <div className="text-center py-12 text-gray-400">
+              <div className="text-center py-12 text-gray-500">
                 <Send className="w-16 h-16 mx-auto mb-4 opacity-50" />
                 <p>No applications yet</p>
               </div>
             ) : (
               applications.map((app) => (
-                <div key={app.id} className="bg-white/5 backdrop-blur-xl rounded-xl p-5 border border-white/10">
+                <div key={app.id} className="bg-white rounded-xl p-5 border border-gray-200 shadow-sm">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 rounded-lg bg-white/10 flex items-center justify-center">
-                        <Building className="w-6 h-6 text-gray-400" />
+                      <div className="w-12 h-12 rounded-lg bg-gray-100 flex items-center justify-center">
+                        <Building className="w-6 h-6 text-gray-500" />
                       </div>
                       <div>
-                        <h3 className="font-medium text-white">{app.opportunity?.title}</h3>
-                        <p className="text-sm text-gray-400">{app.opportunity?.company}</p>
+                        <h3 className="font-medium text-gray-900">{app.opportunity?.title}</h3>
+                        <p className="text-sm text-gray-500">{app.opportunity?.company}</p>
                       </div>
                     </div>
                     <div className="flex items-center gap-3">
@@ -369,7 +367,7 @@ export default function Opportunities() {
                     <p className="text-sm text-gray-400">{opp.company}</p>
                   </div>
                 </div>
-                
+
                 <div className="flex flex-wrap gap-2 mb-3">
                   <span className={`px-2 py-1 text-xs rounded-full ${getTypeColor(opp.type)}`}>
                     {opp.type}
@@ -384,14 +382,14 @@ export default function Opportunities() {
                     {opp.location}
                   </span>
                 </div>
-                
+
                 {opp.salary_min && opp.salary_max && (
                   <p className="text-sm text-gray-400 flex items-center gap-1 mb-3">
                     <DollarSign className="w-4 h-4" />
                     {opp.salary_currency} {opp.salary_min.toLocaleString()} - {opp.salary_max.toLocaleString()}
                   </p>
                 )}
-                
+
                 <button
                   onClick={() => handleApply(opp.id)}
                   className="w-full py-2 bg-purple-600 hover:bg-purple-700 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2"
@@ -422,12 +420,12 @@ export default function Opportunities() {
                   <X className="w-5 h-5" />
                 </button>
               </div>
-              
+
               <div className="flex items-center gap-3 mb-4">
                 <span className="text-2xl font-bold text-amber-400">{Math.round(selectedOpp.match_score)}%</span>
                 <span className="text-gray-400">Match Score</span>
               </div>
-              
+
               <div className="space-y-4 mb-6">
                 <div>
                   <h4 className="text-sm font-medium text-gray-400 mb-2">Why this matches you:</h4>
@@ -440,7 +438,7 @@ export default function Opportunities() {
                     ))}
                   </ul>
                 </div>
-                
+
                 {selectedOpp.skill_gaps?.length > 0 && (
                   <div>
                     <h4 className="text-sm font-medium text-gray-400 mb-2">Skills to develop:</h4>
@@ -453,7 +451,7 @@ export default function Opportunities() {
                     </div>
                   </div>
                 )}
-                
+
                 {selectedOpp.ai_recommendation && (
                   <div className="bg-purple-500/10 rounded-lg p-4 border border-purple-500/20">
                     <h4 className="text-sm font-medium text-purple-400 mb-1">AI Recommendation:</h4>
@@ -461,7 +459,7 @@ export default function Opportunities() {
                   </div>
                 )}
               </div>
-              
+
               <div className="flex gap-3">
                 <button
                   onClick={() => handleApply(selectedOpp.opportunity?.id)}
@@ -485,7 +483,7 @@ export default function Opportunities() {
           </div>
         </div>
       )}
-      
+
       <Footer />
     </div>
   );
