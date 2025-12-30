@@ -176,13 +176,24 @@ class LearningRoadmapView(APIView):
                 'target_readiness': serializer.validated_data.get('target_readiness_score', 80)
             })
             
+            # Enrich milestones with real learning resources from Tavily
+            milestones = result.get('milestones', [])
+            try:
+                from .resource_searcher import TavilyResourceSearcher
+                resource_searcher = TavilyResourceSearcher()
+                milestones = resource_searcher.enrich_milestones_with_resources(milestones)
+                print(f"✅ Enriched {len(milestones)} milestones with Tavily resources")
+            except Exception as e:
+                print(f"⚠️ Resource enrichment failed: {e}")
+                # Continue with AI-generated resources
+            
             # Create roadmap
             roadmap = LearningRoadmap.objects.create(
                 user=request.user,
                 target_role=serializer.validated_data['target_role'],
                 current_readiness_score=result.get('current_readiness_score', 0),
                 target_readiness_score=serializer.validated_data.get('target_readiness_score', 80),
-                milestones=result.get('milestones', []),
+                milestones=milestones,
                 skill_gaps=result.get('skill_gaps', []),
                 ai_reasoning=result.get('reasoning', ''),
                 estimated_duration_weeks=result.get('estimated_duration_weeks', 12)
