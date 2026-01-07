@@ -4,7 +4,7 @@ import Footer from '../components/ui/footer';
 import { Calendar, Clock, Users, Plus, Trash2, ChevronRight, ChevronLeft, Save, Eye, FileText, Code, Brain, Settings } from 'lucide-react';
 import { getAuthToken } from '../utils/handleToken';
 import { useParams, useNavigate } from 'react-router-dom';
-import { toast} from 'react-toastify';
+import { toast } from 'react-toastify';
 const GROQ_API_KEY = import.meta.env.VITE_GROQ_API_KEY;
 const baseUrl = import.meta.env.VITE_API_URL;
 // Form Container Component
@@ -19,11 +19,11 @@ const FormContainer = ({ children, isVisible = true }) => (
 // Message Notification Component
 const MessageNotification = ({ message, messageType, onClose }) => {
   if (!message) return null;
-  
-  const bgColor = messageType === 'error' ? 'bg-red-50 border-red-200 text-red-800' : 
-                  messageType === 'success' ? 'bg-green-50 border-green-200 text-green-800' : 
-                  'bg-blue-50 border-blue-200 text-blue-800';
-  
+
+  const bgColor = messageType === 'error' ? 'bg-red-50 border-red-200 text-red-800' :
+    messageType === 'success' ? 'bg-green-50 border-green-200 text-green-800' :
+      'bg-blue-50 border-blue-200 text-blue-800';
+
   return (
     <div className={`fixed top-4 right-4 p-4 rounded-2xl border shadow-lg z-50 ${bgColor}`}>
       <div className="flex items-center justify-between">
@@ -52,7 +52,7 @@ const InterviewSetup = ({ onNext, formData, setFormData }) => {
 
   const validateForm = () => {
     const newErrors = {};
-    
+
     if (!formData.desc.trim()) newErrors.desc = 'Description is required';
     if (!formData.post.trim()) newErrors.post = 'Position is required';
     if (!formData.submissionDeadline) newErrors.submissionDeadline = 'Submission deadline is required';
@@ -60,7 +60,7 @@ const InterviewSetup = ({ onNext, formData, setFormData }) => {
     if (!formData.endTime) newErrors.endTime = 'End time is required';
     if (!formData.duration || formData.duration <= 0) newErrors.duration = 'Valid duration is required';
     if (formData.DSA + formData.Dev !== 100) newErrors.allocation = 'DSA and Dev percentages must total 100%';
-    
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -79,7 +79,7 @@ const InterviewSetup = ({ onNext, formData, setFormData }) => {
         </div>
         <h2 className="text-3xl font-semibold text-gray-900">Interview Setup</h2>
       </div>
-      
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* Basic Information */}
         <div className="space-y-6">
@@ -93,7 +93,7 @@ const InterviewSetup = ({ onNext, formData, setFormData }) => {
             />
             {errors.desc && <p className="text-red-600 text-sm mt-2 font-medium">{errors.desc}</p>}
           </div>
-          
+
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-3">Position</label>
             <input
@@ -105,7 +105,7 @@ const InterviewSetup = ({ onNext, formData, setFormData }) => {
             />
             {errors.post && <p className="text-red-600 text-sm mt-2 font-medium">{errors.post}</p>}
           </div>
-          
+
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-3">Experience Required (years)</label>
             <input
@@ -119,7 +119,7 @@ const InterviewSetup = ({ onNext, formData, setFormData }) => {
             {errors.experience && <p className="text-red-600 text-sm mt-2 font-medium">{errors.experience}</p>}
           </div>
         </div>
-        
+
         {/* Timing Information */}
         <div className="space-y-6">
           <div>
@@ -132,7 +132,7 @@ const InterviewSetup = ({ onNext, formData, setFormData }) => {
             />
             {errors.submissionDeadline && <p className="text-red-600 text-sm mt-2 font-medium">{errors.submissionDeadline}</p>}
           </div>
-          
+
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-3">Interview Start Time</label>
             <input
@@ -143,7 +143,7 @@ const InterviewSetup = ({ onNext, formData, setFormData }) => {
             />
             {errors.startTime && <p className="text-red-600 text-sm mt-2 font-medium">{errors.startTime}</p>}
           </div>
-          
+
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-3">Interview End Time</label>
             <input
@@ -154,7 +154,7 @@ const InterviewSetup = ({ onNext, formData, setFormData }) => {
             />
             {errors.endTime && <p className="text-red-600 text-sm mt-2 font-medium">{errors.endTime}</p>}
           </div>
-          
+
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-3">Duration (minutes)</label>
             <input
@@ -169,7 +169,7 @@ const InterviewSetup = ({ onNext, formData, setFormData }) => {
           </div>
         </div>
       </div>
-      
+
       {/* Question Allocation */}
       <div className="mt-8 p-6 bg-purple-50 rounded-2xl border border-purple-100">
         <h3 className="text-xl font-semibold mb-6 text-gray-900">Question Allocation</h3>
@@ -185,7 +185,7 @@ const InterviewSetup = ({ onNext, formData, setFormData }) => {
               className="w-full px-4 py-3 bg-white border border-purple-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent text-gray-900"
             />
           </div>
-          
+
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-3">Development Questions (%)</label>
             <input
@@ -197,7 +197,7 @@ const InterviewSetup = ({ onNext, formData, setFormData }) => {
               className="w-full px-4 py-3 bg-white border border-purple-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent text-gray-900"
             />
           </div>
-          
+
           <div className="flex items-center justify-center">
             <label className="flex items-center space-x-3 cursor-pointer">
               <input
@@ -209,15 +209,27 @@ const InterviewSetup = ({ onNext, formData, setFormData }) => {
               <span className="text-sm font-medium text-gray-700">Ask questions on resume</span>
             </label>
           </div>
+
+          <div className="flex items-center justify-center">
+            <label className="flex items-center space-x-3 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={formData.has_coding_round}
+                onChange={(e) => handleInputChange('has_coding_round', e.target.checked)}
+                className="w-5 h-5 text-purple-600 rounded-lg focus:ring-purple-500 border-gray-300"
+              />
+              <span className="text-sm font-medium text-gray-700">Include Coding Round</span>
+            </label>
+          </div>
         </div>
-        
+
         {errors.allocation && <p className="text-red-600 text-sm mt-3 font-medium">{errors.allocation}</p>}
-        
+
         <div className="mt-3 text-sm text-gray-600 font-medium">
           Total: {formData.DSA + formData.Dev}% (must equal 100%)
         </div>
       </div>
-      
+
       <div className="flex justify-end mt-8">
         <button
           onClick={handleNext}
@@ -253,7 +265,7 @@ const QuestionsConfig = ({ onNext, onBack, formData, setFormData }) => {
   const handleQuestionChange = (index, field, value) => {
     setFormData(prev => ({
       ...prev,
-      questions: prev.questions.map((q, i) => 
+      questions: prev.questions.map((q, i) =>
         i === index ? { ...q, [field]: value } : q
       )
     }));
@@ -276,8 +288,31 @@ const QuestionsConfig = ({ onNext, onBack, formData, setFormData }) => {
   const handleDSATopicChange = (index, field, value) => {
     setFormData(prev => ({
       ...prev,
-      dsa_topics: prev.dsa_topics.map((topic, i) => 
+      dsa_topics: prev.dsa_topics.map((topic, i) =>
         i === index ? { ...topic, [field]: value } : topic
+      )
+    }));
+  };
+
+  const handleAddCodingQuestion = () => {
+    setFormData(prev => ({
+      ...prev,
+      coding_questions: [...prev.coding_questions, { question: '' }]
+    }));
+  };
+
+  const handleRemoveCodingQuestion = (index) => {
+    setFormData(prev => ({
+      ...prev,
+      coding_questions: prev.coding_questions.filter((_, i) => i !== index)
+    }));
+  };
+
+  const handleCodingQuestionChange = (index, value) => {
+    setFormData(prev => ({
+      ...prev,
+      coding_questions: prev.coding_questions.map((q, i) =>
+        i === index ? { ...q, question: value } : q
       )
     }));
   };
@@ -292,20 +327,20 @@ const QuestionsConfig = ({ onNext, onBack, formData, setFormData }) => {
     try {
       const existingQuestions = formData.questions.map(q => q.question).join("\n");
       const prompt = `Generate 1 new technical interview question for a ${formData.post} position with ${formData.experience} years of experience. 
-Job description: ${formData.desc}. 
-
-Do NOT repeat these questions:
-${existingQuestions}
-
-Return ONLY a JSON array of objects with 'question' and 'answer' fields. No other text, no markdown formatting, just pure JSON.
-
-Example format:
-[
-  {
-    "question": "What is the difference between let and var in JavaScript?",
-    "answer": "let has block scope while var has function scope. let variables cannot be redeclared in the same scope."
-  }
-]`;
+  Job description: ${formData.desc}. 
+  
+  Do NOT repeat these questions:
+  ${existingQuestions}
+  
+  Return ONLY a JSON array of objects with 'question' and 'answer' fields. No other text, no markdown formatting, just pure JSON.
+  
+  Example format:
+  [
+    {
+      "question": "What is the difference between let and var in JavaScript?",
+      "answer": "let has block scope while var has function scope. let variables cannot be redeclared in the same scope."
+    }
+  ]`;
 
       const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
         method: 'POST',
@@ -329,15 +364,15 @@ Example format:
       }
 
       const data = await response.json();
-      
+
       if (!data.choices || !data.choices[0] || !data.choices[0].message) {
         throw new Error('Invalid response format from Groq API');
       }
-      
+
       const generatedText = data.choices[0].message.content;
-      
+
       let cleanedText = generatedText.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
-      
+
       let jsonMatch = cleanedText.match(/[\s\S]*]/);
       if (!jsonMatch) {
         const firstBracket = cleanedText.indexOf('[');
@@ -348,18 +383,18 @@ Example format:
       } else {
         cleanedText = jsonMatch[0];
       }
-      
+
       try {
         const questions = JSON.parse(cleanedText);
         if (Array.isArray(questions) && questions.length > 0) {
-          const validQuestions = questions.filter(q => 
-            q && typeof q === 'object' && 
-            typeof q.question === 'string' && 
+          const validQuestions = questions.filter(q =>
+            q && typeof q === 'object' &&
+            typeof q.question === 'string' &&
             typeof q.answer === 'string' &&
-            q.question.trim() !== '' && 
+            q.question.trim() !== '' &&
             q.answer.trim() !== ''
           );
-          
+
           if (validQuestions.length > 0) {
             setFormData(prev => ({
               ...prev,
@@ -384,6 +419,7 @@ Example format:
       setIsGenerating(false);
     }
   };
+
   return (
     <div className="bg-white rounded-3xl p-8 shadow-sm border border-gray-100">
       <div className="flex items-center justify-between mb-8">
@@ -406,22 +442,30 @@ Example format:
       <div className="flex space-x-2 mb-8 bg-gray-100 rounded-2xl p-2">
         <button
           onClick={() => setActiveTab('dev')}
-          className={`flex-1 py-3 px-6 rounded-xl font-semibold transition-all duration-300 flex items-center justify-center space-x-2 ${
-            activeTab === 'dev' ? 'bg-white text-purple-600 shadow-sm' : 'text-gray-600 hover:text-gray-800'
-          }`}
+          className={`flex-1 py-3 px-6 rounded-xl font-semibold transition-all duration-300 flex items-center justify-center space-x-2 ${activeTab === 'dev' ? 'bg-white text-purple-600 shadow-sm' : 'text-gray-600 hover:text-gray-800'
+            }`}
         >
           <Code className="w-5 h-5" />
           <span>Development Questions</span>
         </button>
         <button
           onClick={() => setActiveTab('dsa')}
-          className={`flex-1 py-3 px-6 rounded-xl font-semibold transition-all duration-300 flex items-center justify-center space-x-2 ${
-            activeTab === 'dsa' ? 'bg-white text-purple-600 shadow-sm' : 'text-gray-600 hover:text-gray-800'
-          }`}
+          className={`flex-1 py-3 px-6 rounded-xl font-semibold transition-all duration-300 flex items-center justify-center space-x-2 ${activeTab === 'dsa' ? 'bg-white text-purple-600 shadow-sm' : 'text-gray-600 hover:text-gray-800'
+            }`}
         >
           <Brain className="w-5 h-5" />
           <span>DSA Topics</span>
         </button>
+        {formData.has_coding_round && (
+          <button
+            onClick={() => setActiveTab('coding')}
+            className={`flex-1 py-3 px-6 rounded-xl font-semibold transition-all duration-300 flex items-center justify-center space-x-2 ${activeTab === 'coding' ? 'bg-white text-purple-600 shadow-sm' : 'text-gray-600 hover:text-gray-800'
+              }`}
+          >
+            <Code className="w-5 h-5" />
+            <span>Coding Questions</span>
+          </button>
+        )}
       </div>
 
       {/* Development Questions Tab */}
@@ -547,6 +591,46 @@ Example format:
         </div>
       )}
 
+      {/* Coding Questions Tab */}
+      {activeTab === 'coding' && formData.has_coding_round && (
+        <div className="space-y-6">
+          <div className="flex items-center justify-between">
+            <h3 className="text-xl font-semibold text-gray-900">Coding Questions</h3>
+            <button
+              onClick={handleAddCodingQuestion}
+              className="px-6 py-3 bg-purple-600 text-white rounded-2xl hover:bg-purple-700 transition-colors flex items-center space-x-2 font-semibold shadow-lg"
+            >
+              <Plus className="w-5 h-5" />
+              <span>Add Question</span>
+            </button>
+          </div>
+
+          <div className="max-h-96 overflow-y-auto space-y-4 pr-2">
+            {formData.coding_questions.map((question, index) => (
+              <div key={index} className="bg-gray-50 rounded-2xl p-6 border border-gray-200">
+                <div className="flex items-center justify-between mb-4">
+                  <span className="text-sm font-semibold text-purple-600 bg-purple-100 px-3 py-1 rounded-full">Coding Question {index + 1}</span>
+                  <button
+                    onClick={() => handleRemoveCodingQuestion(index)}
+                    className="text-red-500 hover:text-red-600 transition-colors p-1 hover:bg-red-50 rounded-lg"
+                  >
+                    <Trash2 className="w-5 h-5" />
+                  </button>
+                </div>
+                <div className="space-y-4">
+                  <textarea
+                    value={question.question}
+                    onChange={(e) => handleCodingQuestionChange(index, e.target.value)}
+                    placeholder="Enter the coding question or topic..."
+                    className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none h-24 text-gray-900 placeholder-gray-500"
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div className="flex justify-between mt-8">
         <button
           onClick={onBack}
@@ -568,7 +652,7 @@ Example format:
 };
 
 // Review and Submit Page
-const ReviewSubmit = ({ onBack, formData, onSubmit, isLoading, isEditMode })  => {
+const ReviewSubmit = ({ onBack, formData, onSubmit, isLoading, isEditMode }) => {
   const formatDateTime = (dateTime) => {
     return new Date(dateTime).toLocaleString();
   };
@@ -654,8 +738,12 @@ const ReviewSubmit = ({ onBack, formData, onSubmit, isLoading, isEditMode })  =>
               <span className="text-sm font-semibold text-gray-600">Resume Questions:</span>
               <p className="text-gray-900 font-medium mt-1">{formData.ask_questions_on_resume ? 'Yes' : 'No'}</p>
             </div>
+            <div>
+              <span className="text-sm font-semibold text-gray-600">Coding Round:</span>
+              <p className="text-gray-900 font-medium mt-1">{formData.has_coding_round ? 'Yes' : 'No'}</p>
+            </div>
           </div>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <span className="text-sm font-semibold text-gray-600">Development Questions:</span>
@@ -665,6 +753,12 @@ const ReviewSubmit = ({ onBack, formData, onSubmit, isLoading, isEditMode })  =>
               <span className="text-sm font-semibold text-gray-600">DSA Topics:</span>
               <p className="text-gray-900 font-medium mt-1">{formData.dsa_topics.length} topics</p>
             </div>
+            {formData.has_coding_round && (
+              <div>
+                <span className="text-sm font-semibold text-gray-600">Coding Questions:</span>
+                <p className="text-gray-900 font-medium mt-1">{formData.coding_questions.length} questions</p>
+              </div>
+            )}
           </div>
         </div>
 
@@ -705,6 +799,21 @@ const ReviewSubmit = ({ onBack, formData, onSubmit, isLoading, isEditMode })  =>
             </div>
           </div>
         )}
+
+        {/* Coding Questions Preview */}
+        {formData.has_coding_round && formData.coding_questions.length > 0 && (
+          <div className="bg-indigo-50 rounded-2xl p-6 border border-indigo-200">
+            <h3 className="text-xl font-semibold mb-6 text-gray-900">Coding Questions Preview</h3>
+            <div className="max-h-40 overflow-y-auto space-y-3">
+              {formData.coding_questions.map((q, index) => (
+                <div key={index} className="text-sm">
+                  <span className="font-semibold text-indigo-600">{index + 1}.</span>
+                  <span className="text-gray-900 ml-2 font-medium">{q.question}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="flex justify-between mt-8">
@@ -724,7 +833,7 @@ const ReviewSubmit = ({ onBack, formData, onSubmit, isLoading, isEditMode })  =>
           <span>{isLoading ? (isEditMode ? 'Updating Interview...' : 'Creating Interview...') : (isEditMode ? 'Update Interview' : 'Create Interview')}</span>
         </button>
       </div>
-    </div>
+    </div >
   );
 };
 
@@ -747,8 +856,10 @@ const InterviewCreation = () => {
     DSA: 60,
     Dev: 40,
     ask_questions_on_resume: true,
+    has_coding_round: false,
     questions: [],
-    dsa_topics: []
+    dsa_topics: [],
+    coding_questions: []
   });
   const { id } = useParams();
   const navigate = useNavigate();
@@ -798,15 +909,15 @@ const InterviewCreation = () => {
           Authorization: `Token ${token}`,
         },
       });
-  
+
       if (response.ok) {
         const data = await response.json();
         setOriginalData(data);
-        
+
         const formatForInput = (isoString) => {
           return new Date(isoString).toISOString().slice(0, 16);
         };
-  
+
         setFormData({
           desc: data.desc || '',
           post: data.post || '',
@@ -818,7 +929,9 @@ const InterviewCreation = () => {
           DSA: data.DSA || 60,
           Dev: data.Dev || 40,
           ask_questions_on_resume: data.ask_questions_on_resume || true,
+          has_coding_round: data.has_coding_round || false,
           questions: data.questions || [],
+          coding_questions: data.coding_questions || [],
           dsa_topics: data.dsa_topics || []
         });
       } else {
@@ -832,36 +945,36 @@ const InterviewCreation = () => {
 
   const handleSubmit = async () => {
     setIsLoading(true);
-  
+
     try {
       if (!formData.desc.trim()) {
         showMessage('Description is required', 'error');
         setIsLoading(false);
         return;
       }
-  
+
       if (!formData.post.trim()) {
         showMessage('Position is required', 'error');
         setIsLoading(false);
         return;
       }
-  
+
       const submissionDeadline = new Date(formData.submissionDeadline);
       const startTime = new Date(formData.startTime);
       const endTime = new Date(formData.endTime);
-  
+
       if (isNaN(submissionDeadline.getTime()) || isNaN(startTime.getTime()) || isNaN(endTime.getTime())) {
         showMessage('Invalid date format', 'error');
         setIsLoading(false);
         return;
       }
-  
+
       if (formData.DSA + formData.Dev !== 100) {
         showMessage('DSA and Dev percentages must total 100%', 'error');
         setIsLoading(false);
         return;
       }
-  
+
       const payload = {
         desc: formData.desc.trim(),
         post: formData.post.trim(),
@@ -873,25 +986,27 @@ const InterviewCreation = () => {
         DSA: parseInt(formData.DSA),
         Dev: parseInt(formData.Dev),
         ask_questions_on_resume: Boolean(formData.ask_questions_on_resume),
+        has_coding_round: Boolean(formData.has_coding_round),
         questions: formData.questions.filter(q => q.question.trim() && q.answer.trim()),
         dsa_topics: formData.dsa_topics.filter(topic => topic.topic.trim()),
+        coding_questions: formData.has_coding_round ? formData.coding_questions.filter(q => q.question.trim()) : [],
       };
-  
+
       console.log('Payload being sent:', JSON.stringify(payload, null, 2));
-  
+
       const token = getAuthToken();
       if (!token) {
         showMessage('Authentication token not found. Please login again.', 'error');
         setIsLoading(false);
         return;
       }
-  
+
       const url = isEditMode
         ? `${baseUrl}/interview/edit-interview/${id}/`
         : `${baseUrl}/interview/create-interview/`;
-  
+
       const method = isEditMode ? 'PUT' : 'POST';
-  
+
       const response = await fetch(url, {
         method,
         headers: {
@@ -900,17 +1015,17 @@ const InterviewCreation = () => {
         },
         body: JSON.stringify(payload),
       });
-  
+
       if (response.ok) {
         const successMessage = isEditMode
           ? 'Interview updated successfully!'
           : 'Interview created successfully!';
         showMessage(successMessage, 'success');
-  
+
         setTimeout(() => {
           const queryParams = new URLSearchParams(window.location.search);
           const orgId = queryParams.get('orgId');
-  
+
           if (isEditMode && orgId) {
             navigate(`/org-dashboard/${orgId}`);
           } else {
@@ -925,8 +1040,10 @@ const InterviewCreation = () => {
               DSA: 60,
               Dev: 40,
               ask_questions_on_resume: true,
+              has_coding_round: false,
               questions: [],
               dsa_topics: [],
+              coding_questions: [],
             });
             setCurrentStep(1);
           }
@@ -964,7 +1081,7 @@ const InterviewCreation = () => {
   return (
     <div className="min-h-screen bg-gray-50 text-gray-900 flex flex-col">
       <Header />
-      
+
       {/* Progress Indicator */}
       <div className="container mx-auto px-4 py-8">
         <div className="max-w-5xl mx-auto">
@@ -972,17 +1089,15 @@ const InterviewCreation = () => {
             <div className="flex items-center space-x-8">
               {[1, 2, 3].map((step) => (
                 <div key={step} className="flex items-center">
-                  <div className={`w-12 h-12 rounded-2xl flex items-center justify-center font-semibold text-lg transition-all duration-300 ${
-                    currentStep >= step 
-                      ? 'bg-purple-600 text-white shadow-lg' 
-                      : 'bg-gray-200 text-gray-500'
-                  }`}>
+                  <div className={`w-12 h-12 rounded-2xl flex items-center justify-center font-semibold text-lg transition-all duration-300 ${currentStep >= step
+                    ? 'bg-purple-600 text-white shadow-lg'
+                    : 'bg-gray-200 text-gray-500'
+                    }`}>
                     {step}
                   </div>
                   {step < 3 && (
-                    <div className={`w-20 h-1 ml-4 rounded-full transition-all duration-300 ${
-                      currentStep > step ? 'bg-purple-600' : 'bg-gray-200'
-                    }`}></div>
+                    <div className={`w-20 h-1 ml-4 rounded-full transition-all duration-300 ${currentStep > step ? 'bg-purple-600' : 'bg-gray-200'
+                      }`}></div>
                   )}
                 </div>
               ))}
@@ -993,7 +1108,7 @@ const InterviewCreation = () => {
           </div>
         </div>
       </div>
-      
+
       <FormContainer isVisible={isVisible}>
         {currentStep === 1 && (
           <InterviewSetup
@@ -1002,7 +1117,7 @@ const InterviewCreation = () => {
             setFormData={setFormData}
           />
         )}
-        
+
         {currentStep === 2 && (
           <QuestionsConfig
             onNext={handleNext}
@@ -1011,7 +1126,7 @@ const InterviewCreation = () => {
             setFormData={setFormData}
           />
         )}
-        
+
         {currentStep === 3 && (
           <ReviewSubmit
             onBack={handleBack}
@@ -1022,7 +1137,7 @@ const InterviewCreation = () => {
           />
         )}
       </FormContainer>
-      
+
       <Footer />
 
       <MessageNotification

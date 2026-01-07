@@ -18,22 +18,35 @@ class DsaTopicSerializer(serializers.ModelSerializer):
             'id': {'read_only': True}  # Read-only for POST, but available for PUT
         }
 
+class CodingQuestionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CodingQuestion
+        fields = ["id", "question"]
+        extra_kwargs = {
+            'id': {'read_only': True}
+        }
+
 
 class CustomInterviewSerializer(serializers.ModelSerializer):
     questions = CustomQuestionSerializer(many=True)
     dsa_topics = DsaTopicSerializer(many=True)
+    coding_questions = CodingQuestionSerializer(many=True)
+
 
     class Meta:
         model = Custominterviews
         fields = [
             "id","desc", "post", "experience", "submissionDeadline",
             "startTime", "endTime", "duration", "DSA", "Dev",
-            "ask_questions_on_resume", "questions", "dsa_topics",
+            "ask_questions_on_resume", "has_coding_round", "questions", "dsa_topics", "coding_questions",
         ]
+
 
     def create(self, validated_data):
         questions_data = validated_data.pop("questions", [])
         dsa_topics_data = validated_data.pop("dsa_topics", [])
+        coding_questions_data = validated_data.pop("coding_questions", [])
+
 
         interview = Custominterviews.objects.create(**validated_data)
 
@@ -45,12 +58,19 @@ class CustomInterviewSerializer(serializers.ModelSerializer):
             d.pop('id', None)  # Remove ID if present in POST
             DsaTopics.objects.create(interview=interview, **d)
 
+        for c in coding_questions_data:
+            c.pop('id', None)
+            CodingQuestion.objects.create(interview=interview, **c)
+
         return interview
+
 
     def update(self, instance, validated_data):
         # Extract nested data
         questions_data = validated_data.pop("questions", [])
         dsa_topics_data = validated_data.pop("dsa_topics", [])
+        coding_questions_data = validated_data.pop("coding_questions", [])
+
 
         # Update the parent instance
         for attr, value in validated_data.items():
@@ -62,6 +82,12 @@ class CustomInterviewSerializer(serializers.ModelSerializer):
         
         # Update DSA topics (handles both existing and new)
         self._update_dsa_topics(instance, dsa_topics_data)
+
+        # Update coding questions
+        self._update_coding_questions(instance, coding_questions_data)
+
+        return instance
+
 
         return instance
 
@@ -124,20 +150,50 @@ class CustomInterviewSerializer(serializers.ModelSerializer):
         if topics_to_delete:
             instance.dsa_topics.filter(id__in=topics_to_delete).delete()
 
+    def _update_coding_questions(self, instance, coding_questions_data):
+        existing_questions = {q.id: q for q in instance.coding_questions.all()}
+        updated_question_ids = set()
+
+        for q_data in coding_questions_data:
+            question_id = q_data.get('id')
+            if question_id and question_id in existing_questions:
+                question = existing_questions[question_id]
+                question.question = q_data.get('question', question.question)
+                question.save()
+                updated_question_ids.add(question_id)
+            else:
+                q_data_copy = q_data.copy()
+                q_data_copy.pop('id', None)
+                new_question = CodingQuestion.objects.create(interview=instance, **q_data_copy)
+                updated_question_ids.add(new_question.id)
+        
+        questions_to_delete = set(existing_questions.keys()) - updated_question_ids
+        if questions_to_delete:
+            instance.coding_questions.filter(id__in=questions_to_delete).delete()
+
+
 class InterviewSerializer(serializers.ModelSerializer):
     has_applied = serializers.SerializerMethodField()
     application_status = serializers.SerializerMethodField()
     attempted = serializers.SerializerMethodField()
     final_decision = serializers.SerializerMethodField()
     final_feedback = serializers.SerializerMethodField()
+    match_score = serializers.SerializerMethodField()
+    match_details = serializers.SerializerMethodField()
     
     class Meta:
         model = Custominterviews
         fields = [
             "id", "desc", "post", "experience", "submissionDeadline",
             "startTime", "endTime", "has_applied", "application_status", "attempted",
-            "final_decision", "final_feedback",
+            "final_decision", "final_feedback", "match_score", "match_details"
         ]
+
+    def get_match_score(self, obj):
+        return getattr(obj, 'match_score', 0)
+
+    def get_match_details(self, obj):
+        return getattr(obj, 'match_details', {})
 
     def get_has_applied(self, obj):
         """
@@ -269,12 +325,28 @@ class DsaSessionSerializer(serializers.ModelSerializer):
         fields = ["id", "session", "topic", "question", "code", "score", "created_at"]
         read_only_fields = ["id", "created_at"]
 
+class CodingSessionSerializer(serializers.ModelSerializer):
+    question = CodingQuestionSerializer(read_only=True)
+
+    class Meta:
+        model = CodingInteraction
+        fields = ["id", "session", "question", "code", "score", "feedback", "assistance_count", "created_at"]
+        read_only_fields = ["id", "created_at"]
+
 class InteractionSerializer(serializers.ModelSerializer):
     Customquestion = CustomQuestionSerializer()  # Fixed: was "CustomQuestion"
     followups = FollowUpSerializer(many=True, source='interaction')
     class Meta:
         model = Interaction
         fields = ["Customquestion","followups","score","feedback"]  # Fixed field name
+
+class InterviewSessionSerializer(serializers.ModelSerializer):
+    has_coding_round = serializers.BooleanField(source='Application.interview.has_coding_round', read_only=True)
+    interview_id = serializers.IntegerField(source='Application.interview.id', read_only=True)
+
+    class Meta:
+        model = InterviewSession
+        fields = ["id", "status", "has_coding_round", "interview_id"]
 
 # New serializer for resumeconvo model
 class ResumeConvoSerializer(serializers.ModelSerializer):
@@ -293,6 +365,7 @@ class LeaderBoardSerializer(serializers.ModelSerializer):
     session = InteractionSerializer(many=True)  # Fixed: should be many=True for related_name="session"
     dsa = DsaSessionSerializer(many=True, source='dsa_sessions')
     resume_conversations = ResumeConvoSerializer(many=True, source='interview_session')  # Add resume conversations
+    coding_sessions = CodingSessionSerializer(many=True)
     images = InterviewImagesSerializer(many=True)  # Add images
     class Meta:
         model = InterviewSession
@@ -306,12 +379,14 @@ class LeaderBoardSerializer(serializers.ModelSerializer):
             "Resumescore",
             "confidenceScore",
             "DsaScore",
+            "CodingScore",
             "recommendation",
             "strengths",
             "Application",
             "user",
             "session",
             "dsa",
+            "coding_sessions",
             "resume_conversations",  # Add the new field
             "images",
         ]

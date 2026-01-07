@@ -21,11 +21,12 @@ import CareerDashboard from '../pages/CareerDashboard';
 import Opportunities from '../pages/Opportunities';
 import FeedbackInsights from '../pages/FeedbackInsights';
 import RoadmapDetail from '../pages/RoadmapDetail';
+import CodingRound from '../pages/CodingRound';
 
 export default function AppRoutes() {
   return (
     <Routes>
-      <Route path="/" element={<Home />}/>
+      <Route path="/" element={<Home />} />
       <Route path="/about" element={<About />} />
       <Route path="/login" element={<Login />} />
       <Route path="/signup" element={<Signup />} />
@@ -38,37 +39,46 @@ export default function AppRoutes() {
       <Route path="/interview" element={<Interview />} />
       <Route path="/applications/:id" element={<Application />} />
       <Route path="/leaderboard/:id" element={<Leaderboard />} />
-      
+
       {/* Career Co-Pilot Routes */}
       <Route path="/career" element={<CareerDashboard />} />
       <Route path="/roadmap/:id" element={<RoadmapDetail />} />
       <Route path="/opportunities" element={<Opportunities />} />
       <Route path="/feedback" element={<FeedbackInsights />} />
-      
-      <Route 
-        path="/interview/start/:interviewId" 
+      <Route
+        path="/coding-round/:sessionId"
+        element={
+          <EnhancedProctoredRouteWrapper>
+            <InterviewScreenshotCapture />
+            <CodingRound />
+          </EnhancedProctoredRouteWrapper>
+        }
+      />
+
+      <Route
+        path="/interview/start/:interviewId"
         element={
           <EnhancedProctoredRouteWrapper>
             <InterviewSession />
           </EnhancedProctoredRouteWrapper>
-        } 
+        }
       />
       <Route
         path="/resume-platform/:sessionId"
         element={
           <EnhancedProctoredRouteWrapper>
-            <InterviewScreenshotCapture/>
-            <ResumeQuestionSession/>
+            <InterviewScreenshotCapture />
+            <ResumeQuestionSession />
           </EnhancedProctoredRouteWrapper>
-        }/>
-      <Route 
-        path="/dsa-interview-platform/:sessionId" 
+        } />
+      <Route
+        path="/dsa-interview-platform/:sessionId"
         element={
           <EnhancedProctoredRouteWrapper>
-            <InterviewScreenshotCapture/>
+            <InterviewScreenshotCapture />
             <DSAInterviewPlatform />
           </EnhancedProctoredRouteWrapper>
-        } 
+        }
       />
 
     </Routes>

@@ -113,7 +113,7 @@ const ResumeQuestionSession = () => {
         const response = await fetch(endpoint, {
           method: 'POST',
           headers: {
-            'Authorization': `Bearer ${token}`,
+            'Authorization': `Token ${token}`,
             'Content-Type': 'application/json',
           },
           body: JSON.stringify(requestBody)
@@ -121,11 +121,11 @@ const ResumeQuestionSession = () => {
 
         console.log('📡 Response status:', response.status);
         console.log('📡 Response headers:', Object.fromEntries(response.headers.entries()));
-        
+
         if (!response.ok) {
           const errorText = await response.text();
           console.error('❌ HTTP Error Response:', errorText);
-          
+
           if (response.status === 401) {
             throw new Error('Authentication failed. Please log in again.');
           } else if (response.status === 404) {
@@ -209,7 +209,7 @@ const ResumeQuestionSession = () => {
       const response = await fetch(endpoint, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${token}`,
+          'Authorization': `Token ${token}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(requestBody)
@@ -277,13 +277,48 @@ const ResumeQuestionSession = () => {
     }
   };
 
+  const handleCompletion = async () => {
+    try {
+        const token = getAuthToken();
+        
+        // Mark interview round as completed
+        await fetchWithToken(
+            `${API_URL}/interview/update-session-status/${sessionId}/`,
+            token,
+            navigate,
+            "PATCH",
+            {
+                status: 'completed',
+                round_type: 'interview'
+            }
+        );
+        
+        // Initialize DSA round
+        await fetchWithToken(
+            `${API_URL}/interview/continue-session/${sessionId}/`,
+            token,
+            navigate,
+            "POST",
+            {
+                round_type: 'dsa'
+            }
+        );
+        
+        // Navigate to DSA round
+        navigate(`/dsa-interview-platform/${sessionId}`);
+        
+    } catch (error) {
+        console.error("Error transitioning to DSA round:", error);
+        alert("There was an error transitioning to the DSA round. You will be redirected now, but you may need to refresh the page.");
+        navigate(`/dsa-interview-platform/${sessionId}`);
+    }
+  };
+
   // Redirect after completion
   useEffect(() => {
     if (completed) {
-      console.log('🎉 Session completed, redirecting in 3 seconds...');
-      setTimeout(() => {
-      navigate(sessionId ? `/dsa-interview-platform/${sessionId}` : "/");
-      }, 3000);
+      console.log('🎉 Session completed, transitioning to DSA round...');
+      handleCompletion();
     }
   }, [completed, navigate]);
 
