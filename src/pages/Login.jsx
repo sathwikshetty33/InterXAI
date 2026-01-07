@@ -1814,6 +1814,17 @@ const Login = () => {
                       >
                         {isLoading ? 'Creating...' : 'Create Account'}
                       </button>
+                      <div className="text-center mt-4">
+                        <p className="text-sm text-gray-600">
+                          Are you an organization?{' '}
+                          <Link 
+                            to="/company-signup" 
+                            className="text-purple-600 hover:text-blue-600 font-semibold transition-colors"
+                          >
+                            Sign up as Organization
+                          </Link>
+                        </p>
+                      </div>
                     </>
                   )}
                 </div>

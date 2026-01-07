@@ -1,11 +1,12 @@
 import axios from 'axios';
 
-// ✅ Get token from localStorage
+// Get token from localStorage
 export const getAuthToken = () => {
   return localStorage.getItem("authToken");
 };
 const baseUrl = import.meta.env.VITE_API_URL;
-// ✅ Enhanced fetchWithToken: supports GET (default), POST, PUT, DELETE
+
+// Enhanced fetchWithToken: supports GET (default), POST, PUT, DELETE
 export const fetchWithToken = async (url, token, navigate, method = "GET", body = null) => {
   try {
     const headers = token ? { Authorization: `Token ${token}` } : {};
@@ -34,7 +35,7 @@ export const fetchWithToken = async (url, token, navigate, method = "GET", body 
   
 };
 
-// ✅ Token handler: login + fetch ID + redirect
+// Token handler: login + check org/user + redirect
 export const handleToken = async (username, password, navigate) => {
   try {
     const res = await fetch(`${baseUrl}/users/login/`, {
@@ -51,6 +52,28 @@ export const handleToken = async (username, password, navigate) => {
 
     localStorage.setItem('authToken', data.token);
 
+    // Check if user is an organization admin
+    const orgRes = await fetch(`${baseUrl}/organization/is-org/`, {
+      headers: { Authorization: `Token ${data.token}` },
+    });
+
+    const orgData = await orgRes.json();
+
+    if (orgRes.ok && orgData.is_organization) {
+      // User is an org admin - get org ID and redirect to org dashboard
+      const orgIdRes = await fetch(`${baseUrl}/organization/get-org-id/`, {
+        headers: { Authorization: `Token ${data.token}` },
+      });
+      
+      const orgIdData = await orgIdRes.json();
+      
+      if (orgIdRes.ok && orgIdData.organization_id) {
+        navigate(`/org-dashboard/${orgIdData.organization_id}`);
+        return true;
+      }
+    }
+
+    // User is not an org - redirect to user profile
     const idRes = await fetch(`${baseUrl}/users/get-id/`, {
       headers: { Authorization: `Token ${data.token}` },
     });

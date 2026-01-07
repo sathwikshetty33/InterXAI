@@ -196,3 +196,323 @@ class CompanyRegisterAPIView(APIView):
                 'success': False,
                 'error': f'Registration failed: {str(e)}'
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class JoinOrganization(APIView):
+    """User joins an organization (college)"""
+    permission_classes = [IsAuthenticated]
+    authentication_classes = [TokenAuthentication]
+
+    def post(self, request):
+        org_id = request.data.get('org_id')
+        role = request.data.get('role', 'student')
+        
+        if not org_id:
+            return Response({
+                'success': False,
+                'error': 'Organization ID is required'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        try:
+            org = organization.objects.get(id=org_id)
+        except organization.DoesNotExist:
+            return Response({
+                'success': False,
+                'error': 'Organization not found'
+            }, status=status.HTTP_404_NOT_FOUND)
+        
+        # Check if user is the org admin
+        if org.org == request.user:
+            return Response({
+                'success': False,
+                'error': 'You are the admin of this organization'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Check if already a member
+        if OrgUsers.objects.filter(org=org, user=request.user).exists():
+            return Response({
+                'success': False,
+                'error': 'You are already a member of this organization'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Validate role
+        if role not in ['student', 'faculty']:
+            role = 'student'
+        
+        # Create membership
+        membership = OrgUsers.objects.create(
+            org=org,
+            user=request.user,
+            role=role
+        )
+        
+        return Response({
+            'success': True,
+            'message': f'Successfully joined {org.orgname}',
+            'membership': OrgUsersSerializer(membership).data
+        }, status=status.HTTP_201_CREATED)
+
+
+class LeaveOrganization(APIView):
+    """User leaves an organization"""
+    permission_classes = [IsAuthenticated]
+    authentication_classes = [TokenAuthentication]
+
+    def delete(self, request, org_id):
+        try:
+            membership = OrgUsers.objects.get(org_id=org_id, user=request.user)
+            org_name = membership.org.orgname
+            membership.delete()
+            return Response({
+                'success': True,
+                'message': f'Successfully left {org_name}'
+            }, status=status.HTTP_200_OK)
+        except OrgUsers.DoesNotExist:
+            return Response({
+                'success': False,
+                'error': 'You are not a member of this organization'
+            }, status=status.HTTP_404_NOT_FOUND)
+
+
+class MyOrganizations(APIView):
+    """Get all organizations the user is a member of"""
+    permission_classes = [IsAuthenticated]
+    authentication_classes = [TokenAuthentication]
+
+    def get(self, request):
+        memberships = OrgUsers.objects.filter(user=request.user, is_active=True)
+        serializer = OrgMembershipSerializer(memberships, many=True)
+        
+        # Also check if user is an org admin
+        admin_org = organization.objects.filter(org=request.user).first()
+        
+        return Response({
+            'success': True,
+            'memberships': serializer.data,
+            'is_org_admin': admin_org is not None,
+            'admin_org_id': admin_org.id if admin_org else None
+        }, status=status.HTTP_200_OK)
+
+
+class ListOrganizations(APIView):
+    """List all available organizations for joining"""
+    permission_classes = [AllowAny]
+    authentication_classes = []
+
+    def get(self, request):
+        orgs = organization.objects.all().order_by('-is_central', 'orgname')
+        serializer = OrganizationSerializer(orgs, many=True)
+        return Response({
+            'success': True,
+            'organizations': serializer.data
+        }, status=status.HTTP_200_OK)
+
+
+class OrganizationMembers(APIView):
+    """Get all members of an organization (for org admins)"""
+    permission_classes = [IsAuthenticated]
+    authentication_classes = [TokenAuthentication]
+
+    def get(self, request, org_id):
+        try:
+            org = organization.objects.get(id=org_id)
+        except organization.DoesNotExist:
+            return Response({
+                'success': False,
+                'error': 'Organization not found'
+            }, status=status.HTTP_404_NOT_FOUND)
+        
+        # Only org admin can view members
+        if org.org != request.user:
+            return Response({
+                'success': False,
+                'error': 'You do not have permission to view members'
+            }, status=status.HTTP_403_FORBIDDEN)
+        
+        members = OrgUsers.objects.filter(org=org).select_related('user')
+        
+        # Build member list with profile info
+        member_list = []
+        for member in members:
+            profile = UserProfile.objects.filter(user=member.user).first()
+            member_list.append({
+                'id': member.id,
+                'user_id': member.user.id,
+                'username': member.user.username,
+                'email': member.user.email,
+                'role': member.role,
+                'joined_at': member.joined_at,
+                'is_active': member.is_active,
+                'profile_id': profile.id if profile else None,
+            })
+        
+        return Response({
+            'success': True,
+            'org_name': org.orgname,
+            'member_count': len(member_list),
+            'members': member_list
+        }, status=status.HTTP_200_OK)
+
+    def delete(self, request, org_id):
+        """Remove a member from the organization"""
+        member_id = request.data.get('member_id')
+        
+        if not member_id:
+            return Response({
+                'success': False,
+                'error': 'Member ID is required'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        try:
+            org = organization.objects.get(id=org_id)
+        except organization.DoesNotExist:
+            return Response({
+                'success': False,
+                'error': 'Organization not found'
+            }, status=status.HTTP_404_NOT_FOUND)
+        
+        # Only org admin can remove members
+        if org.org != request.user:
+            return Response({
+                'success': False,
+                'error': 'You do not have permission to remove members'
+            }, status=status.HTTP_403_FORBIDDEN)
+        
+        try:
+            member = OrgUsers.objects.get(id=member_id, org=org)
+            username = member.user.username
+            member.delete()
+            return Response({
+                'success': True,
+                'message': f'Successfully removed {username} from {org.orgname}'
+            }, status=status.HTTP_200_OK)
+        except OrgUsers.DoesNotExist:
+            return Response({
+                'success': False,
+                'error': 'Member not found'
+            }, status=status.HTTP_404_NOT_FOUND)
+
+
+class BulkImportStudents(APIView):
+    """Bulk import students from Excel file (for org admins)"""
+    permission_classes = [IsAuthenticated]
+    authentication_classes = [TokenAuthentication]
+
+    def post(self, request):
+        import pandas as pd
+        from io import BytesIO
+        
+        # Check if user is an org admin
+        org = organization.objects.filter(org=request.user).first()
+        if not org:
+            return Response({
+                'success': False,
+                'error': 'You are not an organization admin'
+            }, status=status.HTTP_403_FORBIDDEN)
+        
+        # Get the uploaded file
+        excel_file = request.FILES.get('file')
+        if not excel_file:
+            return Response({
+                'success': False,
+                'error': 'No file uploaded. Please upload an Excel file.'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Check file extension
+        if not excel_file.name.endswith(('.xlsx', '.xls', '.csv')):
+            return Response({
+                'success': False,
+                'error': 'Invalid file format. Please upload .xlsx, .xls, or .csv file.'
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        try:
+            # Read the file
+            file_content = excel_file.read()
+            
+            if excel_file.name.endswith('.csv'):
+                df = pd.read_csv(BytesIO(file_content))
+            else:
+                df = pd.read_excel(BytesIO(file_content))
+            
+            # Validate columns
+            required_columns = ['username', 'email', 'password']
+            missing_columns = [col for col in required_columns if col.lower() not in [c.lower() for c in df.columns]]
+            
+            if missing_columns:
+                return Response({
+                    'success': False,
+                    'error': f'Missing required columns: {", ".join(missing_columns)}. Required: username, email, password'
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            # Normalize column names
+            df.columns = [c.lower() for c in df.columns]
+            
+            # Track results
+            created_count = 0
+            skipped_count = 0
+            errors = []
+            
+            role = request.data.get('role', 'student')
+            if role not in ['student', 'faculty']:
+                role = 'student'
+            
+            for index, row in df.iterrows():
+                username = str(row['username']).strip()
+                email = str(row['email']).strip()
+                password = str(row['password']).strip()
+                
+                # Validate row data
+                if not username or not email or not password or username == 'nan' or email == 'nan':
+                    errors.append(f"Row {index + 2}: Missing data")
+                    skipped_count += 1
+                    continue
+                
+                # Check if user already exists
+                if User.objects.filter(username=username).exists():
+                    errors.append(f"Row {index + 2}: Username '{username}' already exists")
+                    skipped_count += 1
+                    continue
+                
+                if User.objects.filter(email=email).exists():
+                    errors.append(f"Row {index + 2}: Email '{email}' already registered")
+                    skipped_count += 1
+                    continue
+                
+                try:
+                    # Create user
+                    user = User.objects.create_user(
+                        username=username,
+                        email=email,
+                        password=password
+                    )
+                    
+                    # Create user profile
+                    UserProfile.objects.create(user=user)
+                    
+                    # Add to organization
+                    OrgUsers.objects.create(
+                        org=org,
+                        user=user,
+                        role=role
+                    )
+                    
+                    created_count += 1
+                    
+                except Exception as e:
+                    errors.append(f"Row {index + 2}: Error creating user - {str(e)}")
+                    skipped_count += 1
+            
+            return Response({
+                'success': True,
+                'message': f'Bulk import completed',
+                'created_count': created_count,
+                'skipped_count': skipped_count,
+                'total_rows': len(df),
+                'errors': errors[:20] if errors else []  # Return first 20 errors
+            }, status=status.HTTP_200_OK)
+            
+        except Exception as e:
+            return Response({
+                'success': False,
+                'error': f'Error processing file: {str(e)}'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
