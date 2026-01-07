@@ -101,25 +101,25 @@
 // //   const handleResumeUpload = async (e, interviewId) => {
 // //     const file = e.target.files[0];
 // //     if (!file) return;
-  
+
 // //     // Check file type
 // //     if (file.type !== "application/pdf") {
 // //       toast.error("Please upload a PDF file only.");
 // //       return;
 // //     }
-  
+
 // //     // Check file size (e.g., max 5MB)
 // //     if (file.size > 5 * 1024 * 1024) {
 // //       toast.error("File size should not exceed 5MB.");
 // //       return;
 // //     }
-  
+
 // //     setUploadingResume(prev => ({ ...prev, [interviewId]: true }));
-  
+
 // //     // Upload directly to Pinata
 // //     const formData = new FormData();
 // //     formData.append("file", file);
-    
+
 // //     // Optional: Add metadata
 // //     const metadata = JSON.stringify({
 // //       name: `resume_${interviewId}_${file.name}`,
@@ -129,12 +129,12 @@
 // //       }
 // //     });
 // //     formData.append("pinataMetadata", metadata);
-  
+
 // //     const options = JSON.stringify({
 // //       cidVersion: 1,
 // //     });
 // //     formData.append("pinataOptions", options);
-  
+
 // //     try {
 // //       const res = await fetch("https://api.pinata.cloud/pinning/pinFileToIPFS", {
 // //         method: "POST",
@@ -144,20 +144,20 @@
 // //         },
 // //         body: formData,
 // //       });
-  
+
 // //       const data = await res.json();
-      
+
 // //       if (res.ok && data.IpfsHash) {
 // //         const fileUrl = `https://gateway.pinata.cloud/ipfs/${data.IpfsHash}`;
-        
+
 // //         // Store the file URL in your state
 // //         setResumeFiles((prev) => ({
 // //           ...prev,
 // //           [interviewId]: fileUrl
 // //         }));
-        
+
 // //         toast.success("Resume uploaded successfully!");
-        
+
 // //       } else {
 // //         toast.error("Failed to upload resume.");
 // //       }
@@ -272,7 +272,7 @@
 // //               </div>
 // //             )}
 // //           </div>
-          
+
 // //           <button
 // //             onClick={() => handleApply(interviewId)}
 // //             disabled={!resumeUploaded || isUploading || isApplying}
@@ -842,7 +842,7 @@
 //   }
 
 //   return (
-  
+
 
 //      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-white text-gray-800 relative overflow-hidden">
 //       <Header viewerType={viewerType} />
@@ -1038,7 +1038,7 @@
 //       <Footer />
 //     </div>
 
-    
+
 //   );
 // }
 
@@ -1142,6 +1142,37 @@ export default function UserDashboard() {
     }
   };
 
+  // Ensure a valid InterviewSession exists before navigating to the coding round.
+  const startCodingInterview = async (interviewId) => {
+    const token = getAuthToken();
+    if (!token) {
+      toast.error('Authentication required. Please log in.');
+      navigate('/login');
+      return;
+    }
+
+    try {
+      const data = await fetchWithToken(
+        `${API_URL}/interview/interview-session-initializer/${interviewId}/`,
+        token,
+        navigate,
+        'POST',
+        {}
+      );
+
+      if (data && data.session_id) {
+        navigate(`/coding-round/${data.session_id}`);
+      } else if (data && data.error) {
+        toast.error('Unable to start session: ' + data.error);
+      } else {
+        toast.error('Unable to initialize interview session.');
+      }
+    } catch (err) {
+      console.error('Start coding interview error:', err);
+      toast.error('Failed to start interview session.');
+    }
+  };
+
   // Fixed: Upload resume and store both CID and URL
   const handleResumeUpload = async (e, interviewId) => {
     const file = e.target.files[0];
@@ -1177,7 +1208,7 @@ export default function UserDashboard() {
       const res = await fetch("https://api.pinata.cloud/pinning/pinFileToIPFS", {
         method: "POST",
         headers: {
-          'Authorization': `Bearer ${import.meta.env.VITE_PINATAJWT}`,
+          'Authorization': `Bearer ${import.meta.env.VITE_PINATA_JWT_TOKEN}`,
         },
         body: form,
       });
@@ -1227,9 +1258,9 @@ export default function UserDashboard() {
             "Content-Type": "application/json",
             Authorization: `Token ${token}`,
           },
-          body: JSON.stringify({ 
+          body: JSON.stringify({
             resume_cid: resume.cid,
-            resume_url: resume.url 
+            resume_url: resume.url
           }),
         }
       );
@@ -1266,7 +1297,7 @@ export default function UserDashboard() {
       if (applicationStatus) {
         if (hasAttempted) {
           const finalDecision = interview.final_decision;
-          
+
           if (finalDecision === 'accepted') {
             return (
               <div className="mt-2 flex items-center gap-2 text-green-600 bg-green-50 px-3 py-2 rounded-lg">
@@ -1300,7 +1331,7 @@ export default function UserDashboard() {
         } else {
           return (
             <button
-              onClick={() => navigate(`/interview/start/${interviewId}`)}
+              onClick={() => startCodingInterview(interviewId)}
               className="mt-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center gap-2"
             >
               <CheckCircle className="w-4 h-4" />
@@ -1350,11 +1381,10 @@ export default function UserDashboard() {
           <button
             onClick={() => handleApply(interviewId)}
             disabled={!resumeUploaded || isUploading || isApplying}
-            className={`px-4 py-2 rounded-lg flex items-center gap-2 transition-colors ${
-              !resumeUploaded || isUploading || isApplying
-                ? "bg-gray-300 text-gray-500 cursor-not-allowed"
-                : "bg-blue-600 hover:bg-blue-700 text-white"
-            }`}
+            className={`px-4 py-2 rounded-lg flex items-center gap-2 transition-colors ${!resumeUploaded || isUploading || isApplying
+              ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+              : "bg-blue-600 hover:bg-blue-700 text-white"
+              }`}
           >
             {isApplying ? (
               <>
@@ -1455,128 +1485,128 @@ export default function UserDashboard() {
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 w-full mt-6">
-              <div className="bg-white border border-gray-200 rounded-2xl shadow-xl p-5">
-  {/* Header */}
-  <div className="flex items-center gap-3 mb-4">
-    <Github className="w-6 h-6 text-gray-800" />
-    <h3 className="text-lg font-semibold text-gray-800">
-      GitHub Profile
-    </h3>
+                <div className="bg-white border border-gray-200 rounded-2xl shadow-xl p-5">
+                  {/* Header */}
+                  <div className="flex items-center gap-3 mb-4">
+                    <Github className="w-6 h-6 text-gray-800" />
+                    <h3 className="text-lg font-semibold text-gray-800">
+                      GitHub Profile
+                    </h3>
 
-    {viewerType === "owner" && editingField !== "github" && (
-      <Pencil
-        className="w-4 h-4 ml-auto cursor-pointer text-gray-500 hover:text-blue-600"
-        onClick={() => setEditingField("github")}
-      />
-    )}
-  </div>
+                    {viewerType === "owner" && editingField !== "github" && (
+                      <Pencil
+                        className="w-4 h-4 ml-auto cursor-pointer text-gray-500 hover:text-blue-600"
+                        onClick={() => setEditingField("github")}
+                      />
+                    )}
+                  </div>
 
-  {/* Edit Mode */}
-  {viewerType === "owner" && editingField === "github" ? (
-    <div className="space-y-2">
-      <input
-        name="github"
-        value={formData.github}
-        onChange={handleChange}
-        placeholder="GitHub username"
-        className="w-full p-2 border border-blue-200 rounded-lg bg-blue-50 text-gray-800"
-      />
-      <div className="flex gap-2">
-        <button
-          onClick={() => handleSave("github")}
-          className="px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700"
-        >
-          Save
-        </button>
-        <button
-          onClick={() => setEditingField(null)}
-          className="px-3 py-1 text-sm bg-gray-400 text-white rounded hover:bg-gray-500"
-        >
-          Cancel
-        </button>
-      </div>
-    </div>
-  ) : (
-    <>
-      {githubUsername ? (
-        <>
-          {/* Profile Row */}
-          <div className="flex items-center gap-4 mb-4">
-            {/* Avatar */}
-            <img
-              src={`https://github.com/${githubUsername}.png`}
-              alt="GitHub Avatar"
-              className="w-16 h-16 rounded-full border border-gray-300"
-            />
+                  {/* Edit Mode */}
+                  {viewerType === "owner" && editingField === "github" ? (
+                    <div className="space-y-2">
+                      <input
+                        name="github"
+                        value={formData.github}
+                        onChange={handleChange}
+                        placeholder="GitHub username"
+                        className="w-full p-2 border border-blue-200 rounded-lg bg-blue-50 text-gray-800"
+                      />
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => handleSave("github")}
+                          className="px-3 py-1 text-sm bg-blue-600 text-white rounded hover:bg-blue-700"
+                        >
+                          Save
+                        </button>
+                        <button
+                          onClick={() => setEditingField(null)}
+                          className="px-3 py-1 text-sm bg-gray-400 text-white rounded hover:bg-gray-500"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      {githubUsername ? (
+                        <>
+                          {/* Profile Row */}
+                          <div className="flex items-center gap-4 mb-4">
+                            {/* Avatar */}
+                            <img
+                              src={`https://github.com/${githubUsername}.png`}
+                              alt="GitHub Avatar"
+                              className="w-16 h-16 rounded-full border border-gray-300"
+                            />
 
-            {/* Username */}
-            <div>
-              <a
-                href={`https://github.com/${githubUsername}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-blue-600 font-medium hover:underline"
-              >
-                @{githubUsername}
-              </a>
-              <p className="text-xs text-gray-500">
-                github.com/{githubUsername}
-              </p>
-            </div>
-          </div>
+                            {/* Username */}
+                            <div>
+                              <a
+                                href={`https://github.com/${githubUsername}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-blue-600 font-medium hover:underline"
+                              >
+                                @{githubUsername}
+                              </a>
+                              <p className="text-xs text-gray-500">
+                                github.com/{githubUsername}
+                              </p>
+                            </div>
+                          </div>
 
-          {/* Stats Grid */}
-          <div className="grid grid-cols-3 gap-3 mb-4">
-            <div className="bg-gray-50 border rounded-xl p-3 text-center">
-              <img
-                src={`https://img.shields.io/github/repos/${githubUsername}?label=&style=flat`}
-                alt="Repos"
-                className="mx-auto mb-1"
-              />
-              <p className="text-xs text-gray-500">Repositories</p>
-            </div>
+                          {/* Stats Grid */}
+                          <div className="grid grid-cols-3 gap-3 mb-4">
+                            <div className="bg-gray-50 border rounded-xl p-3 text-center">
+                              <img
+                                src={`https://img.shields.io/github/repos/${githubUsername}?label=&style=flat`}
+                                alt="Repos"
+                                className="mx-auto mb-1"
+                              />
+                              <p className="text-xs text-gray-500">Repositories</p>
+                            </div>
 
-            <div className="bg-gray-50 border rounded-xl p-3 text-center">
-              <img
-                src={`https://img.shields.io/github/followers/${githubUsername}?label=&style=flat`}
-                alt="Followers"
-                className="mx-auto mb-1"
-              />
-              <p className="text-xs text-gray-500">Followers</p>
-            </div>
+                            <div className="bg-gray-50 border rounded-xl p-3 text-center">
+                              <img
+                                src={`https://img.shields.io/github/followers/${githubUsername}?label=&style=flat`}
+                                alt="Followers"
+                                className="mx-auto mb-1"
+                              />
+                              <p className="text-xs text-gray-500">Followers</p>
+                            </div>
 
-            <div className="bg-gray-50 border rounded-xl p-3 text-center">
-              <img
-                src={`https://img.shields.io/github/stars/${githubUsername}?affiliations=OWNER&label=&style=flat`}
-                alt="Stars"
-                className="mx-auto mb-1"
-              />
-              <p className="text-xs text-gray-500">Stars</p>
-            </div>
-          </div>
+                            <div className="bg-gray-50 border rounded-xl p-3 text-center">
+                              <img
+                                src={`https://img.shields.io/github/stars/${githubUsername}?affiliations=OWNER&label=&style=flat`}
+                                alt="Stars"
+                                className="mx-auto mb-1"
+                              />
+                              <p className="text-xs text-gray-500">Stars</p>
+                            </div>
+                          </div>
 
-          {/* Contribution Activity */}
-          <div className="rounded-xl overflow-hidden border">
-            <img
-              src={`https://github-readme-activity-graph.vercel.app/graph?username=${githubUsername}&theme=github-light&hide_border=true`}
-              alt="GitHub Activity"
-              className="w-full"
-            />
-          </div>
-        </>
-      ) : (
-        <div className="border border-dashed border-gray-300 rounded-xl p-6 text-center">
-          <p className="text-sm text-gray-500">
-            GitHub profile not added
-          </p>
-          <p className="text-xs text-gray-400 mt-1">
-            Add your username to display GitHub activity
-          </p>
-        </div>
-      )}
-    </>
-  )}
-</div>
+                          {/* Contribution Activity */}
+                          <div className="rounded-xl overflow-hidden border">
+                            <img
+                              src={`https://github-readme-activity-graph.vercel.app/graph?username=${githubUsername}&theme=github-light&hide_border=true`}
+                              alt="GitHub Activity"
+                              className="w-full"
+                            />
+                          </div>
+                        </>
+                      ) : (
+                        <div className="border border-dashed border-gray-300 rounded-xl p-6 text-center">
+                          <p className="text-sm text-gray-500">
+                            GitHub profile not added
+                          </p>
+                          <p className="text-xs text-gray-400 mt-1">
+                            Add your username to display GitHub activity
+                          </p>
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
 
 
                 <div className="bg-white border border-orange-200 rounded-2xl shadow-xl p-4">
@@ -1634,9 +1664,16 @@ export default function UserDashboard() {
             {interviews.map((interview) => (
               <div key={interview.id} className="bg-white/90 backdrop-blur-xl p-6 rounded-2xl border border-blue-100 shadow-xl">
                 <div className="space-y-3">
-                  <div>
-                    <span className="text-blue-600 font-medium">Position:</span>
-                    <p className="text-gray-800 text-lg font-semibold">{interview.post}</p>
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <span className="text-blue-600 font-medium">Position:</span>
+                      <p className="text-gray-800 text-lg font-semibold">{interview.post}</p>
+                    </div>
+                    {interview.match_score > 0 && (
+                      <div className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm font-semibold flex items-center gap-1 border border-green-200">
+                        ✨ {Math.round(interview.match_score)}% Match
+                      </div>
+                    )}
                   </div>
                   <div>
                     <span className="text-blue-600 font-medium">Description:</span>

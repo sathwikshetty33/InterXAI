@@ -7,12 +7,12 @@ const InterviewScreenshotCapture = () => {
   const navigate = useNavigate();
   const hasStarted = useRef(false);
 
-  const PINATA_JWT = import.meta.env.VITE_PINATAJWT;
+  const PINATA_JWT = import.meta.env.VITE_PINATA_JWT_TOKEN;
 
   const log = (message, type = 'info', data = null) => {
     const timestamp = new Date().toISOString();
     const prefix = `[Screenshot ${sessionId}]`;
-    
+
     if (type === 'error') {
       console.error(`${prefix} [${timestamp}] ❌`, message, data || '');
     } else if (type === 'success') {
@@ -24,14 +24,14 @@ const InterviewScreenshotCapture = () => {
 
   const captureScreenshot = async () => {
     log('Starting screenshot capture...');
-    
+
     try {
       // Method 1: Try using MediaDevices API (screen capture)
       log('Attempting screen capture with MediaDevices API...');
-      
+
       try {
         const stream = await navigator.mediaDevices.getDisplayMedia({
-          video: { 
+          video: {
             mediaSource: 'screen',
             width: { ideal: 1920 },
             height: { ideal: 1080 }
@@ -39,7 +39,7 @@ const InterviewScreenshotCapture = () => {
           audio: false,
           preferCurrentTab: true
         });
-        
+
         const video = document.createElement('video');
         video.srcObject = stream;
         video.play();
@@ -62,15 +62,15 @@ const InterviewScreenshotCapture = () => {
             else reject(new Error('Failed to create blob'));
           }, 'image/jpeg', 0.7);
         });
-        
+
         log('Screenshot captured with MediaDevices', 'success', `Size: ${(blob.size / 1024).toFixed(2)}KB`);
         return blob;
       } catch (mediaError) {
         log('MediaDevices failed, trying html2canvas...', 'info', mediaError.message);
-        
+
         // Method 2: Fallback to html2canvas with ignore for problematic elements
         log('Capturing with html2canvas (ignoring CSS errors)...');
-        
+
         const canvas = await html2canvas(document.body, {
           logging: false,
           useCORS: true,
@@ -82,7 +82,7 @@ const InterviewScreenshotCapture = () => {
             const computedStyle = window.getComputedStyle(element);
             const bgColor = computedStyle.backgroundColor;
             const color = computedStyle.color;
-            
+
             // Skip elements with oklch, lab, lch colors
             if (bgColor && (bgColor.includes('oklch') || bgColor.includes('lab') || bgColor.includes('lch'))) {
               return true;
@@ -110,16 +110,16 @@ const InterviewScreenshotCapture = () => {
             });
           }
         });
-        
+
         log('Canvas created, converting to blob...');
-        
+
         const blob = await new Promise((resolve, reject) => {
           canvas.toBlob((blob) => {
             if (blob) resolve(blob);
             else reject(new Error('Failed to create blob'));
           }, 'image/jpeg', 0.7);
         });
-        
+
         log('Screenshot captured with html2canvas', 'success', `Size: ${(blob.size / 1024).toFixed(2)}KB`);
         return blob;
       }
@@ -132,7 +132,7 @@ const InterviewScreenshotCapture = () => {
 
   const uploadToPinata = async (imageBlob) => {
     log('Uploading to Pinata...');
-    
+
     try {
       const formData = new FormData();
       const filename = `screenshot_${sessionId}_${Date.now()}.jpg`;
@@ -157,7 +157,7 @@ const InterviewScreenshotCapture = () => {
 
       const pinataData = JSON.parse(responseText);
       const imageUrl = `https://gateway.pinata.cloud/ipfs/${pinataData.IpfsHash}`;
-      
+
       log('Pinata upload SUCCESS', 'success', imageUrl);
       return imageUrl;
     } catch (error) {
@@ -168,10 +168,10 @@ const InterviewScreenshotCapture = () => {
 
   const sendToDatabase = async (imageUrl) => {
     log('Sending URL to database...');
-    
+
     try {
       const token = getAuthToken();
-      
+
       if (!token) {
         log('No auth token found', 'error');
         return;
@@ -204,7 +204,7 @@ const InterviewScreenshotCapture = () => {
 
   const processScreenshot = async () => {
     log('=== STARTING SCREENSHOT PROCESS ===');
-    
+
     try {
       // Step 1: Capture
       log('STEP 1: Capturing screenshot...');
@@ -217,11 +217,11 @@ const InterviewScreenshotCapture = () => {
       // Step 2: Upload to Pinata
       log('STEP 2: Uploading to Pinata...');
       const imageUrl = await uploadToPinata(imageBlob);
-      
+
       // Step 3: Send to Database
       log('STEP 3: Saving to database...');
       await sendToDatabase(imageUrl);
-      
+
       log('=== PROCESS COMPLETED SUCCESSFULLY ===', 'success');
     } catch (error) {
       log('=== PROCESS FAILED ===', 'error', error.message);
@@ -230,16 +230,19 @@ const InterviewScreenshotCapture = () => {
 
   useEffect(() => {
     if (!sessionId || hasStarted.current) return;
-    
+
     hasStarted.current = true;
     log('=== COMPONENT INITIALIZED ===');
     log(`Session ID: ${sessionId}`);
-    
-    // Start async process - fire and forget
-    log('Starting async screenshot process...');
-    processScreenshot();
+
+    // Start async process - delay by 5 seconds to avoid freezing the initial load
+    log('Scheduling async screenshot process in 5 seconds...');
+    const timer = setTimeout(() => {
+      processScreenshot();
+    }, 5000);
 
     return () => {
+      clearTimeout(timer);
       log('Component unmounting');
     };
   }, [sessionId]);

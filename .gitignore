@@ -1,6 +1,7 @@
 .env
 core/venv
 node_modules
+venv
 .vscode
 *.log
 npm-debug.log*
@@ -29,3 +30,4 @@ build/
 dist/
 build/assets/index-3oBceVxF.js
 core/.env
+.vercel

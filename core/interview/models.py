@@ -13,6 +13,7 @@ class Custominterviews(models.Model):
     DSA = models.IntegerField(blank=True,null=True)
     Dev = models.IntegerField(blank=True,null=True)
     ask_questions_on_resume = models.BooleanField(default=False)
+    has_coding_round = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
     def __str__(self):
         return f'{self.org.orgname}-{self.post}'
@@ -24,6 +25,14 @@ class Customquestion(models.Model):
     answer = models.TextField(blank=True, null=True)
     def __str__(self):
         return f'{self.interview.org.orgname}-{self.question[:50]}...'
+
+class CodingQuestion(models.Model):
+    interview = models.ForeignKey(Custominterviews, on_delete=models.CASCADE, related_name='coding_questions')
+    question = models.TextField()
+    
+    def __str__(self):
+        return f'{self.interview.org.orgname}-{self.question[:50]}...'
+
 class DsaTopics(models.Model):
     interview = models.ForeignKey(Custominterviews, on_delete=models.CASCADE, related_name='dsa_topics' )
     topic = models.CharField(max_length=100)
@@ -72,6 +81,7 @@ class InterviewSession(models.Model):
     Resumescore = models.FloatField(blank=True, null=True)
     confidenceScore= models.FloatField(blank=True,null=True)
     DsaScore = models.FloatField(blank=True, null=True)
+    CodingScore = models.FloatField(blank=True, null=True)
     overallScore = models.FloatField(blank=True, null=True)
     recommendation = models.CharField(max_length=50, blank=True, null=True)
     strengths = models.TextField(blank=True, null=True)
@@ -93,6 +103,19 @@ class DSAInteractions(models.Model):
     code = models.TextField(blank=True, null=True)
     score = models.FloatField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
+
+class CodingInteraction(models.Model):
+    session = models.ForeignKey(InterviewSession, on_delete=models.CASCADE, related_name="coding_sessions")
+    question = models.ForeignKey(CodingQuestion, on_delete=models.CASCADE)
+    code = models.TextField(blank=True, null=True)
+    score = models.FloatField(blank=True, null=True)
+    feedback = models.TextField(blank=True, null=True)
+    assistance_count = models.IntegerField(default=0)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f'{self.session.Application.user.username}-{self.question.question[:30]}...'
+
 class FollowUpQuestions(models.Model):
     Interaction = models.ForeignKey(Interaction, on_delete=models.CASCADE,related_name="interaction")
     question = models.TextField()

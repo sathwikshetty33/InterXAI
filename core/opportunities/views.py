@@ -141,7 +141,8 @@ class ScanOpportunitiesView(APIView):
             # Get user preferences
             preferences = UserApplicationPreferences.objects.filter(user=request.user).first()
             
-            matcher = OpportunityMatcher()
+            from utils.RecommendationEngine import RecommendationEngine
+            engine = RecommendationEngine()
             matches_created = 0
             
             for opp in opportunities:
@@ -149,26 +150,48 @@ class ScanOpportunitiesView(APIView):
                 if OpportunityMatch.objects.filter(user=request.user, opportunity=opp).exists():
                     continue
                 
-                result = matcher.evaluate({
-                    'user_skills': profile.skills,
-                    'user_experience': profile.experience_years,
-                    'user_preferences': preferences.__dict__ if preferences else {},
-                    'opportunity': {
+                # Use RecommendationEngine for fast scoring
+                score_data = engine.calculate_score(
+                    user_profile={
+                        'skills': profile.skills,
+                        'experience_years': profile.experience_years,
+                        'target_roles': profile.target_roles,
+                        'preferences': preferences.__dict__ if preferences else {}
+                    },
+                    opportunity_data={
                         'title': opp.title,
+                        'description': opp.description,
                         'requirements': opp.requirements,
                         'experience_level': opp.experience_level,
-                        'type': opp.type
+                        'type': opp.type,
+                        'remote': opp.remote
                     }
-                })
+                )
+
+                match_score = score_data['match_score']
+                min_score = preferences.min_match_score if preferences else 50
                 
-                if result.get('match_score', 0) >= (preferences.min_match_score if preferences else 50):
+                if match_score >= min_score:
+                    # Generate simple AI recommendation text based on breakdown
+                    bd = score_data['breakdown']
+                    reasons = []
+                    if bd.get('skill_score', 0) > 70: reasons.append("Strong skill match")
+                    if bd.get('experience_score', 0) > 80: reasons.append("Experience level fits well")
+                    if bd.get('role_score', 0) > 80: reasons.append("Role title matches your targets")
+                    
+                    if not reasons: reasons.append("General profile match")
+                    
+                    rec_text = f"We found this opportunity to be a {match_score}% match for you." 
+                    if score_data['missing_skills']:
+                         rec_text += f" You might need to brush up on: {', '.join(score_data['missing_skills'][:3])}."
+
                     OpportunityMatch.objects.create(
                         user=request.user,
                         opportunity=opp,
-                        match_score=result['match_score'],
-                        match_reasons=result.get('match_reasons', []),
-                        skill_gaps=result.get('skill_gaps', []),
-                        ai_recommendation=result.get('recommendation', '')
+                        match_score=match_score,
+                        match_reasons=reasons,
+                        skill_gaps=score_data['missing_skills'],
+                        ai_recommendation=rec_text
                     )
                     matches_created += 1
             

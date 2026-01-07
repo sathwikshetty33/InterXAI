@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Clock, Play, Send, CheckCircle, XCircle, Code, AlertCircle, Loader } from 'lucide-react';
+import { generateQuestion } from '../services/groqService';
 import { getAuthToken, fetchWithToken } from '../utils/handleToken';
 import { useParams, useNavigate } from 'react-router-dom';
-const base_url=import.meta.env.VITE_API_URL;
+const base_url = import.meta.env.VITE_API_URL;
 const TIME_LIMIT = 30 * 60; // 30 minutes in seconds
 const LANGUAGES = ['Python', 'C++', 'Java'];
 const CODE_TEMPLATES = {
@@ -84,7 +85,7 @@ const DSAInterviewPlatform = () => {
     if (!userCode || !userCode.trim()) {
       return { isValid: false, message: 'Code cannot be empty' };
     }
-    
+
     // Remove comments and whitespace to check for actual code
     const cleanCode = userCode
       .replace(/\/\*[\s\S]*?\*\//g, '') // Remove /* */ comments
@@ -92,27 +93,27 @@ const DSAInterviewPlatform = () => {
       .replace(/#.*$/gm, '') // Remove # comments (Python)
       .replace(/\s+/g, ' ') // Normalize whitespace
       .trim();
-    
+
     // Check if there's meaningful code beyond templates
     const templateKeywords = ['Your code here', 'Write your solution here', 'pass', 'return 0;', 'TODO'];
-    const hasOnlyTemplate = templateKeywords.some(keyword => 
+    const hasOnlyTemplate = templateKeywords.some(keyword =>
       cleanCode.includes(keyword) && cleanCode.replace(keyword, '').trim().length < 10
     );
-    
+
     if (hasOnlyTemplate) {
       return { isValid: false, message: 'Please write actual code, not just template' };
     }
-    
+
     // Basic syntax checks
     if (selectedLanguage === 'Python' && !cleanCode.includes('def ')) {
       return { isValid: false, message: 'Python code should contain function definitions' };
     }
-    
-    if ((selectedLanguage === 'C++' || selectedLanguage === 'Java') && 
-        (!cleanCode.includes('{') || !cleanCode.includes('}'))) {
+
+    if ((selectedLanguage === 'C++' || selectedLanguage === 'Java') &&
+      (!cleanCode.includes('{') || !cleanCode.includes('}'))) {
       return { isValid: false, message: `${selectedLanguage} code should contain proper braces` };
     }
-    
+
     return { isValid: true, message: '' };
   };
 
@@ -123,7 +124,7 @@ const DSAInterviewPlatform = () => {
       setError('Authentication required');
       return [];
     }
-    const base_url= import.meta.env.VITE_API_URL;
+    const base_url = import.meta.env.VITE_API_URL;
     try {
       const data = await fetchWithToken(
         `${base_url}/interview/get-dsa-questions/${sessionId}/`,
@@ -145,90 +146,12 @@ const DSAInterviewPlatform = () => {
     }
   };
 
-  const callGroqAPI = async (prompt) => {
-    try {
-      const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${import.meta.env.VITE_GROQ_API_KEY}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: 'openai/gpt-oss-120b',
-          messages: [{ role: 'user', content: prompt }],
-          temperature: 0.1,
-        }),
-      });
-      
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      
-      const data = await response.json();
-      return data.choices[0]?.message?.content || '';
-    } catch (error) {
-      console.error('Groq API Error:', error);
-      setError('Failed to connect to API. Please check your connection.');
-      return null;
-    }
-  };
-
-  const generateQuestion = async (topic, difficulty) => {
-    const prompt = `Generate a DSA coding problem for topic: ${topic} with difficulty: ${difficulty}. 
-    Respond ONLY with a valid JSON object in this exact format, with no additional text, markdown, or explanations:
-    {
-      "title": "Problem Title",
-      "description": "Problem description with clear constraints, examples, and what the function should do. Include input/output format.",
-      "testCases": [
-        {"input": "input1", "output": "expected_output1", "description": "test case 1 description"},
-        {"input": "input2", "output": "expected_output2", "description": "test case 2 description"},
-        {"input": "input3", "output": "expected_output3", "description": "test case 3 description"}
-      ],
-      "sampleInput": "sample input for testing",
-      "sampleOutput": "expected sample output",
-      "difficulty": "${difficulty}",
-      "hints": ["hint1", "hint2"]
-    }
-    
-    Make sure:
-    1. The problem is clear and has examples
-    2. Test cases cover edge cases
-    3. Input/output format is specified
-    4. Problem is language-agnostic
-    5. Difficulty level matches: ${difficulty}`;
-
-    const response = await callGroqAPI(prompt);
-    if (response) {
-      try {
-        // Clean response to extract JSON
-        let cleanResponse = response.trim();
-        cleanResponse = cleanResponse.replace(/```json\n?/g, '').replace(/```\n?/g, '');
-        const jsonStart = cleanResponse.indexOf('{');
-        const jsonEnd = cleanResponse.lastIndexOf('}') + 1;
-        if (jsonStart === -1 || jsonEnd === 0) {
-          throw new Error('No valid JSON found in response');
-        }
-        cleanResponse = cleanResponse.slice(jsonStart, jsonEnd);
-        
-        const parsedQuestion = JSON.parse(cleanResponse);
-        if (!parsedQuestion.title || !parsedQuestion.description || !parsedQuestion.testCases) {
-          throw new Error('Invalid question format');
-        }
-        
-        return parsedQuestion;
-      } catch (e) {
-        console.error('Failed to parse question JSON:', e, 'Response:', response);
-        return null;
-      }
-    }
-    return null;
-  };
+  // Local functions removed in favor of groqService.js
 
   const initializeQuestions = useCallback(async () => {
     setLoading(true);
     setError(null);
-    
-    // Fetch DSA topics from backend
+
     const backendTopics = await fetchDSATopics();
     if (!backendTopics || backendTopics.length === 0) {
       setError('No DSA topics found for this session');
@@ -237,54 +160,78 @@ const DSAInterviewPlatform = () => {
     }
 
     setDsaTopics(backendTopics);
-    
-    // Generate questions for each topic
-    const generatedQuestions = [];
-    
-    for (let i = 0; i < Math.min(backendTopics.length, 3); i++) {
-      const dsaTopic = backendTopics[i];
-      const question = await generateQuestion(dsaTopic.topic, dsaTopic.difficulty);
-      if (question) {
-        generatedQuestions.push({ 
-          ...question, 
-          topic: dsaTopic.topic,
-          difficulty: dsaTopic.difficulty,
-          dsaTopicId: dsaTopic.id,
-          id: i 
-        });
-      } else {
-        generatedQuestions.push({
-          id: i,
-          topic: dsaTopic.topic,
-          difficulty: dsaTopic.difficulty,
-          dsaTopicId: dsaTopic.id,
-          title: `${dsaTopic.topic.charAt(0).toUpperCase() + dsaTopic.topic.slice(1)} Problem`,
-          description: `Solve a ${dsaTopic.topic} related problem with ${dsaTopic.difficulty} difficulty. Implement the solution function.`,
-          testCases: [
-            { input: "test1", output: "result1", description: "Basic test case" },
-            { input: "test2", output: "result2", description: "Edge case" },
-            { input: "test3", output: "result3", description: "Complex case" }
-          ],
-          sampleInput: "sample",
-          sampleOutput: "expected",
-          hints: ["Consider the problem constraints", "Think about edge cases"]
-        });
-      }
-    }
-    
-    if (generatedQuestions.length === 0) {
-      setError('Failed to generate questions. Please refresh the page.');
+    const topicsToGenerate = backendTopics.slice(0, 3);
+    const initialQuestions = new Array(topicsToGenerate.length).fill(null);
+
+    // 1. Generate the FIRST question immediately to unblock the UI
+    const firstTopic = topicsToGenerate[0];
+    const firstQuestion = await generateQuestion(firstTopic.topic, firstTopic.difficulty);
+
+    if (firstQuestion) {
+      initialQuestions[0] = {
+        ...firstQuestion,
+        topic: firstTopic.topic,
+        difficulty: firstTopic.difficulty,
+        dsaTopicId: firstTopic.id,
+        id: 0
+      };
     } else {
-      setQuestions(generatedQuestions);
-      setCode(CODE_TEMPLATES.Python);
-      const initialRuns = {};
-      generatedQuestions.forEach((_, index) => {
-        initialRuns[index] = 3;
-      });
-      setRunsLeft(initialRuns);
+      // Fallback for first
+      initialQuestions[0] = {
+        id: 0,
+        topic: firstTopic.topic,
+        difficulty: firstTopic.difficulty,
+        dsaTopicId: firstTopic.id,
+        title: `${firstTopic.topic} Problem`,
+        description: `Solve this ${firstTopic.topic} problem.`,
+        testCases: [{ input: "1", output: "1", description: "test" }],
+        sampleInput: "1",
+        sampleOutput: "1",
+        hints: ["Think about basic logic"]
+      };
     }
-    
-    setLoading(false);
+
+    setQuestions([...initialQuestions]);
+    setCode(CODE_TEMPLATES.Python);
+    setRunsLeft({ 0: 3 });
+    setLoading(false); // UI IS NOW UNBLOCKED
+
+    // 2. Generate the rest in the background
+    const restPromises = topicsToGenerate.slice(1).map(async (dsaTopic, i) => {
+      const idx = i + 1;
+      const question = await generateQuestion(dsaTopic.topic, dsaTopic.difficulty);
+      return {
+        ...(question || {
+          title: `${dsaTopic.topic} Problem`,
+          description: `Solve this ${dsaTopic.topic} problem.`,
+          testCases: [{ input: "1", output: "1", description: "test" }],
+          sampleInput: "1",
+          sampleOutput: "1",
+          hints: ["Think about basic logic"]
+        }),
+        topic: dsaTopic.topic,
+        difficulty: dsaTopic.difficulty,
+        dsaTopicId: dsaTopic.id,
+        id: idx
+      };
+    });
+
+    const restQuestions = await Promise.all(restPromises);
+    setQuestions(prev => {
+      const newQuestions = [...prev];
+      restQuestions.forEach((q, i) => {
+        newQuestions[i + 1] = q;
+      });
+      return newQuestions;
+    });
+
+    setRunsLeft(prev => {
+      const newRuns = { ...prev };
+      restQuestions.forEach((_, i) => {
+        newRuns[i + 1] = 3;
+      });
+      return newRuns;
+    });
   }, [sessionId, navigate]);
 
   useEffect(() => {
@@ -334,7 +281,7 @@ const DSAInterviewPlatform = () => {
 
   const submitQuestion = async () => {
     if (!questions[currentQuestionIndex]) return;
-    
+
     // Validate code first
     const validation = validateCode(code);
     if (!validation.isValid) {
@@ -354,18 +301,18 @@ const DSAInterviewPlatform = () => {
       });
       return;
     }
-    
+
     setIsTestRunning(true);
     setTestResult(null);
     const question = questions[currentQuestionIndex];
-    
+
     let passedTests = 0;
     const testResults = [];
-    
+
     // Enhanced validation prompt
     for (let i = 0; i < question.testCases.length; i++) {
       const testCase = question.testCases[i];
-      
+
       const prompt = `You are a strict code validator. Your ONLY job is to:
 1. Execute the ${selectedLanguage} code with the given input
 2. Compare the actual output with the expected output
@@ -385,16 +332,16 @@ Input: ${testCase.input}
 Expected Output: ${testCase.output}
 
 Validate and respond with one word:`;
-      
+
       const result = await callGroqAPI(prompt);
       console.log(`Test case ${i + 1} response:`, result);
-      
+
       if (result) {
         const cleanResult = result.trim().toUpperCase();
         const passed = cleanResult === 'PASS' || (cleanResult.includes('PASS') && !cleanResult.includes('FAIL'));
-        
+
         console.log(`Test case ${i + 1}: Raw="${result}" Clean="${cleanResult}" Passed=${passed}`);
-        
+
         if (passed) passedTests++;
         testResults.push({
           passed,
@@ -411,13 +358,13 @@ Validate and respond with one word:`;
         });
       }
     }
-    
+
     const allPassed = passedTests === question.testCases.length;
     const questionScore = allPassed ? 10 : Math.floor((passedTests / question.testCases.length) * 10);
-    
+
     // Submit to backend
     await submitToBackend(question, questionScore);
-    
+
     const newSubmission = {
       questionIndex: currentQuestionIndex,
       questionId: question.id,
@@ -431,21 +378,21 @@ Validate and respond with one word:`;
       title: question.title,
       topic: question.topic
     };
-    
+
     const updatedSubmissions = submittedQuestions.filter(sub => sub.questionIndex !== currentQuestionIndex);
     updatedSubmissions.push(newSubmission);
     setSubmittedQuestions(updatedSubmissions);
-    
+
     const totalScore = updatedSubmissions.reduce((acc, sub) => acc + sub.score, 0);
     setScore(totalScore);
-    
+
     setTestResult(newSubmission);
     setIsTestRunning(false);
   };
 
   const runSingleTest = async () => {
     if (!questions[currentQuestionIndex]) return;
-    
+
     const remainingRuns = runsLeft[currentQuestionIndex] || 0;
     if (remainingRuns <= 0) {
       setRunResult({
@@ -454,7 +401,7 @@ Validate and respond with one word:`;
       });
       return;
     }
-    
+
     // Validate code first
     const validation = validateCode(code);
     if (!validation.isValid) {
@@ -464,11 +411,11 @@ Validate and respond with one word:`;
       });
       return;
     }
-    
+
     setIsTestRunning(true);
     setRunResult(null);
     const question = questions[currentQuestionIndex];
-    
+
     const prompt = `Execute this ${selectedLanguage} code and return ONLY the raw output.
 
 IMPORTANT RULES:
@@ -486,20 +433,20 @@ Input: ${question.sampleInput}
 Execute and return only the output:`;
 
     const result = await callGroqAPI(prompt);
-    
+
     setRunsLeft(prev => ({
       ...prev,
       [currentQuestionIndex]: remainingRuns - 1
     }));
-    
+
     if (result) {
       let cleanOutput = result.trim();
       cleanOutput = cleanOutput.replace(/^(Output:|Result:|Response:)/i, '').trim();
       cleanOutput = cleanOutput.replace(/```[\s\S]*?```/g, '').trim();
-      
+
       const normalizedResult = cleanOutput.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
       const normalizedExpected = question.sampleOutput.trim().replace(/\r\n/g, '\n').replace(/\r/g, '\n');
-      
+
       setRunResult({
         isOutput: true,
         message: normalizedResult,
@@ -517,10 +464,10 @@ Execute and return only the output:`;
 
   const handleQuestionSelect = (index) => {
     if (index === currentQuestionIndex) return;
-    
+
     setCurrentQuestionIndex(index);
     const submitted = submittedQuestions.find(sub => sub.questionIndex === index);
-    
+
     if (submitted) {
       setCode(submitted.code);
       setTestResult(submitted);
@@ -534,17 +481,17 @@ Execute and return only the output:`;
   const handleLanguageChange = (e) => {
     const newLanguage = e.target.value;
     setSelectedLanguage(newLanguage);
-    
+
     const isSubmitted = submittedQuestions.some(sub => sub.questionIndex === currentQuestionIndex);
     if (!isSubmitted) {
       setCode(CODE_TEMPLATES[newLanguage]);
     }
-    
+
     setTestResult(null);
     setRunResult(null);
   };
 
-  const handleFinalSubmit = () => {
+  const handleFinalSubmit = async () => {
     const finalResults = {
       sessionId,
       totalScore: score,
@@ -566,9 +513,27 @@ Execute and return only the output:`;
       })),
       timestamp: new Date().toISOString()
     };
-    
+
     console.log('Final Interview Results:', finalResults);
-    navigate('/');
+
+    try {
+      const token = getAuthToken();
+      const sessionData = await fetchWithToken(
+        `${base_url}/interview/interview-session/${sessionId}/`,
+        token,
+        navigate
+      );
+
+      // Show completion message instead of navigating to leaderboard
+      alert('Interview Complete! Thank you for your time. We will review your responses and get back to you soon.');
+
+      // Navigate to home or dashboard
+      navigate('/');
+    } catch (error) {
+      console.error('Error fetching session data for navigation:', error);
+      alert('Interview Complete! Thank you for your time.');
+      navigate('/');
+    }
   };
 
   if (loading) {
@@ -633,9 +598,8 @@ Execute and return only the output:`;
             <div className="flex items-center space-x-6 mt-2 sm:mt-0">
               <div className="flex items-center space-x-2">
                 <Clock className="h-5 w-5 text-purple-600" />
-                <span className={`text-lg font-mono font-bold ${
-                  timeLeft < 300 ? 'text-red-500' : timeLeft < 600 ? 'text-yellow-500' : 'text-purple-600'
-                }`}>
+                <span className={`text-lg font-mono font-bold ${timeLeft < 300 ? 'text-red-500' : timeLeft < 600 ? 'text-yellow-500' : 'text-purple-600'
+                  }`}>
                   {formatTime(timeLeft)}
                 </span>
               </div>
@@ -656,15 +620,14 @@ Execute and return only the output:`;
               <button
                 key={index}
                 onClick={() => handleQuestionSelect(index)}
-                className={`px-4 py-3 rounded-xl border-2 transition-all transform hover:scale-105 ${
-                  currentQuestionIndex === index
-                    ? 'bg-gradient-to-r from-purple-600 to-lavender-600 text-white border-purple-600 shadow-lg'
-                    : submission
+                className={`px-4 py-3 rounded-xl border-2 transition-all transform hover:scale-105 ${currentQuestionIndex === index
+                  ? 'bg-gradient-to-r from-purple-600 to-lavender-600 text-white border-purple-600 shadow-lg'
+                  : submission
                     ? submission.allPassed
                       ? 'bg-gradient-to-r from-green-100 to-green-50 text-green-800 border-green-300 hover:from-green-200 hover:to-green-100'
                       : 'bg-gradient-to-r from-red-100 to-red-50 text-red-800 border-red-300 hover:from-red-200 hover:to-red-100'
                     : 'bg-white/80 backdrop-blur-sm text-purple-700 border-purple-300 hover:bg-white'
-                }`}
+                  }`}
               >
                 <div className="font-medium">Q{index + 1}</div>
                 <div className="text-xs opacity-75">{q.topic}</div>
@@ -682,10 +645,9 @@ Execute and return only the output:`;
                 <div>
                   <h2 className="text-xl font-bold text-gray-800 mb-1">{currentQuestion.title}</h2>
                   <div className="flex items-center space-x-2 text-sm">
-                    <span className={`px-3 py-1 rounded-full text-white font-medium ${
-                      currentQuestion.difficulty === 'Easy' ? 'bg-green-500' :
+                    <span className={`px-3 py-1 rounded-full text-white font-medium ${currentQuestion.difficulty === 'Easy' ? 'bg-green-500' :
                       currentQuestion.difficulty === 'Medium' ? 'bg-yellow-500' : 'bg-red-500'
-                    }`}>
+                      }`}>
                       {currentQuestion.difficulty}
                     </span>
                     <span className="text-purple-400">•</span>
@@ -693,9 +655,8 @@ Execute and return only the output:`;
                   </div>
                 </div>
                 {isSubmitted && (
-                  <div className={`flex items-center space-x-1 px-3 py-1 rounded-full ${
-                    testResult.allPassed ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                  }`}>
+                  <div className={`flex items-center space-x-1 px-3 py-1 rounded-full ${testResult.allPassed ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                    }`}>
                     {testResult.allPassed ? <CheckCircle className="h-4 w-4" /> : <XCircle className="h-4 w-4" />}
                     <span className="text-sm font-medium">
                       {testResult.allPassed ? 'Passed' : 'Failed'}
@@ -704,7 +665,7 @@ Execute and return only the output:`;
                 )}
               </div>
             </div>
-            
+
             <div className="p-6 space-y-6">
               <div>
                 <h3 className="font-semibold text-purple-800 mb-3">Problem Description</h3>
@@ -747,9 +708,8 @@ Execute and return only the output:`;
                         <div className="text-gray-600 text-xs mb-1">Expected:</div>
                         <div className="text-gray-900 whitespace-pre-wrap">{runResult.expected}</div>
                       </div>
-                      <div className={`text-sm font-medium ${
-                        runResult.matches ? 'text-green-600' : 'text-orange-600'
-                      }`}>
+                      <div className={`text-sm font-medium ${runResult.matches ? 'text-green-600' : 'text-orange-600'
+                        }`}>
                         {runResult.matches ? '✓ Output matches expected' : '⚠ Output differs from expected'}
                       </div>
                     </div>
@@ -760,19 +720,18 @@ Execute and return only the output:`;
               )}
 
               {testResult && (
-                <div className={`p-4 rounded-xl border shadow-sm ${
-                  testResult.allPassed 
-                    ? 'bg-gradient-to-r from-green-50 to-green-100 border-green-200 text-green-800' 
-                    : testResult.error
+                <div className={`p-4 rounded-xl border shadow-sm ${testResult.allPassed
+                  ? 'bg-gradient-to-r from-green-50 to-green-100 border-green-200 text-green-800'
+                  : testResult.error
                     ? 'bg-gradient-to-r from-red-50 to-red-100 border-red-200 text-red-800'
                     : 'bg-gradient-to-r from-red-50 to-red-100 border-red-200 text-red-800'
-                }`}>
+                  }`}>
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center space-x-2">
                       {testResult.allPassed ? <CheckCircle className="h-5 w-5" /> : <XCircle className="h-5 w-5" />}
                       <span className="font-medium">
-                        {testResult.error ? 'Code Validation Error' : 
-                         testResult.allPassed ? 'All Tests Passed!' : 'Some Tests Failed'}
+                        {testResult.error ? 'Code Validation Error' :
+                          testResult.allPassed ? 'All Tests Passed!' : 'Some Tests Failed'}
                       </span>
                     </div>
                     {!testResult.error && (
@@ -813,7 +772,7 @@ Execute and return only the output:`;
                 </select>
               </div>
             </div>
-            
+
             <div className="p-6">
               {/* Code validation warning */}
               {!codeValidation.isValid && (
@@ -822,7 +781,7 @@ Execute and return only the output:`;
                   <span className="text-yellow-700 text-sm">{codeValidation.message}</span>
                 </div>
               )}
-              
+
               <textarea
                 value={code}
                 onChange={(e) => setCode(e.target.value)}
@@ -830,7 +789,7 @@ Execute and return only the output:`;
                 placeholder="Write your solution here..."
                 disabled={isSubmitted}
               />
-              
+
               <div className="flex space-x-3 mt-4">
                 <button
                   onClick={runSingleTest}
@@ -844,7 +803,7 @@ Execute and return only the output:`;
                   )}
                   {isTestRunning ? 'Running...' : `Run (${runsLeft[currentQuestionIndex] || 0} left)`}
                 </button>
-                
+
                 <button
                   onClick={submitQuestion}
                   disabled={isTestRunning || isSubmitted || !codeValidation.isValid}
@@ -868,11 +827,11 @@ Execute and return only the output:`;
             <div>
               <h3 className="text-lg font-semibold text-purple-800">Interview Progress</h3>
               <p className="text-purple-600">
-                {submittedQuestions.length} of {questions.length} questions completed • 
+                {submittedQuestions.length} of {questions.length} questions completed •
                 Score: {score}/{questions.length * 10}
               </p>
             </div>
-            
+
             {submittedQuestions.length > 0 && (
               <button
                 onClick={handleFinalSubmit}
@@ -883,7 +842,7 @@ Execute and return only the output:`;
               </button>
             )}
           </div>
-          
+
           <div className="mt-4">
             <div className="w-full bg-purple-200 rounded-full h-3">
               <div

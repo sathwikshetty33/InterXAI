@@ -19,7 +19,8 @@ from dotenv import load_dotenv
 import os
 
 # Load environment variables from .env file
-load_dotenv()
+env_path = BASE_DIR.parent / '.env'
+load_dotenv(dotenv_path=env_path)
 
 # Then access them like this
 
@@ -102,7 +103,7 @@ CORS_ALLOW_HEADERS = [
     "x-requested-with",
     "access-control-allow-origin",
 ]
-ROOT_URLCONF = os.getenv('ROOT_URLCONF')
+ROOT_URLCONF = os.getenv('ROOT_URLCONF', 'core.urls')
 
 TEMPLATES = [
     {
@@ -119,7 +120,7 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = os.getenv('WSGI_APPLICATION')
+WSGI_APPLICATION = os.getenv('WSGI_APPLICATION', 'core.wsgi.application')
 
 
 # Database

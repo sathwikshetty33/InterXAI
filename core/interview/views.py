@@ -1,4 +1,4 @@
-from django.shortcuts import render
+﻿from django.shortcuts import render
 from urllib3 import request
 from .serializers import *
 from rest_framework.views import APIView
@@ -70,33 +70,69 @@ class InterviewSessionInitializerView(APIView):
     authentication_classes = [TokenAuthentication]
 
     def post(self, request, id):
+        print(f"[DEBUG] Received POST to InterviewSessionInitializerView for interview id={id}")
         try:
-            interview = Custominterviews.objects.get(id=id)
+            # interview_obj is a Custominterviews object
+            interview_obj = Custominterviews.objects.get(id=id)
         except Custominterviews.DoesNotExist:
-            return Response({"error": "Interview not found."}, status=status.HTTP_404_NOT_FOUND)
-        interview = Application.objects.filter(user=request.user, interview=interview).first()
-        if not interview:
+            return Response({"error": f"Interview with id={id} not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        # application is an Application object
+        application = Application.objects.filter(user=request.user, interview=interview_obj).first()
+        if not application:
             return Response({"error": "You have not applied for this interview."}, status=status.HTTP_403_FORBIDDEN)
-        if not interview.approved:
-            return Response({"error": "Application not approved."}, status=status.HTTP_403_FORBIDDEN)
-        if interview.interview.startTime > timezone.now() or interview.interview.endTime < timezone.now():
-            return Response({"error": "Interview time has passed."}, status=status.HTTP_400_BAD_REQUEST)
-        session = InterviewSession.objects.filter(Application=interview).first()
+        
+        if not application.approved:
+            return Response({"error": "Your application has not been approved yet."}, status=status.HTTP_403_FORBIDDEN)
+
+        # If a session already exists for this application, return the existing session id (idempotent)
+        session = InterviewSession.objects.filter(Application=application).first()
         if session:
-            return Response({"error": "Interview session already exists."}, status=status.HTTP_400_BAD_REQUEST)
-        session = InterviewSession.objects.create(Application=interview)
-        question = Customquestion.objects.filter(interview=interview.interview).first()
+            return Response({"message": "Interview session already exists.", "session_id": session.id}, status=status.HTTP_200_OK)
+
+        # Validate interview timing (relaxed)
+        now = timezone.now()
+        if application.interview.startTime and application.interview.startTime > now:
+            print(f"[DEBUG] Interview not started yet: start={application.interview.startTime}, now={now}")
+            # Proceed without error to allow session creation
+        if application.interview.endTime and application.interview.endTime < now:
+            print(f"[DEBUG] Interview already ended: end={application.interview.endTime}, now={now}")
+            # Proceed; session may be marked expired later if needed
+
+        # Create a new interview session for this application
+        session = InterviewSession.objects.create(Application=application)
+        question = Customquestion.objects.filter(interview=application.interview).first()
         if question:
             session.current_question_index = 0
             session.status = "ongoing"
             session.save()
             interaction = Interaction.objects.create(session=session, Customquestion=question)
-            follow_up = FollowUpQuestions.objects.create(Interaction=interaction, question=question.question)
-        return Response({"message": "Interview session initialized successfully.", "session_id": session.id, "question": question.question}, status=status.HTTP_201_CREATED)
+            FollowUpQuestions.objects.create(Interaction=interaction, question=question.question)
+        
+        return Response({
+            "message": "Interview session initialized successfully.", 
+            "session_id": session.id, 
+            "question": question.question if question else None,
+            "has_coding_round": application.interview.has_coding_round
+        }, status=status.HTTP_201_CREATED)
 
 class InterviewSessionView(APIView):
     permission_classes = [IsAuthenticated]  
     authentication_classes = [TokenAuthentication]
+
+    def get(self, request, id):
+        print(f"\n[DEBUG] Fetching configuration for Session ID: {id}")
+        try:
+            session = InterviewSession.objects.get(id=id)
+            if request.user != session.Application.user:
+                print(f"[DEBUG] Permission denied for user {request.user.username}")
+                return Response({"error": "You do not have permission to access this session."}, status=status.HTTP_403_FORBIDDEN)
+            
+            serializer = InterviewSessionSerializer(session)
+            print(f"[DEBUG] Session details fetched. has_coding_round: {serializer.data.get('has_coding_round')}")
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        except InterviewSession.DoesNotExist:
+            return Response({"error": "Interview session not found."}, status=status.HTTP_404_NOT_FOUND)
 
     def post(self, request, id):
         try:
@@ -326,6 +362,40 @@ class GetAllInterviewsView(APIView):
             Q(submissionDeadline__gt=timezone.now()) |
             Q(applications__user=request.user)
         ).distinct()
+
+        try:
+            from career.models import UserSkillProfile
+            from utils.RecommendationEngine import RecommendationEngine
+            
+            profile = UserSkillProfile.objects.filter(user=request.user).first()
+            if profile:
+                engine = RecommendationEngine()
+                interviews_list = list(interviews)
+                
+                for interview in interviews_list:
+                    score_data = engine.calculate_score(
+                        user_profile={
+                            'skills': profile.skills,
+                            'experience_years': profile.experience_years,
+                            'target_roles': profile.target_roles,
+                            'preferences': {}
+                        },
+                        opportunity_data={
+                            'title': interview.post,
+                            'description': interview.desc,
+                            'experience_level': interview.experience,
+                            'requirements': [],
+                            'remote': False
+                        }
+                    )
+                    interview.match_score = score_data['match_score']
+                    interview.match_details = score_data['breakdown']
+                
+                interviews = sorted(interviews_list, key=lambda x: getattr(x, 'match_score', 0), reverse=True)
+                
+        except Exception as e:
+            print(f"Error scoring interviews: {e}")
+
         serializer = InterviewSerializer(interviews, many=True, context={'request': request})
         return Response(serializer.data, status=status.HTTP_200_OK)
 
@@ -485,7 +555,7 @@ class SessionDsaQuestions(APIView):
             print(dsa_topics)
             created_interactions = []
             for topic in dsa_topics:
-                # ✅ Create a DSAInteraction for each topic
+                # âœ… Create a DSAInteraction for each topic
                 interaction, created = DSAInteractions.objects.get_or_create(
                     session=session,
                     topic=topic,
@@ -546,7 +616,7 @@ class resumeQuestion(APIView):
         # Check if a resumeconvo already exists for this session
         existing_convo = resumeconvo.objects.filter(session=session).first()
         if existing_convo:
-            # ✅ Get first unanswered convo for this session
+            # âœ… Get first unanswered convo for this session
             unanswered_convo = resumeconvo.objects.filter(session=session, answer__isnull=True).first()
             if not unanswered_convo:
                 return Response({"compeletd": True}, status=status.HTTP_200_OK)
@@ -589,7 +659,7 @@ class resumeQuestion(APIView):
                 "completed" : True
             }, status=status.HTTP_200_OK)
 
-        # ✅ No convo yet → generate new questions
+        # âœ… No convo yet â†’ generate new questions
         application = session.Application
         req = questionGenerationRequest(
             extracted_standardized_resume=application.extratedResume,
@@ -601,7 +671,7 @@ class resumeQuestion(APIView):
         extractor = ResumeQuestionGenerator()
         result = extractor.evaluate(req)
 
-        # result is ResumeQuestionResponse → access extractedQAndA
+        # result is ResumeQuestionResponse â†’ access extractedQAndA
         convo1 = resumeconvo.objects.create(session=session, question=result[0], expected_answer=result[1])
         convo2 = resumeconvo.objects.create(session=session, question=result[2], expected_answer=result[3])
 
@@ -989,3 +1059,289 @@ Be constructive and helpful, not harsh. Focus on growth mindset."""
             "feedback_saved": bool(feedback_text) if decision == 'reject' else False,
             "ai_feedback_generated": bool(ai_feedback)
         }, status=status.HTTP_200_OK)
+
+
+class SessionCodingQuestions(APIView):
+    permission_classes = [IsAuthenticated]
+    authentication_classes = [TokenAuthentication]
+
+    def get(self, request, id):
+        try:
+            session = InterviewSession.objects.get(id=id)
+        except InterviewSession.DoesNotExist:
+            return Response({"error": "Session not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        if not session.Application.interview.has_coding_round:
+            return Response({"error": "This interview does not have a coding round"}, status=status.HTTP_400_BAD_REQUEST)
+
+        print(f"\n[DEBUG] Fetching coding questions for Session ID: {id}")
+        coding_questions = CodingQuestion.objects.filter(interview=session.Application.interview)
+        
+        # Ensure interactions exist
+        for q in coding_questions:
+            CodingInteraction.objects.get_or_create(session=session, question=q)
+
+        interactions = CodingInteraction.objects.filter(session=session)
+        print(f"[DEBUG] Found {interactions.count()} coding interactions.")
+        serializer = CodingSessionSerializer(interactions, many=True)
+        
+        return Response({
+            "interactions": serializer.data,
+            "post_title": session.Application.interview.post
+        }, status=status.HTTP_200_OK)
+
+    def post(self, request, id, coding_q_id):
+        try:
+            print(f"\n[DEBUG] Updating coding interaction for Session ID: {id}, Question ID: {coding_q_id}")
+            session = InterviewSession.objects.get(id=id)
+            interaction = CodingInteraction.objects.get(session=session, question_id=coding_q_id)
+            
+            interaction.code = request.data.get("code")
+            interaction.score = request.data.get("score")
+            interaction.feedback = request.data.get("feedback")
+            interaction.save()
+            
+            print(f"[DEBUG] Successfully saved code for Question ID: {coding_q_id}, Score: {interaction.score}")
+            
+            # Aggregate CodingScore for the session
+            all_coding = CodingInteraction.objects.filter(session=session)
+            scores = [i.score for i in all_coding if i.score is not None]
+            if scores:
+                session.CodingScore = sum(scores) / len(scores)
+                session.save()
+                print(f"[DEBUG] Session {id} CodingScore updated to: {session.CodingScore}")
+            
+            return Response({"message": "Coding interaction updated"}, status=status.HTTP_200_OK)
+        except (InterviewSession.DoesNotExist, CodingInteraction.DoesNotExist):
+            return Response({"error": "Interaction not found"}, status=status.HTTP_404_NOT_FOUND)
+
+class CodingAssistance(APIView):
+    permission_classes = [IsAuthenticated]
+    authentication_classes = [TokenAuthentication]
+
+    def post(self, request, id, coding_q_id):
+        try:
+            session = InterviewSession.objects.get(id=id)
+            interaction = CodingInteraction.objects.get(session=session, question_id=coding_q_id)
+            
+            if interaction.assistance_count >= 3:
+                return Response({"error": "Maximum assistance limit reached (3)"}, status=status.HTTP_400_BAD_REQUEST)
+            
+            # Logic for assistance (e.g., calling Groq optionally, here we just increment count)
+            interaction.assistance_count += 1
+            interaction.save()
+            
+            print(f"\n[DEBUG] AI Assistance requested for Session: {id}, Question: {coding_q_id}. Count: {interaction.assistance_count}/3")
+            # You might want to return actual AI assistance here, but based on request, 
+            # we just need to track the limit.
+            return Response({
+                "message": "Assistance provided",
+                "assistance_count": interaction.assistance_count
+            }, status=status.HTTP_200_OK)
+            
+        except (InterviewSession.DoesNotExist, CodingInteraction.DoesNotExist):
+            return Response({"error": "Interaction not found"}, status=status.HTTP_404_NOT_FOUND)
+
+
+class ContinueInterviewSession(APIView):
+    """
+    Continue an existing interview session to the next round
+    Used when transitioning from coding -> interview -> DSA
+    """
+    permission_classes = [IsAuthenticated]
+    authentication_classes = [TokenAuthentication]
+
+    def post(self, request, session_id):
+        try:
+            session = InterviewSession.objects.get(id=session_id)
+        except InterviewSession.DoesNotExist:
+            return Response({
+                "error": "Session not found",
+                "session_id": session_id
+            }, status=status.HTTP_404_NOT_FOUND)
+
+        # Verify user owns this session
+        if request.user != session.Application.user:
+            return Response({
+                "error": "You do not have permission to access this session."
+            }, status=status.HTTP_403_FORBIDDEN)
+
+        round_type = request.data.get('round_type', 'interview')
+
+        # Update session status to ongoing for the new round
+        session.status = 'ongoing'
+        session.save()
+
+        print(f"[DEBUG] Session {session_id} continued for {round_type} round")
+
+        # Prepare response based on round type
+        if round_type == 'interview':
+            # Get first interview question
+            question = Customquestion.objects.filter(
+                interview=session.Application.interview,
+                type='interview'
+            ).first()
+
+            if question:
+                # Check if interaction already exists
+                interaction = Interaction.objects.filter(
+                    session=session,
+                    Customquestion=question
+                ).first()
+
+                if not interaction:
+                    # Create new interaction
+                    interaction = Interaction.objects.create(
+                        session=session,
+                        Customquestion=question
+                    )
+                    # Create first follow-up question
+                    FollowUpQuestions.objects.create(
+                        Interaction=interaction,
+                        question=question.question
+                    )
+                    session.current_question_index = 0
+                    session.save()
+
+                return Response({
+                    "message": "Interview round initialized successfully",
+                    "session_id": session.id,
+                    "round_type": "interview",
+                    "question": question.question,
+                    "has_coding_round": session.Application.interview.has_coding_round
+                }, status=status.HTTP_200_OK)
+            else:
+                return Response({
+                    "error": "No interview questions found for this interview"
+                }, status=status.HTTP_400_BAD_REQUEST)
+
+        elif round_type == 'dsa':
+            # Get DSA topics
+            dsa_topics = DsaTopics.objects.filter(
+                interview=session.Application.interview
+            )
+
+            if dsa_topics.exists():
+                # Create DSA interactions if they don't exist
+                for topic in dsa_topics:
+                    DSAInteractions.objects.get_or_create(
+                        session=session,
+                        topic=topic,
+                        defaults={"created_at": timezone.now()}
+                    )
+
+                return Response({
+                    "message": "DSA round initialized successfully",
+                    "session_id": session.id,
+                    "round_type": "dsa",
+                    "dsa_topics_count": dsa_topics.count()
+                }, status=status.HTTP_200_OK)
+            else:
+                return Response({
+                    "error": "No DSA topics found for this interview"
+                }, status=status.HTTP_400_BAD_REQUEST)
+
+        elif round_type == 'resume':
+            # Check if resume questions should be asked
+            if not session.Application.interview.ask_questions_on_resume:
+                return Response({
+                    "message": "No resume questions for this interview",
+                    "session_id": session.id,
+                    "round_type": "resume",
+                    "skip_resume": True
+                }, status=status.HTTP_200_OK)
+
+            return Response({
+                "message": "Resume round initialized successfully",
+                "session_id": session.id,
+                "round_type": "resume"
+            }, status=status.HTTP_200_OK)
+
+        else:
+            return Response({
+                "error": f"Invalid round_type: {round_type}"
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+
+class UpdateSessionStatus(APIView):
+    """
+    Update the status of an interview session
+    """
+    permission_classes = [IsAuthenticated]
+    authentication_classes = [TokenAuthentication]
+
+    def patch(self, request, session_id):
+        try:
+            session = InterviewSession.objects.get(id=session_id)
+        except InterviewSession.DoesNotExist:
+            return Response({
+                "error": "Session not found"
+            }, status=status.HTTP_404_NOT_FOUND)
+
+        # Verify user owns this session
+        if request.user != session.Application.user:
+            return Response({
+                "error": "You do not have permission to access this session."
+            }, status=status.HTTP_403_FORBIDDEN)
+
+        new_status = request.data.get('status')
+        round_type = request.data.get('round_type', 'unknown')
+
+        if not new_status:
+            return Response({
+                "error": "Status not provided"
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        # Update status
+        session.status = new_status
+
+        # If completing a round, set end_time
+        if new_status == 'completed' and not session.end_time:
+            session.end_time = timezone.now()
+
+        session.save()
+
+        print(f"[DEBUG] Session {session_id} status updated to {new_status} for {round_type} round")
+
+        return Response({
+            "message": f"{round_type.capitalize()} round status updated to {new_status}",
+            "session_id": session.id,
+            "status": session.status
+        }, status=status.HTTP_200_OK)
+
+class GroqProxyView(APIView):
+    # ... existing GroqProxyView content ...
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        try:
+            import os
+            from groq import Groq
+            
+            api_key = os.environ.get('GROQ_API_KEY')
+            if not api_key:
+                return Response({'error': 'GROQ_API_KEY not configured on server'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+                
+            client = Groq(api_key=api_key)
+            
+            data = request.data
+            messages = data.get('messages')
+            model = data.get('model', 'llama-3.3-70b-versatile')
+            temperature = data.get('temperature', 0.7)
+            response_format = data.get('response_format')
+            
+            print(f"\n[DEBUG] Groq API Call: Model={model}, Temperature={temperature}")
+            completion = client.chat.completions.create(
+                messages=messages,
+                model=model,
+                temperature=temperature,
+                response_format=response_format
+            )
+            
+            return Response(completion.to_dict(), status=status.HTTP_200_OK)
+            
+        except Exception as e:
+            print(f'Groq Proxy Error: {str(e)}')
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
