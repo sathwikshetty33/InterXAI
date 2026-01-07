@@ -5,6 +5,8 @@ import { Mic, Send, Play, CheckCircle, Clock, AlertTriangle, Terminal, Code2, Me
 import { generateQuestion, analyzeCode, getChatResponse, executeCode, gradeCode } from '../services/groqService';
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { getAuthToken, fetchWithToken } from '../utils/handleToken';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 const base_url = import.meta.env.VITE_API_URL;
 
 const DEFAULT_QUESTIONS = {
@@ -809,8 +811,10 @@ const CodingRound = () => {
                                             <div className="flex items-center space-x-2 mb-4">
                                                 <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs font-semibold rounded">Technical</span>
                                             </div>
-                                            <div className="prose prose-sm prose-gray max-w-none text-gray-700">
-                                                <p className="whitespace-pre-wrap">{problem.question}</p>
+                                            <div className="prose prose-sm prose-gray max-w-none text-gray-700 prose-headings:text-gray-900 prose-strong:text-gray-900 prose-code:bg-gray-100 prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-code:text-purple-600 prose-pre:bg-gray-900 prose-pre:text-gray-100">
+                                                <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                                                    {codingInteractions[currentQuestionIndex]?.generated_question || problem?.question || "Loading question..."}
+                                                </ReactMarkdown>
                                             </div>
                                         </div>
 

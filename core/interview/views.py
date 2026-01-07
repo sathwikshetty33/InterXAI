@@ -19,6 +19,7 @@ from utils.resumeQuestiongeneratorAgent import ResumeQuestionGenerator
 import requests
 from PyPDF2 import PdfReader
 from django.core.files.base import ContentFile
+from utils.question_generator import generate_coding_question
 
 # Create your views here.
 class CustomInterviewView(APIView):
@@ -1076,10 +1077,28 @@ class SessionCodingQuestions(APIView):
 
         print(f"\n[DEBUG] Fetching coding questions for Session ID: {id}")
         coding_questions = CodingQuestion.objects.filter(interview=session.Application.interview)
+        post_title = session.Application.interview.post
         
-        # Ensure interactions exist
+        # Ensure interactions exist and generate questions if needed
         for q in coding_questions:
-            CodingInteraction.objects.get_or_create(session=session, question=q)
+            interaction, created = CodingInteraction.objects.get_or_create(
+                session=session, 
+                question=q
+            )
+            
+            # If no generated question yet, generate one from the topic
+            if not interaction.generated_question:
+                print(f"[DEBUG] Generating question for topic: {q.question[:50]}...")
+                result = generate_coding_question(q.question, post_title)
+                
+                if result.get('is_generated'):
+                    interaction.generated_question = result.get('question')
+                    interaction.save()
+                    print(f"[DEBUG] Generated question saved for ID: {q.id}")
+                else:
+                    # Use original question as generated_question for consistency
+                    interaction.generated_question = result.get('question')
+                    interaction.save()
 
         interactions = CodingInteraction.objects.filter(session=session)
         print(f"[DEBUG] Found {interactions.count()} coding interactions.")
@@ -1087,7 +1106,7 @@ class SessionCodingQuestions(APIView):
         
         return Response({
             "interactions": serializer.data,
-            "post_title": session.Application.interview.post
+            "post_title": post_title
         }, status=status.HTTP_200_OK)
 
     def post(self, request, id, coding_q_id):

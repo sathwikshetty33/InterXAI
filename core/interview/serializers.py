@@ -330,7 +330,7 @@ class CodingSessionSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = CodingInteraction
-        fields = ["id", "session", "question", "code", "score", "feedback", "assistance_count", "created_at"]
+        fields = ["id", "session", "question", "generated_question", "code", "score", "feedback", "assistance_count", "created_at"]
         read_only_fields = ["id", "created_at"]
 
 class InteractionSerializer(serializers.ModelSerializer):

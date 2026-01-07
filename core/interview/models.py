@@ -107,6 +107,7 @@ class DSAInteractions(models.Model):
 class CodingInteraction(models.Model):
     session = models.ForeignKey(InterviewSession, on_delete=models.CASCADE, related_name="coding_sessions")
     question = models.ForeignKey(CodingQuestion, on_delete=models.CASCADE)
+    generated_question = models.TextField(blank=True, null=True)  # AI-generated question from topic
     code = models.TextField(blank=True, null=True)
     score = models.FloatField(blank=True, null=True)
     feedback = models.TextField(blank=True, null=True)
