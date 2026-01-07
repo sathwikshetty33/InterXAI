@@ -24,7 +24,7 @@ class InterviewManager(ABC):
         
         # Initialize ChatGroq 
         self.llm = ChatGroq(
-            model=self.config.llm_model,
+            model="openai/gpt-oss-120b",
             temperature=self.config.temperature,
             max_tokens=self.config.max_tokens,
             groq_api_key=groq_api_key

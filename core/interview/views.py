@@ -1329,7 +1329,7 @@ class UpdateSessionStatus(APIView):
         }, status=status.HTTP_200_OK)
 
 class GroqProxyView(APIView):
-    # ... existing GroqProxyView content ...
+    """Proxy to call Groq API from frontend through backend securely"""
     authentication_classes = [TokenAuthentication]
     permission_classes = [IsAuthenticated]
 
@@ -1340,9 +1340,11 @@ class GroqProxyView(APIView):
             
             api_key = os.environ.get('GROQ_API_KEY')
             if not api_key:
+                print("[ERROR] GROQ_API_KEY not found in environment")
                 return Response({'error': 'GROQ_API_KEY not configured on server'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
                 
-            client = Groq(api_key=api_key)
+            # Add timeout to prevent indefinite hanging
+            client = Groq(api_key=api_key, timeout=60.0)  # 60 second timeout
             
             data = request.data
             messages = data.get('messages')
@@ -1350,7 +1352,11 @@ class GroqProxyView(APIView):
             temperature = data.get('temperature', 0.7)
             response_format = data.get('response_format')
             
-            print(f"\n[DEBUG] Groq API Call: Model={model}, Temperature={temperature}")
+            print(f"\n[DEBUG] Groq API Call Started: Model={model}, Temperature={temperature}, Messages={len(messages) if messages else 0}")
+            
+            if not messages:
+                return Response({'error': 'No messages provided'}, status=status.HTTP_400_BAD_REQUEST)
+            
             completion = client.chat.completions.create(
                 messages=messages,
                 model=model,
@@ -1358,9 +1364,12 @@ class GroqProxyView(APIView):
                 response_format=response_format
             )
             
+            print(f"[DEBUG] Groq API Call Completed Successfully")
             return Response(completion.to_dict(), status=status.HTTP_200_OK)
             
         except Exception as e:
-            print(f'Groq Proxy Error: {str(e)}')
+            print(f'[ERROR] Groq Proxy Error: {str(e)}')
+            import traceback
+            traceback.print_exc()
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
