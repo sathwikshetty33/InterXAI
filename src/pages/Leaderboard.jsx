@@ -15,6 +15,8 @@ import { getAuthToken } from "../utils/handleToken";
 import ImageModal from "../../src/pages/ImageModal"
 import Appp from "../../src/pages/ImageModal"
 import { toast } from 'react-toastify';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 ChartJS.register(...registerables);
 
 const Leaderboard = () => {
@@ -1003,7 +1005,7 @@ console.log("Sorted Data:", sortedData);
                   {/* Tabs */}
                   <div className="bg-gray-50 px-6 py-3 border-b border-gray-200">
                     <div className="flex gap-2 flex-wrap">
-                      {['overview', 'questions', 'coding', 'dsa', 'resume_conversations', 'images'].map((tab) => (
+                      {['overview', 'questions', 'coding', 'dsa', 'resume_conversations'].map((tab) => (
                         <button
                           key={tab}
                           onClick={() => setActiveTab(tab)}
@@ -1018,7 +1020,7 @@ console.log("Sorted Data:", sortedData);
                           {tab === 'coding' && <Code className="w-4 h-4" />}
                           {tab === 'dsa' && <FileCode className="w-4 h-4" />}
                           {tab === 'resume_conversations' && <BarChart2 className="w-4 h-4" />}
-                          {tab === 'images' && <Eye className="w-4 h-4" />}
+                          {/* {tab === 'images' && <Eye className="w-4 h-4" />} */}
                           {tab.charAt(0).toUpperCase() + tab.slice(1).replace('_', ' ')}
                         </button>
                       ))}
@@ -1271,6 +1273,7 @@ console.log("Sorted Data:", sortedData);
                       </div>
                     )}
 
+                    {/* Images tab commented out
                     {activeTab === 'images' && (
                       <div className="space-y-8">
                         <h4 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
@@ -1287,7 +1290,7 @@ console.log("Sorted Data:", sortedData);
                                     alt={`Interview capture ${index + 1}`}
                                     className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
                                     onError={(e) => {
-                                      e.target.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="100" height="100"%3E%3Crect fill="%23ddd" width="100" height="100"/%3E%3Ctext fill="%23999" x="50%25" y="50%25" text-anchor="middle" dy=".3em"%3ENo Image%3C/text%3E%3C/svg%3E';
+                                      e.target.src = 'data:image/svg+xml,...';
                                     }}
                                   />
                                 </div>
@@ -1313,6 +1316,7 @@ console.log("Sorted Data:", sortedData);
                         )}
                       </div>
                     )}
+                    */}
 
                     {activeTab === 'coding' && (
                       <div className="space-y-8">
@@ -1337,19 +1341,25 @@ console.log("Sorted Data:", sortedData);
                                   {/* Question */}
                                   <div>
                                     <p className="text-sm font-medium text-blue-600 mb-2">Question:</p>
-                                    <div className="text-sm text-gray-700 bg-gray-50 p-4 rounded-md border border-gray-200">
+                                    <div className="text-sm text-gray-700 bg-gray-50 p-4 rounded-md border border-gray-200 prose prose-sm max-w-none">
                                       {session.generated_question ? (() => {
                                         try {
                                           const parsed = JSON.parse(session.generated_question);
                                           return (
                                             <div>
                                               <p className="font-medium mb-2">{parsed?.title || 'Coding Question'}</p>
-                                              <p className="text-gray-600">{parsed?.description || session.generated_question}</p>
+                                              <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                                                {parsed?.description || session.generated_question}
+                                              </ReactMarkdown>
                                             </div>
                                           );
                                         } catch {
-                                          // Not JSON, display as plain text
-                                          return <p className="whitespace-pre-wrap">{session.generated_question}</p>;
+                                          // Not JSON, display as markdown
+                                          return (
+                                            <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                                              {session.generated_question}
+                                            </ReactMarkdown>
+                                          );
                                         }
                                       })() : session.question ? (
                                         <p>{session.question.question || 'Coding Question'}</p>

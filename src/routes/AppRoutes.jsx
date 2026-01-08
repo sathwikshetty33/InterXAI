@@ -22,6 +22,7 @@ import Opportunities from '../pages/Opportunities';
 import FeedbackInsights from '../pages/FeedbackInsights';
 import RoadmapDetail from '../pages/RoadmapDetail';
 import CodingRound from '../pages/CodingRound';
+import ThankYou from '../pages/ThankYou';
 
 export default function AppRoutes() {
   return (
@@ -89,6 +90,7 @@ export default function AppRoutes() {
           </EnhancedProctoredRouteWrapper>
         }
       />
+      <Route path="/thank-you" element={<ThankYou />} />
 
     </Routes>
   );

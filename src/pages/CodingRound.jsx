@@ -407,11 +407,20 @@ const CodingRound = () => {
                 console.log(`[SUBMIT] Grading code for question ${currentInteraction.question.id}`);
 
                 try {
+                    // Get the question text - prefer generated_question which has the full problem
+                    const questionText = currentInteraction.generated_question || 
+                                        codingInteractions[currentQuestionIndex]?.generated_question || 
+                                        currentInteraction.question?.question || 
+                                        "";
+                    
+                    console.log("[SUBMIT] Question text for grading:", questionText?.substring(0, 300));
+                    console.log("[SUBMIT] Full currentInteraction:", currentInteraction);
+                    
                     // Grade the code using AI
                     const grading = await gradeCode(
                         code,
                         language,
-                        codingInteractions[currentQuestionIndex]?.generated_question || currentInteraction.question.question
+                        questionText
                     );
 
                     console.log("[SUBMIT] AI Grading Result:", grading);
@@ -692,7 +701,7 @@ const CodingRound = () => {
         );
     }
 
-    return (
+    const content = (
         <div className={`h-screen flex flex-col ${isDark ? 'bg-gray-900 text-white' : 'bg-[#F9FAFB] text-gray-800'} transition-colors duration-300`}>
             {/* Header */}
             <header className={`h-16 px-6 flex items-center justify-between border-b ${isDark ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'} shadow-sm z-10`}>
