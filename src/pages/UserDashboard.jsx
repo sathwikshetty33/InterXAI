@@ -1321,6 +1321,7 @@ export default function UserDashboard() {
               </div>
             );
           } else {
+            // 'pending', null, undefined - Result not announced yet
             return (
               <div className="mt-2 flex items-center gap-2 text-amber-600 bg-amber-50 px-3 py-2 rounded-lg">
                 <Clock className="w-4 h-4" />

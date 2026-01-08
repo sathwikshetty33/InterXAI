@@ -82,6 +82,7 @@ const Leaderboard = () => {
   const getEffectiveScore = (candidate) => {
     let sum = 0;
     let count = 0;
+    if (typeof candidate.CodingScore === 'number') { sum += candidate.CodingScore; count++; }
     if (typeof candidate.Devscore === 'number') { sum += candidate.Devscore; count++; }
     if (typeof candidate.Resumescore === 'number') { sum += candidate.Resumescore; count++; }
     if (typeof candidate.DsaScore === 'number') { sum += candidate.DsaScore; count++; }
@@ -699,6 +700,7 @@ console.log("Sorted Data:", sortedData);
                       <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Rank</th>
                       <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Candidate</th>
                       <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Overall</th>
+                      <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Coding</th>
                       <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Dev</th>
                       <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Resume</th>
                       <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">DSA</th>
@@ -736,6 +738,11 @@ console.log("Sorted Data:", sortedData);
                         <td className="px-6 py-4 whitespace-nowrap">
                           <span className={`inline-flex px-3 py-1 rounded-full text-sm font-bold border ${getScoreColor(getEffectiveScore(candidate))}`}>
                             {getEffectiveScore(candidate).toFixed(1)}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className={`inline-flex px-3 py-1 rounded-full text-sm font-bold border ${getScoreColor(candidate.CodingScore)}`}>
+                            {typeof candidate.CodingScore === 'number' ? candidate.CodingScore.toFixed(1) : '0'}
                           </span>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
@@ -996,7 +1003,7 @@ console.log("Sorted Data:", sortedData);
                   {/* Tabs */}
                   <div className="bg-gray-50 px-6 py-3 border-b border-gray-200">
                     <div className="flex gap-2 flex-wrap">
-                      {['overview', 'questions', 'dsa', 'resume_conversations', 'images'].map((tab) => (
+                      {['overview', 'questions', 'coding', 'dsa', 'resume_conversations', 'images'].map((tab) => (
                         <button
                           key={tab}
                           onClick={() => setActiveTab(tab)}
@@ -1008,6 +1015,7 @@ console.log("Sorted Data:", sortedData);
                         >
                           {tab === 'overview' && <LayoutDashboard className="w-4 h-4" />}
                           {tab === 'questions' && <MessageSquare className="w-4 h-4" />}
+                          {tab === 'coding' && <Code className="w-4 h-4" />}
                           {tab === 'dsa' && <FileCode className="w-4 h-4" />}
                           {tab === 'resume_conversations' && <BarChart2 className="w-4 h-4" />}
                           {tab === 'images' && <Eye className="w-4 h-4" />}
@@ -1301,6 +1309,90 @@ console.log("Sorted Data:", sortedData);
                           <div className="bg-gray-50 rounded-xl p-6 border border-gray-200 text-center shadow-sm">
                             <Eye className="w-12 h-12 text-gray-400 mx-auto mb-4" />
                             <p className="text-gray-500 text-lg">No images captured during this interview.</p>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {activeTab === 'coding' && (
+                      <div className="space-y-8">
+                        <h4 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                          <Code className="w-5 h-5 text-blue-500" />
+                          Coding Questions & Answers
+                        </h4>
+                        {selectedCandidate.coding_sessions && selectedCandidate.coding_sessions.length > 0 ? (
+                          <div className="space-y-6">
+                            {selectedCandidate.coding_sessions.map((session, index) => (
+                              <div key={index} className="bg-white rounded-xl p-6 border border-gray-200 shadow-md hover:shadow-lg transition-shadow duration-300">
+                                <div className="flex justify-between items-start mb-4">
+                                  <h5 className="text-lg font-medium text-gray-900">Question {index + 1}</h5>
+                                  {session.score !== null && session.score !== undefined && (
+                                    <span className={`px-3 py-1 rounded-full text-sm font-medium border ${getScoreColor(session.score)}`}>
+                                      {typeof session.score === 'number' ? session.score.toFixed(1) : session.score}
+                                    </span>
+                                  )}
+                                </div>
+                                
+                                <div className="space-y-4">
+                                  {/* Question */}
+                                  <div>
+                                    <p className="text-sm font-medium text-blue-600 mb-2">Question:</p>
+                                    <div className="text-sm text-gray-700 bg-gray-50 p-4 rounded-md border border-gray-200">
+                                      {session.generated_question ? (() => {
+                                        try {
+                                          const parsed = JSON.parse(session.generated_question);
+                                          return (
+                                            <div>
+                                              <p className="font-medium mb-2">{parsed?.title || 'Coding Question'}</p>
+                                              <p className="text-gray-600">{parsed?.description || session.generated_question}</p>
+                                            </div>
+                                          );
+                                        } catch {
+                                          // Not JSON, display as plain text
+                                          return <p className="whitespace-pre-wrap">{session.generated_question}</p>;
+                                        }
+                                      })() : session.question ? (
+                                        <p>{session.question.question || 'Coding Question'}</p>
+                                      ) : (
+                                        <p>Question not available</p>
+                                      )}
+                                    </div>
+                                  </div>
+                                  
+                                  {/* Code Answer */}
+                                  {session.code && (
+                                    <div>
+                                      <p className="text-sm font-medium text-green-600 mb-2">Candidate's Code:</p>
+                                      <pre className="text-sm text-gray-700 bg-gray-900 text-gray-100 p-4 rounded-md border border-gray-700 overflow-x-auto max-h-96">
+                                        <code>{session.code}</code>
+                                      </pre>
+                                    </div>
+                                  )}
+                                  
+                                  {/* Feedback */}
+                                  {session.feedback && (
+                                    <div>
+                                      <p className="text-sm font-medium text-purple-600 mb-2">Feedback:</p>
+                                      <p className="text-sm text-gray-700 bg-purple-50 p-3 rounded-md border border-purple-200">
+                                        {session.feedback}
+                                      </p>
+                                    </div>
+                                  )}
+                                  
+                                  {/* Assistance Count */}
+                                  {session.assistance_count !== undefined && session.assistance_count !== null && (
+                                    <div className="flex items-center gap-2 text-sm text-gray-500">
+                                      <span>AI Assistance Used: {session.assistance_count} times</span>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="bg-gray-50 rounded-xl p-6 border border-gray-200 text-center shadow-sm">
+                            <Code className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                            <p className="text-gray-500 text-lg">No coding questions answered.</p>
                           </div>
                         )}
                       </div>

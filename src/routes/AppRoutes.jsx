@@ -64,6 +64,15 @@ export default function AppRoutes() {
         }
       />
       <Route
+        path="/development-questions/:sessionId"
+        element={
+          <EnhancedProctoredRouteWrapper>
+            <InterviewScreenshotCapture />
+            <InterviewSession />
+          </EnhancedProctoredRouteWrapper>
+        }
+      />
+      <Route
         path="/resume-platform/:sessionId"
         element={
           <EnhancedProctoredRouteWrapper>

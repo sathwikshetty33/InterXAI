@@ -7,6 +7,7 @@ import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { getAuthToken, fetchWithToken } from '../utils/handleToken';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import Modal from '../components/Modal';
 const base_url = import.meta.env.VITE_API_URL;
 
 const DEFAULT_QUESTIONS = {
@@ -55,6 +56,9 @@ const CodingRound = () => {
     const [activeTab, setActiveTab] = useState("problem");
     const [isDark, setIsDark] = useState(false);
     const [isStarted, setIsStarted] = useState(false); // New state for Welcome Screen
+    
+    // Modal State
+    const [modal, setModal] = useState({ isOpen: false, title: '', message: '', type: 'info', onConfirm: null });
 
     // Refs
     const recognitionRef = useRef(null);
@@ -396,7 +400,7 @@ const CodingRound = () => {
             const token = getAuthToken();
             const currentInteraction = codingInteractions[currentQuestionIndex];
 
-            console.log(`[SUBMIT] Starting submission process for session ${sessionId}`);
+            console.log(`[SUBMIT] Saving question ${currentQuestionIndex + 1} of ${codingInteractions.length}`);
 
             // Step 1: Save the current code progress
             if (currentInteraction && !String(currentInteraction.question?.id || "").startsWith("default-")) {
@@ -407,7 +411,7 @@ const CodingRound = () => {
                     const grading = await gradeCode(
                         code,
                         language,
-                        currentInteraction.question.question
+                        codingInteractions[currentQuestionIndex]?.generated_question || currentInteraction.question.question
                     );
 
                     console.log("[SUBMIT] AI Grading Result:", grading);
@@ -425,6 +429,16 @@ const CodingRound = () => {
                         }
                     );
 
+                    // Also update local state to track saved code
+                    const updatedInteractions = [...codingInteractions];
+                    updatedInteractions[currentQuestionIndex] = {
+                        ...currentInteraction,
+                        code: code,
+                        score: grading.score,
+                        feedback: grading.feedback
+                    };
+                    setCodingInteractions(updatedInteractions);
+
                     console.log("[SUBMIT] Code saved successfully");
                 } catch (gradeError) {
                     console.error("[SUBMIT] Error grading/saving code:", gradeError);
@@ -434,8 +448,35 @@ const CodingRound = () => {
                 console.log("[SUBMIT] Skipping grading for default question");
             }
 
-            // Step 2: Mark coding round as completed
-            console.log("[SUBMIT] Updating coding round status to completed");
+            // Step 2: Check if there are more questions
+            if (currentQuestionIndex < codingInteractions.length - 1) {
+                // Move to next question
+                const nextIndex = currentQuestionIndex + 1;
+                const nextInteraction = codingInteractions[nextIndex];
+                
+                setCurrentQuestionIndex(nextIndex);
+                setProblem(nextInteraction.question);
+                setAssistanceCount(nextInteraction.assistance_count || 0);
+                setCode(nextInteraction.code || nextInteraction.question?.starting_code || "# Write your solution here");
+                
+                setMessages(prev => [...prev, {
+                    id: Date.now(),
+                    sender: 'ai',
+                    text: `Great! Moving to Question ${nextIndex + 1} of ${codingInteractions.length}. Good luck!`
+                }]);
+                
+                setModal({
+                    isOpen: true,
+                    title: 'Question Saved!',
+                    message: `Question ${currentQuestionIndex + 1} saved! Moving to Question ${nextIndex + 1} of ${codingInteractions.length}.`,
+                    type: 'success',
+                    onConfirm: null
+                });
+                return;
+            }
+
+            // Step 3: All questions done - Mark coding round as completed
+            console.log("[SUBMIT] All questions completed. Updating coding round status...");
             try {
                 await fetchWithToken(
                     `${base_url}/interview/update-session-status/${sessionId}/`,
@@ -450,10 +491,9 @@ const CodingRound = () => {
                 console.log("[SUBMIT] Coding round marked as completed");
             } catch (statusError) {
                 console.error("[SUBMIT] Error updating status:", statusError);
-                // Continue anyway
             }
 
-            // Step 3: Initialize the next round (interview/resume round)
+            // Step 4: Initialize the next round (interview/resume round)
             console.log("[SUBMIT] Initializing interview round");
             try {
                 const continueResponse = await fetchWithToken(
@@ -469,9 +509,8 @@ const CodingRound = () => {
                 console.log("[SUBMIT] Interview round initialized:", continueResponse);
             } catch (initError) {
                 console.error("[SUBMIT] Error initializing interview round:", initError);
-                // Show error but allow user to proceed
                 const shouldContinue = window.confirm(
-                    "There was an error initializing the next round. Do you want to continue anyway? (You may need to refresh the next page)"
+                    "There was an error initializing the next round. Do you want to continue anyway?"
                 );
 
                 if (!shouldContinue) {
@@ -479,22 +518,24 @@ const CodingRound = () => {
                 }
             }
 
-            // Step 4: Navigate to the next round
-            alert("Coding Round Complete! Moving to Interview Round...");
-            console.log(`[SUBMIT] Navigating to /resume-platform/${sessionId}`);
-            navigate(`/resume-platform/${sessionId}`);
+            // Step 5: Navigate to development questions round
+            setModal({
+                isOpen: true,
+                title: 'Coding Round Complete!',
+                message: 'All Coding Questions Complete! Moving to Development Questions Round...',
+                type: 'success',
+                onConfirm: () => navigate(`/development-questions/${sessionId}`)
+            });
 
         } catch (err) {
             console.error("[SUBMIT] Critical error during submission:", err);
 
-            // Show detailed error to user
             const errorMessage = err.response?.data?.error || err.message || "Unknown error occurred";
             const shouldContinue = window.confirm(
                 `Error during submission: ${errorMessage}\n\nDo you want to continue to the next round anyway?`
             );
 
             if (shouldContinue) {
-                // Try to at least initialize the next round
                 try {
                     const token = getAuthToken();
                     await fetchWithToken(
@@ -508,7 +549,7 @@ const CodingRound = () => {
                     console.error("[SUBMIT] Fallback initialization failed:", fallbackError);
                 }
 
-                navigate(`/resume-platform/${sessionId}`);
+                navigate(`/development-questions/${sessionId}`);
             }
         }
     };
@@ -522,19 +563,33 @@ const CodingRound = () => {
             return;
         }
         const token = getAuthToken();
+        
+        // First, save the current question's code to state
+        const currentInteraction = codingInteractions[currentQuestionIndex];
+        const updatedInteractions = [...codingInteractions];
+        if (currentInteraction && !String(currentInteraction.question?.id || "").startsWith('default-')) {
+            updatedInteractions[currentQuestionIndex] = {
+                ...currentInteraction,
+                code: code  // Save current editor code
+            };
+        }
+        
         // Iterate over all interactions and save code + optional grading
-        for (let idx = 0; idx < codingInteractions.length; idx++) {
-            const interaction = codingInteractions[idx];
+        for (let idx = 0; idx < updatedInteractions.length; idx++) {
+            const interaction = updatedInteractions[idx];
             const qId = interaction.question?.id;
             if (!qId || String(qId).startsWith('default-')) {
-                // Skip default placeholder questions
                 continue;
             }
+            
+            // Use the interaction's saved code, or current code if it's the current question
+            const codeToGrade = interaction.code || (idx === currentQuestionIndex ? code : "# No code submitted");
+            const questionText = interaction.generated_question || interaction.question?.question || "";
+            
             try {
-                // Grade code if possible
                 let grading = {};
                 try {
-                    grading = await gradeCode(code, language, interaction.question.question);
+                    grading = await gradeCode(codeToGrade, language, questionText);
                 } catch (e) {
                     console.warn('Grading failed for question', qId, e);
                 }
@@ -544,16 +599,17 @@ const CodingRound = () => {
                     navigate,
                     "POST",
                     {
-                        code: code,
+                        code: codeToGrade,
                         score: grading.score || null,
                         feedback: grading.feedback || null,
                     }
                 );
-                console.log(`[FINISH] Saved interaction ${qId}`);
+                console.log(`[FINISH] Saved interaction ${qId} with score ${grading.score}`);
             } catch (err) {
                 console.error('Error saving interaction during finish', err);
             }
         }
+        
         // Mark coding round completed
         try {
             await fetchWithToken(
@@ -566,6 +622,7 @@ const CodingRound = () => {
         } catch (e) {
             console.error('Error marking coding round completed', e);
         }
+        
         // Proceed to interview (resume) round
         try {
             const continueResponse = await fetchWithToken(
@@ -579,8 +636,13 @@ const CodingRound = () => {
         } catch (e) {
             console.error('Error initializing interview round after finish', e);
         }
-        alert('All answers saved. Moving to Interview Round...');
-        navigate(`/resume-platform/${sessionId}`);
+        setModal({
+            isOpen: true,
+            title: 'All Questions Saved!',
+            message: 'All answers saved. Moving to Interview Round...',
+            type: 'success',
+            onConfirm: () => navigate(`/development-questions/${sessionId}`)
+        });
     };
 
     const formatTime = (seconds) => {
@@ -760,7 +822,13 @@ const CodingRound = () => {
                                     if ((e.ctrlKey || e.metaKey) && e.code === 'KeyV') {
                                         e.preventDefault();
                                         e.stopPropagation();
-                                        alert("Paste is disabled for this round!");
+                                        setModal({
+                                            isOpen: true,
+                                            title: 'Paste Disabled',
+                                            message: 'Paste is disabled for this round! Please type your solution.',
+                                            type: 'warning',
+                                            onConfirm: null
+                                        });
                                     }
                                 });
                             }}
@@ -915,6 +983,20 @@ const CodingRound = () => {
                 </div>
             </main>
         </div>
+    );
+
+    return (
+        <>
+            {content}
+            <Modal
+                isOpen={modal.isOpen}
+                onClose={() => setModal({ ...modal, isOpen: false })}
+                title={modal.title}
+                message={modal.message}
+                type={modal.type}
+                onConfirm={modal.onConfirm}
+            />
+        </>
     );
 };
 

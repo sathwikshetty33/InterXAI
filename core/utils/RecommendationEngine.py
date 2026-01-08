@@ -101,7 +101,7 @@ class SkillGraph:
         return 5.0  # Unrelated
 
 
-class AdvancedRecommendationEngine:
+class RecommendationEngine:
     """
     Sophisticated recommendation engine with graph-based skill analysis,
     semantic matching, and proper score normalization.

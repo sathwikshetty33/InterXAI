@@ -5,9 +5,12 @@ import { Loader2, Send, MessageCircle, User, Mic, MicOff, Volume2, VolumeX, Play
 import { useSession } from '../utils/SessionContext'; // Add this import
 
 const InterviewSession = () => {
-  const { interviewId } = useParams();
+  const { interviewId, sessionId: sessionIdFromParams } = useParams();
   const navigate = useNavigate();
-  const { sessionId, setSessionId } = useSession(); // Add this hook
+  const { sessionId: sessionIdFromContext, setSessionId } = useSession(); // Add this hook
+  
+  // Use sessionId from params first (when coming from CodingRound), then context
+  const sessionId = sessionIdFromParams || sessionIdFromContext;
 
   const token = getAuthToken();
   const [loading, setLoading] = useState(true);
@@ -249,8 +252,61 @@ const InterviewSession = () => {
     }
     if (hasInitialized.current) return;
     hasInitialized.current = true;
+    
     const initInterviewDetails = async () => {
       try {
+        // If we have sessionId from params (coming from CodingRound), 
+        // skip interview lookup and proceed directly
+        if (sessionIdFromParams) {
+          console.log('[InterviewSession] Coming from CodingRound with sessionId:', sessionIdFromParams);
+          setSessionId(sessionIdFromParams);
+          setInterviewActive(true);
+          setShowWelcome(false); // Skip welcome since we're mid-interview
+          
+          // Call continue-session with round_type='interview' to get development questions
+          try {
+            const response = await fetch(
+              `${API_URL}/interview/continue-session/${sessionIdFromParams}/`,
+              {
+                method: 'POST',
+                headers: {
+                  'Authorization': `Token ${token}`,
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ round_type: 'interview' })
+              }
+            );
+            
+            const data = await response.json();
+            console.log('[InterviewSession] Continue-session response:', data);
+            
+            if (!response.ok || data.error) {
+              // No development questions, skip to resume round
+              console.log('[InterviewSession] No dev questions found, going to resume round');
+              navigate(`/resume-platform/${sessionIdFromParams}`);
+              return;
+            }
+            
+            if (data.question) {
+              setCurrentQuestion(data.question);
+              setLoading(false);
+            } else {
+              // No questions, skip to resume
+              console.log('[InterviewSession] No question in response, going to resume');
+              navigate(`/resume-platform/${sessionIdFromParams}`);
+              return;
+            }
+          } catch (err) {
+            console.error('[InterviewSession] Error initializing dev questions:', err);
+            // Skip to resume round on error
+            navigate(`/resume-platform/${sessionIdFromParams}`);
+            return;
+          }
+          
+          return;
+        }
+        
+        // Original flow: coming from interview start with interviewId
         const interviewData = await fetchWithToken(
           `${API_URL}/interview/get-all-interviews/`,
           token
@@ -287,7 +343,7 @@ const InterviewSession = () => {
       }
     };
     initInterviewDetails();
-  }, [interviewId, token, navigate]);
+  }, [interviewId, sessionIdFromParams, token, navigate]);
 
   // Auto-end interview when endTime reached
   useEffect(() => {

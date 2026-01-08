@@ -45,6 +45,36 @@ int main() {
 }`
 };
 
+// Helper function to call Groq API through backend proxy
+const callGroqAPI = async (prompt) => {
+  const token = getAuthToken();
+  try {
+    const response = await fetch(`${base_url}/interview/groq-proxy/`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Token ${token}`
+      },
+      body: JSON.stringify({
+        messages: [{ role: 'user', content: prompt }],
+        model: 'llama-3.1-8b-instant',
+        temperature: 0.1
+      })
+    });
+
+    if (!response.ok) {
+      console.error('Groq API Error:', response.statusText);
+      return null;
+    }
+
+    const data = await response.json();
+    return data.choices?.[0]?.message?.content || null;
+  } catch (error) {
+    console.error('callGroqAPI Error:', error);
+    return null;
+  }
+};
+
 const DSAInterviewPlatform = () => {
   const params = useParams();
   const navigate = useNavigate();
@@ -292,7 +322,7 @@ const DSAInterviewPlatform = () => {
         code,
         testResults: [],
         passedTests: 0,
-        totalTests: questions[currentQuestionIndex].testCases.length,
+        totalTests: questions[currentQuestionIndex]?.testCases?.length || 0,
         score: 0,
         allPassed: false,
         title: questions[currentQuestionIndex].title,
@@ -305,13 +335,82 @@ const DSAInterviewPlatform = () => {
     setIsTestRunning(true);
     setTestResult(null);
     const question = questions[currentQuestionIndex];
+    
+    // Ensure testCases exists, fallback to empty array
+    const testCases = question?.testCases || [];
 
     let passedTests = 0;
     const testResults = [];
 
-    // Enhanced validation prompt
-    for (let i = 0; i < question.testCases.length; i++) {
-      const testCase = question.testCases[i];
+    // If no test cases exist, use AI to grade the code
+    if (testCases.length === 0) {
+      console.log("[DSA] No test cases found, using AI grading...");
+      
+      // Grade the code using AI
+      const gradePrompt = `You are a strict code grader for a coding interview.
+Evaluate this ${selectedLanguage} code for the problem: "${question.question || question.title}"
+
+Code to evaluate:
+${code}
+
+Rules:
+- Score from 0-10 based on correctness, efficiency, and code quality
+- If code is incomplete, has syntax errors, or doesn't solve the problem: score 0-3
+- If code partially solves the problem: score 4-6
+- If code correctly solves the problem with good efficiency: score 7-10
+- Respond with ONLY a JSON object: {"score": <number>, "passed": <boolean>, "feedback": "<brief feedback>"}
+- "passed" should be true only if score >= 6`;
+      
+      const gradeResult = await callGroqAPI(gradePrompt);
+      let score = 0;
+      let passed = false;
+      let feedback = "Evaluation failed";
+      
+      try {
+        if (gradeResult) {
+          const parsed = JSON.parse(gradeResult);
+          score = parsed.score || 0;
+          passed = parsed.passed || score >= 6;
+          feedback = parsed.feedback || "";
+        }
+      } catch (e) {
+        console.error("[DSA] Failed to parse grade result:", e);
+      }
+      
+      const result = {
+        questionIndex: currentQuestionIndex,
+        questionId: question.id,
+        dsaTopicId: question.dsaTopicId,
+        code,
+        testResults: [{ passed, message: feedback }],
+        passedTests: passed ? 1 : 0,
+        totalTests: 1,
+        score: score,
+        allPassed: passed,
+        title: question.title || "DSA Question",
+        topic: question.topic || "DSA",
+      };
+      
+      // Submit to backend (same as when we have test cases)
+      await submitToBackend(question, score);
+      
+      // Add to submitted questions so Final Submit button appears
+      const updatedSubmissions = submittedQuestions.filter(sub => sub.questionIndex !== currentQuestionIndex);
+      updatedSubmissions.push(result);
+      setSubmittedQuestions(updatedSubmissions);
+      
+      // Update total score
+      const totalScore = updatedSubmissions.reduce((acc, sub) => acc + sub.score, 0);
+      setScore(totalScore);
+      
+      setTestResult(result);
+      setIsTestRunning(false);
+      return;
+    }
+
+    // Enhanced validation prompt with test cases
+    for (let i = 0; i < testCases.length; i++) {
+      const testCase = testCases[i];
 
       const prompt = `You are a strict code validator. Your ONLY job is to:
 1. Execute the ${selectedLanguage} code with the given input
@@ -428,7 +527,7 @@ IMPORTANT RULES:
 Code:
 ${code}
 
-Input: ${question.sampleInput}
+Input: ${question.sampleInput || question.sample_input || "None"}
 
 Execute and return only the output:`;
 
@@ -445,7 +544,8 @@ Execute and return only the output:`;
       cleanOutput = cleanOutput.replace(/```[\s\S]*?```/g, '').trim();
 
       const normalizedResult = cleanOutput.replace(/\r\n/g, '\n').replace(/\r/g, '\n');
-      const normalizedExpected = question.sampleOutput.trim().replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+      const expectedOutput = question.sampleOutput || question.expected_output || "";
+      const normalizedExpected = expectedOutput.trim().replace(/\r\n/g, '\n').replace(/\r/g, '\n');
 
       setRunResult({
         isOutput: true,
@@ -518,20 +618,32 @@ Execute and return only the output:`;
 
     try {
       const token = getAuthToken();
-      const sessionData = await fetchWithToken(
-        `${base_url}/interview/interview-session/${sessionId}/`,
-        token,
-        navigate
-      );
+      
+      // Mark the interview session as completed
+      try {
+        await fetch(
+          `${base_url}/interview/update-session-status/${sessionId}/`,
+          {
+            method: 'PATCH',
+            headers: {
+              'Authorization': `Token ${token}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              status: 'completed',
+              round_type: 'dsa'
+            })
+          }
+        );
+        console.log('Interview session marked as completed');
+      } catch (statusError) {
+        console.error('Error marking session complete:', statusError);
+      }
 
-      // Show completion message instead of navigating to leaderboard
-      alert('Interview Complete! Thank you for your time. We will review your responses and get back to you soon.');
-
-      // Navigate to home or dashboard
+      // Navigate to home or dashboard (without showing score)
       navigate('/');
     } catch (error) {
-      console.error('Error fetching session data for navigation:', error);
-      alert('Interview Complete! Thank you for your time.');
+      console.error('Error during final submit:', error);
       navigate('/');
     }
   };
@@ -580,6 +692,20 @@ Execute and return only the output:`;
   }
 
   const currentQuestion = questions[currentQuestionIndex];
+  
+  // Show loading if current question hasn't loaded yet
+  if (!currentQuestion) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-white via-purple-50 to-lavender-100 flex items-center justify-center">
+        <div className="text-center bg-white/80 backdrop-blur-sm p-8 rounded-2xl shadow-lg border border-purple-200">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
+          <p className="text-lg text-purple-800">Loading question {currentQuestionIndex + 1}...</p>
+          <p className="text-sm text-purple-600 mt-2">Please wait while we generate your question</p>
+        </div>
+      </div>
+    );
+  }
+  
   const isSubmitted = submittedQuestions.some(sub => sub.questionIndex === currentQuestionIndex);
   const codeValidation = validateCode(code);
 
@@ -615,6 +741,7 @@ Execute and return only the output:`;
         {/* Question Navigation */}
         <div className="mb-6 flex flex-wrap gap-2">
           {questions.map((q, index) => {
+            if (!q) return null; // Skip null questions that are still loading
             const submission = submittedQuestions.find(sub => sub.questionIndex === index);
             return (
               <button
@@ -630,8 +757,8 @@ Execute and return only the output:`;
                   }`}
               >
                 <div className="font-medium">Q{index + 1}</div>
-                <div className="text-xs opacity-75">{q.topic}</div>
-                <div className="text-xs opacity-75">{q.difficulty}</div>
+                <div className="text-xs opacity-75">{q.topic || 'Loading...'}</div>
+                <div className="text-xs opacity-75">{q.difficulty || ''}</div>
               </button>
             );
           })}
