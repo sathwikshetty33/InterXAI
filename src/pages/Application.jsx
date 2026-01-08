@@ -2,6 +2,117 @@ import React, { useEffect, useState, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Loader2, ArrowLeft, FileText, Eye, User, Mail, Phone, MapPin, Briefcase, GraduationCap, Award, Star, Calendar, ChevronDown, ChevronUp, Building, Code, Trophy, Link as LinkIcon, Search, Filter, Download, Share2, MessageSquare, Send, X, Bot } from "lucide-react";
 
+// ChatbotModal component moved OUTSIDE of Application to prevent re-renders
+const ChatbotModal = ({ app, messages, input, loading, onClose, onSend, onInputChange, onKeyPress, chatEndRef }) => {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div 
+        className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+        onClick={onClose}
+      ></div>
+      
+      <div className="relative bg-white rounded-2xl border border-gray-200 shadow-2xl w-full max-w-3xl h-[80vh] flex flex-col">
+        <div className="flex items-center justify-between p-6 border-b border-gray-200 bg-gradient-to-r from-indigo-50 to-purple-50">
+          <div className="flex items-center gap-3">
+            <div className="bg-gradient-to-br from-indigo-500 to-purple-600 p-3 rounded-xl shadow-lg">
+              <Bot size={24} className="text-white" />
+            </div>
+            <div>
+              <h3 className="text-2xl font-bold text-gray-900">AI Assistant</h3>
+              <p className="text-gray-600 flex items-center gap-2">
+                <span className="inline-block w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+                Ask about {app?.user?.username || "this candidate"}'s application
+              </p>
+            </div>
+          </div>
+          
+          <button
+            onClick={onClose}
+            className="bg-gray-100 hover:bg-gray-200 p-2 rounded-lg transition-all duration-200 group"
+          >
+            <X size={20} className="text-gray-600 group-hover:text-gray-900 transition-colors" />
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-gray-50">
+          {messages.map((msg, index) => (
+            <div
+              key={index}
+              className={`flex gap-3 ${msg.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}
+            >
+              <div className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center ${
+                msg.role === 'user' 
+                  ? 'bg-indigo-100' 
+                  : 'bg-gradient-to-br from-indigo-500 to-purple-600 shadow-md'
+              }`}>
+                {msg.role === 'user' ? (
+                  <User size={18} className="text-indigo-600" />
+                ) : (
+                  <Bot size={18} className="text-white" />
+                )}
+              </div>
+              
+              <div className={`flex-1 max-w-[80%] ${msg.role === 'user' ? 'text-right' : 'text-left'}`}>
+                <div className={`inline-block p-4 rounded-2xl shadow-sm ${
+                  msg.role === 'user'
+                    ? 'bg-indigo-600 text-white'
+                    : 'bg-white text-gray-900 border border-gray-200'
+                }`}>
+                  <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.content}</p>
+                </div>
+                <p className={`text-xs text-gray-500 mt-1 ${msg.role === 'user' ? 'text-right' : 'text-left'}`}>
+                  {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                </p>
+              </div>
+            </div>
+          ))}
+          
+          {loading && (
+            <div className="flex gap-3">
+              <div className="flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center bg-gradient-to-br from-indigo-500 to-purple-600 shadow-md">
+                <Bot size={18} className="text-white" />
+              </div>
+              <div className="bg-white border border-gray-200 p-4 rounded-2xl shadow-sm">
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
+                  <div className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
+                  <div className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+                </div>
+              </div>
+            </div>
+          )}
+          
+          <div ref={chatEndRef} />
+        </div>
+
+        <div className="p-6 border-t border-gray-200 bg-white">
+          <div className="flex gap-3">
+            <input
+              type="text"
+              value={input}
+              onChange={onInputChange}
+              onKeyPress={onKeyPress}
+              placeholder="Ask about the candidate's experience, skills, or feedback..."
+              className="flex-1 px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+              disabled={loading}
+              autoFocus
+            />
+            <button
+              onClick={onSend}
+              disabled={loading || !input.trim()}
+              className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white px-6 py-3 rounded-xl transition-all duration-200 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-md hover:shadow-lg"
+            >
+              <Send size={18} />
+              Send
+            </button>
+          </div>
+          <p className="text-gray-500 text-xs mt-2">Press Enter to send, Shift+Enter for new line</p>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 export default function Application() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -29,7 +140,6 @@ export default function Application() {
   const [chatInput, setChatInput] = useState("");
   const [chatLoading, setChatLoading] = useState(false);
   const chatEndRef = useRef(null);
-  const chatInputRef = useRef(null);
   
   useEffect(() => {
     const token = localStorage.getItem('authToken'); // or however you get your token
@@ -668,7 +778,7 @@ export default function Application() {
   };
 
   const sendChatMessage = async () => {
-    if (!chatInput.trim() || chatLoading) return;
+    if (!chatInput.trim() || chatLoading || !chatbotOpen) return;
 
     const userMessage = chatInput.trim();
     setChatInput("");
@@ -676,14 +786,80 @@ export default function Application() {
     setChatMessages(prev => [...prev, { role: "user", content: userMessage }]);
     setChatLoading(true);
 
-    // Simulate AI response
-    setTimeout(() => {
+    try {
+      const token = localStorage.getItem('authToken');
+      const API_URL = import.meta.env.VITE_API_URL;
+
+      // Build context from the application data
+      const candidateName = chatbotOpen.user?.username || "Unknown Candidate";
+      const extractedResume = chatbotOpen.extratedResume || "No resume data available";
+      const feedback = chatbotOpen.feedback || "No feedback available";
+      const score = chatbotOpen.score || 0;
+
+      // Call Groq API through backend proxy
+      const response = await fetch(`${API_URL}/interview/groq-proxy/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Token ${token}`
+        },
+        body: JSON.stringify({
+          messages: [
+            {
+              role: "system",
+              content: `You are an AI assistant helping a recruiter analyze a candidate's application. You have access to the following information about the candidate:
+
+CANDIDATE NAME: ${candidateName}
+APPLICATION SCORE: ${score}/10
+
+EXTRACTED RESUME DATA:
+${extractedResume}
+
+CANDIDATE FEEDBACK:
+${feedback}
+
+Your role is to:
+1. Answer questions about the candidate's skills, experience, and qualifications
+2. Provide insights about their strengths and potential areas of improvement
+3. Help the recruiter make informed decisions
+4. Be concise but thorough in your responses
+
+Always base your answers on the available data. If information is not available, say so clearly.`
+            },
+            ...chatMessages.map(msg => ({
+              role: msg.role === 'assistant' ? 'assistant' : 'user',
+              content: msg.content
+            })),
+            {
+              role: "user",
+              content: userMessage
+            }
+          ],
+          model: "llama-3.3-70b-versatile",
+          temperature: 0.7
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to get AI response');
+      }
+
+      const data = await response.json();
+      const aiResponse = data.choices?.[0]?.message?.content || "I apologize, but I couldn't generate a response. Please try again.";
+
       setChatMessages(prev => [...prev, { 
         role: "assistant", 
-        content: `This is a simulated response about the candidate. In production, this would be powered by Groq AI analyzing the resume data and feedback.` 
+        content: aiResponse 
       }]);
+    } catch (error) {
+      console.error('Error getting AI response:', error);
+      setChatMessages(prev => [...prev, { 
+        role: "assistant", 
+        content: "I'm sorry, I encountered an error while processing your request. Please try again." 
+      }]);
+    } finally {
       setChatLoading(false);
-    }, 1000);
+    }
   };
 
   const handleChatKeyPress = (e) => {
@@ -792,115 +968,6 @@ export default function Application() {
     );
   };
 
-  const ChatbotModal = ({ app, messages, input, loading, onClose, onSend, onInputChange, onKeyPress }) => {
-    return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-        <div 
-          className="absolute inset-0 bg-black/40 backdrop-blur-sm"
-          onClick={onClose}
-        ></div>
-        
-        <div className="relative bg-white rounded-2xl border border-gray-200 shadow-2xl w-full max-w-3xl h-[80vh] flex flex-col">
-          <div className="flex items-center justify-between p-6 border-b border-gray-200 bg-gradient-to-r from-indigo-50 to-purple-50">
-            <div className="flex items-center gap-3">
-              <div className="bg-gradient-to-br from-indigo-500 to-purple-600 p-3 rounded-xl shadow-lg">
-                <Bot size={24} className="text-white" />
-              </div>
-              <div>
-                <h3 className="text-2xl font-bold text-gray-900">AI Assistant</h3>
-                <p className="text-gray-600 flex items-center gap-2">
-                  <span className="inline-block w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
-                  Ask about {app.user?.username || "this candidate"}'s application
-                </p>
-              </div>
-            </div>
-            
-            <button
-              onClick={onClose}
-              className="bg-gray-100 hover:bg-gray-200 p-2 rounded-lg transition-all duration-200 group"
-            >
-              <X size={20} className="text-gray-600 group-hover:text-gray-900 transition-colors" />
-            </button>
-          </div>
-
-          <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-gray-50">
-            {messages.map((msg, index) => (
-              <div
-                key={index}
-                className={`flex gap-3 ${msg.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}
-              >
-                <div className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center ${
-                  msg.role === 'user' 
-                    ? 'bg-indigo-100' 
-                    : 'bg-gradient-to-br from-indigo-500 to-purple-600 shadow-md'
-                }`}>
-                  {msg.role === 'user' ? (
-                    <User size={18} className="text-indigo-600" />
-                  ) : (
-                    <Bot size={18} className="text-white" />
-                  )}
-                </div>
-                
-                <div className={`flex-1 max-w-[80%] ${msg.role === 'user' ? 'text-right' : 'text-left'}`}>
-                  <div className={`inline-block p-4 rounded-2xl shadow-sm ${
-                    msg.role === 'user'
-                      ? 'bg-indigo-600 text-white'
-                      : 'bg-white text-gray-900 border border-gray-200'
-                  }`}>
-                    <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.content}</p>
-                  </div>
-                  <p className={`text-xs text-gray-500 mt-1 ${msg.role === 'user' ? 'text-right' : 'text-left'}`}>
-                    {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                  </p>
-                </div>
-              </div>
-            ))}
-            
-            {loading && (
-              <div className="flex gap-3">
-                <div className="flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center bg-gradient-to-br from-indigo-500 to-purple-600 shadow-md">
-                  <Bot size={18} className="text-white" />
-                </div>
-                <div className="bg-white border border-gray-200 p-4 rounded-2xl shadow-sm">
-                  <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
-                    <div className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
-                    <div className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
-                  </div>
-                </div>
-              </div>
-            )}
-            
-            <div ref={chatEndRef} />
-          </div>
-
-          <div className="p-6 border-t border-gray-200 bg-white">
-            <div className="flex gap-3">
-              <input
-                ref={chatInputRef}
-                type="text"
-                value={input}
-                onChange={onInputChange}
-                onKeyPress={onKeyPress}
-                placeholder="Ask about the candidate's experience, skills, or feedback..."
-                className="flex-1 px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
-                disabled={loading}
-              />
-              <button
-                onClick={onSend}
-                disabled={loading || !input.trim()}
-                className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white px-6 py-3 rounded-xl transition-all duration-200 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-md hover:shadow-lg"
-              >
-                <Send size={18} />
-                Send
-              </button>
-            </div>
-            <p className="text-gray-500 text-xs mt-2">Press Enter to send, Shift+Enter for new line</p>
-          </div>
-        </div>
-      </div>
-    );
-  };
 
   if (loading) {
     return (
@@ -1263,6 +1330,7 @@ export default function Application() {
           onSend={sendChatMessage}
           onInputChange={(e) => setChatInput(e.target.value)}
           onKeyPress={handleChatKeyPress}
+          chatEndRef={chatEndRef}
         />
       )}
     </div>

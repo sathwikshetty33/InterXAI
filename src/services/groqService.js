@@ -189,35 +189,67 @@ export const executeCode = async (code, language) => {
 
 export const gradeCode = async (code, language, questionText) => {
   try {
+    // Parse questionText if it's JSON
+    let parsedQuestion = questionText;
+    try {
+      const parsed = JSON.parse(questionText);
+      if (parsed.title && parsed.description) {
+        parsedQuestion = `Title: ${parsed.title}\nDescription: ${parsed.description}`;
+        if (parsed.examples) {
+          parsedQuestion += `\nExamples: ${JSON.stringify(parsed.examples)}`;
+        }
+        if (parsed.constraints) {
+          parsedQuestion += `\nConstraints: ${parsed.constraints}`;
+        }
+      }
+    } catch {
+      // Not JSON, use as-is
+    }
+
+    console.log("[GRADING] Question being evaluated:", parsedQuestion?.substring(0, 200) + "...");
+    console.log("[GRADING] Code being evaluated:", code?.substring(0, 200) + "...");
+
     const completion = await callGroqProxy(
       [
         {
           role: "system",
-          content: `You are a technical interviewer grading a candidate's code.
-          Evaluate the code based on:
-          1. Correctness (does it solve the problem?)
-          2. Code Quality (cleanliness, naming, structure)
-          3. Efficiency (time and space complexity)
-          
-          Output strictly in JSON format:
-          {
-            "score": number (0-10),
-            "feedback": "Concise summary of strengths and weaknesses"
-          }`
+          content: `You are a strict but fair technical interviewer grading a candidate's code.
+
+Evaluate the code based on these criteria:
+1. **Correctness (0-4 points)**: Does the code correctly solve the problem? Test mentally against edge cases.
+2. **Code Quality (0-3 points)**: Is the code clean, well-structured, with good naming conventions?
+3. **Efficiency (0-3 points)**: What is the time and space complexity? Is it optimal?
+
+IMPORTANT GRADING GUIDELINES:
+- Score 0-3: Code doesn't work or has major issues
+- Score 4-5: Code has some issues or is incomplete
+- Score 6-7: Code works but could be improved
+- Score 8-9: Good, working solution with minor improvements possible
+- Score 10: Perfect, optimal solution
+
+Be strict! Don't give 8 by default. Actually evaluate the code against the problem.
+
+Output strictly in JSON format:
+{
+  "score": number (0-10),
+  "feedback": "Detailed assessment mentioning specific strengths and weaknesses, referencing actual code"
+}`
         },
         {
           role: "user",
-          content: `Question: ${questionText}\nLanguage: ${language}\nCode:\n${code}`
+          content: `PROBLEM:\n${parsedQuestion}\n\nLANGUAGE: ${language}\n\nCANDIDATE'S CODE:\n\`\`\`${language}\n${code}\n\`\`\`\n\nEvaluate this code strictly. Does it actually solve the problem correctly?`
         }
       ],
       "llama-3.3-70b-versatile",
-      0.1,
+      0.2,  // Slightly higher temperature for more varied responses
       { type: "json_object" }
     );
 
-    return JSON.parse(completion.choices[0]?.message?.content || '{"score": 0, "feedback": "Evaluation failed"}');
+    const result = JSON.parse(completion.choices[0]?.message?.content || '{"score": 0, "feedback": "Evaluation failed"}');
+    console.log("[GRADING] Result:", result);
+    return result;
   } catch (error) {
     console.error("Error grading code:", error);
-    return { score: 0, feedback: "Evaluation failed" };
+    return { score: 0, feedback: "Evaluation failed - unable to grade code" };
   }
 };

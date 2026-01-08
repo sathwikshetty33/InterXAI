@@ -640,11 +640,11 @@ Execute and return only the output:`;
         console.error('Error marking session complete:', statusError);
       }
 
-      // Navigate to home or dashboard (without showing score)
-      navigate('/');
+      // Navigate to thank you page
+      navigate('/thank-you');
     } catch (error) {
       console.error('Error during final submit:', error);
-      navigate('/');
+      navigate('/thank-you');
     }
   };
 
@@ -959,14 +959,18 @@ Execute and return only the output:`;
               </p>
             </div>
 
-            {submittedQuestions.length > 0 && (
+            {submittedQuestions.length === questions.length && questions.length > 0 ? (
               <button
                 onClick={handleFinalSubmit}
-                className="px-6 py-3 bg-gradient-to-r from-red-600 to-pink-600 text-white rounded-xl hover:from-red-700 hover:to-pink-700 disabled:from-gray-400 disabled:to-gray-500 font-medium transition-all transform hover:scale-105 shadow-lg"
+                className="px-6 py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-xl hover:from-green-700 hover:to-emerald-700 disabled:from-gray-400 disabled:to-gray-500 font-medium transition-all transform hover:scale-105 shadow-lg"
                 disabled={isTestRunning}
               >
-                Final Submit
+                ✓ Final Submit
               </button>
+            ) : (
+              <div className="px-6 py-3 bg-gray-200 text-gray-500 rounded-xl font-medium">
+                Submit all questions to finish
+              </div>
             )}
           </div>
 
