@@ -5,13 +5,89 @@ import Header from '../components/ui/header';
 import Footer from '../components/ui/footer';
 import {
   Loader2, Target, BookOpen, Briefcase,
-  ChevronRight, ChevronDown, RefreshCw, Sparkles, BarChart3,
+  ChevronRight, ChevronDown, RefreshCw, BarChart3,
   AlertCircle, Zap, Brain, Plus, X,
-  Upload, FileText, Save, User, ExternalLink, Search
+  Upload, FileText, Save, User, ExternalLink, Search,
+  Code2, Terminal, Cpu, Globe, Database, Layers, Layout,
+  Smartphone, Cloud, Shield, CheckSquare, MessageSquare, MapPin
 } from "lucide-react";
 import { toast } from 'react-toastify';
 
-// Profile Editor Component - Simplified
+// --- CUSTOM BRAND ICONS (Inline SVGs for specific tools) ---
+const BrandIcons = {
+  VSCode: () => (
+    <svg viewBox="0 0 24 24" fill="none" className="w-6 h-6">
+      <path d="M22 5L17.56 6.48L18 8L17.56 6.48L2 18L4.09 13.56L2.32 18L22 5Z" fill="#007ACC" fillOpacity="0" />
+      <path d="M17.56 6.48L22 5L2.32 18L4.09 13.56L9 12L5 3L17.56 6.48Z" fill="#007ACC" stroke="#007ACC" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M4 4L20 12L4 20" stroke="#007ACC" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  ),
+  Python: () => (
+    <svg viewBox="0 0 24 24" className="w-6 h-6" fill="currentColor">
+      <path d="M12 2c-2.3 0-4.4.8-5.3 2.7-.4.9.2 1.3.8 1.3h3v1h-4c-2.7 0-5 2.2-5 5s2.3 5 5 5h3v-1h-3c-1.3 0-2.5-.9-2.9-2.1l-.1-.4c0-.6.4-1.1 1-1.1h5c2.2 0 4-1.8 4-4V6c0-2.2-1.8-4-4-4zm0 1c.6 0 1 .4 1 1s-.4 1-1 1-1-.4-1-1 .4-1 1-1z" opacity="0.8" />
+      <path d="M12 22c2.3 0 4.4-.8 5.3-2.7.4-.9-.2-1.3-.8-1.3h-3v-1h4c2.7 0 5-2.2 5-5s-2.3-5-5-5h-3v1h3c1.3 0 2.5.9 2.9 2.1l.1.4c0 .6-.4 1.1-1 1.1h-5c-2.2 0-4 1.8-4 4v2c0 2.2 1.8 4 4 4zm0-1c-.6 0-1-.4-1-1s.4-1 1-1 1 .4 1 1-.4 1-1 1z" opacity="0.8" />
+    </svg>
+  ),
+  React: () => (
+    <svg viewBox="0 0 24 24" className="w-6 h-6" fill="none" stroke="currentColor" strokeWidth="2">
+      <circle cx="12" cy="12" r="2" />
+      <ellipse cx="12" cy="12" rx="10" ry="4" transform="rotate(0 12 12)" />
+      <ellipse cx="12" cy="12" rx="10" ry="4" transform="rotate(60 12 12)" />
+      <ellipse cx="12" cy="12" rx="10" ry="4" transform="rotate(120 12 12)" />
+    </svg>
+  )
+};
+
+// --- SKILL CARD COMPONENT ---
+const SkillCard = ({ skill, onClick, onDelete, isEditing }) => {
+  const name = typeof skill === 'string' ? skill : skill.name || skill.skill;
+  const normalizedName = name.toLowerCase().replace(/[^a-z0-9]/g, '');
+
+  let brandColor = "bg-slate-100 text-slate-700 border-slate-200 hover:border-slate-300";
+  let Icon = Code2;
+
+  if (normalizedName.includes('react')) { brandColor = "bg-[#61DAFB]/10 text-[#00A8D6] border-[#61DAFB]/30 hover:border-[#61DAFB]"; Icon = BrandIcons.React; }
+  else if (normalizedName.includes('python')) { brandColor = "bg-[#3776AB]/10 text-[#3776AB] border-[#3776AB]/30 hover:border-[#3776AB]"; Icon = BrandIcons.Python; }
+  else if (normalizedName.includes('javascript') || normalizedName.includes('js')) { brandColor = "bg-[#F7DF1E]/10 text-[#D4B830] border-[#F7DF1E]/30 hover:border-[#F7DF1E]"; Icon = FileText; }
+  else if (normalizedName.includes('typescript') || normalizedName.includes('ts')) { brandColor = "bg-[#3178C6]/10 text-[#3178C6] border-[#3178C6]/30 hover:border-[#3178C6]"; Icon = FileText; }
+  else if (normalizedName.includes('vscode')) { brandColor = "bg-[#007ACC]/10 text-[#007ACC] border-[#007ACC]/30 hover:border-[#007ACC]"; Icon = BrandIcons.VSCode; }
+  else if (normalizedName.includes('aws') || normalizedName.includes('amazon')) { brandColor = "bg-[#FF9900]/10 text-[#FF9900] border-[#FF9900]/30 hover:border-[#FF9900]"; Icon = Cloud; }
+  else if (normalizedName.includes('node')) { brandColor = "bg-[#339933]/10 text-[#339933] border-[#339933]/30 hover:border-[#339933]"; Icon = ServerIcon; }
+  else if (normalizedName.includes('figma')) { brandColor = "bg-[#F24E1E]/10 text-[#F24E1E] border-[#F24E1E]/30 hover:border-[#F24E1E]"; Icon = Layout; }
+  else if (normalizedName.includes('github') || normalizedName.includes('git')) { brandColor = "bg-[#181717]/5 text-[#181717] border-[#181717]/20 hover:border-[#181717]"; Icon = Code2; }
+  else if (normalizedName.includes('database') || normalizedName.includes('sql') || normalizedName.includes('mongo')) { brandColor = "bg-[#47A248]/10 text-[#47A248] border-[#47A248]/30 hover:border-[#47A248]"; Icon = Database; }
+  else if (normalizedName.includes('docker') || normalizedName.includes('kube')) { brandColor = "bg-[#2496ED]/10 text-[#2496ED] border-[#2496ED]/30 hover:border-[#2496ED]"; Icon = Layers; }
+
+  function ServerIcon(props) { return <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="20" height="8" x="2" y="2" rx="2" ry="2" /><rect width="20" height="8" x="2" y="14" rx="2" ry="2" /><line x1="6" x2="6.01" y1="6" y2="6" /><line x1="6" x2="6.01" y1="18" y2="18" /></svg> }
+
+  return (
+    <div
+      onClick={onClick}
+      className={`relative group flex items-center gap-3 p-4 rounded-xl border ${brandColor} transition-all duration-300 hover:scale-[1.02] hover:shadow-md cursor-pointer bg-white/50 backdrop-blur-sm`}
+    >
+      <div className={`p-2 rounded-lg bg-white/80 shadow-sm`}>
+        <Icon className="w-6 h-6" />
+      </div>
+      <div className="flex-1">
+        <h4 className="font-semibold text-sm md:text-base leading-tight">{name}</h4>
+        {skill.level && !isEditing && (
+          <span className="text-[10px] uppercase font-bold opacity-70 tracking-wider">{skill.level}</span>
+        )}
+      </div>
+
+      {isEditing && (
+        <button
+          onClick={(e) => { e.stopPropagation(); onDelete(); }}
+          className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 p-1 bg-red-100 text-red-500 rounded-full hover:bg-red-200 transition-all"
+        >
+          <X className="w-3 h-3" />
+        </button>
+      )}
+    </div>
+  );
+};
+
+// --- PROFILE EDITOR COMPONENT ---
 function ProfileEditor({ profile, setProfile, API_URL }) {
   const [isEditing, setIsEditing] = useState(false);
   const [newSkill, setNewSkill] = useState("");
@@ -56,1063 +132,465 @@ function ProfileEditor({ profile, setProfile, API_URL }) {
   const handleSave = async () => {
     const token = getAuthToken();
     setSaving(true);
-
     try {
       const res = await fetch(`${API_URL}/career/profile/`, {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Token ${token}`,
-        },
-        body: JSON.stringify({
-          skills,
-          target_roles: targetRoles,
-          experience_years: experienceYears
-        }),
+        headers: { 'Content-Type': 'application/json', Authorization: `Token ${token}` },
+        body: JSON.stringify({ skills, target_roles: targetRoles, experience_years: experienceYears }),
       });
-
       if (res.ok) {
         const data = await res.json();
         setProfile(data);
         setIsEditing(false);
-        toast.success("Profile updated successfully!");
-      } else {
-        toast.error("Failed to update profile");
-      }
-    } catch {
-      toast.error("Error updating profile");
-    } finally {
-      setSaving(false);
-    }
+        toast.success("Profile updated!");
+      } else { toast.error("Failed to update"); }
+    } catch { toast.error("Error updating"); } finally { setSaving(false); }
   };
 
   const handleResumeUpload = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
-    if (file.type !== "application/pdf") {
-      toast.error("Please upload a PDF file");
-      return;
-    }
-
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error("File size should not exceed 5MB");
-      return;
-    }
+    if (file.type !== "application/pdf") { toast.error("Please upload a PDF file"); return; }
+    if (file.size > 5 * 1024 * 1024) { toast.error("File size should not exceed 5MB"); return; }
 
     setUploadingResume(true);
     const token = getAuthToken();
-
     try {
       const reader = new FileReader();
       reader.onload = async () => {
-        try {
-          const base64 = reader.result?.split(',')[1];
-          if (!base64) {
-            toast.error("Failed to read file");
-            setUploadingResume(false);
-            return;
-          }
-
-          const res = await fetch(`${API_URL}/career/profile/scan/`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              Authorization: `Token ${token}`,
-            },
-            body: JSON.stringify({
-              resume_base64: base64,
-              filename: file.name
-            }),
-          });
-
-          if (res.ok) {
-            const data = await res.json();
-            if (data.profile) {
-              setProfile(data.profile);
-              setSkills(Array.isArray(data.profile.skills) ? data.profile.skills : []);
-            }
-            toast.success(data.message || "Resume scanned!");
-          } else {
-            const errData = await res.json().catch(() => ({}));
-            toast.error(errData.error || "Failed to scan resume");
-          }
-        } catch (err) {
-          console.error("Upload error:", err);
-          toast.error("Error processing resume");
-        }
+        const base64 = reader.result?.split(',')[1];
+        const res = await fetch(`${API_URL}/career/profile/scan/`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Token ${token}` },
+          body: JSON.stringify({ resume_base64: base64, filename: file.name }),
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.profile) { setProfile(data.profile); setSkills(data.profile.skills || []); }
+          toast.success("Resume scanned!");
+        } else { toast.error("Scan failed"); }
         setUploadingResume(false);
       };
-
-      reader.onerror = () => {
-        toast.error("Error reading file");
-        setUploadingResume(false);
-      };
-
       reader.readAsDataURL(file);
-    } catch {
-      toast.error("Error uploading resume");
-      setUploadingResume(false);
-    }
+    } catch { toast.error("Upload failed"); setUploadingResume(false); }
   };
 
   return (
-  <div className="bg-white/5 backdrop-blur-xl rounded-xl p-6 border border-white/10 mb-8">
-
-  {/* ================= HEADER ================= */}
-  <div className="flex justify-between items-center mb-6">
-    <h2 className="text-xl font-semibold flex items-center gap-2 text-black">
-      <User className="w-5 h-5 text-blue-500" />
-      Skill Profile
-      {isEditing && (
-        <span className="text-xs bg-blue-500/20 text-blue-400 px-2 py-0.5 rounded-full">
-          Editing
-        </span>
-      )}
-    </h2>
-
-    <div className="flex gap-2">
-      {!isEditing ? (
-        <button
-          onClick={() => setIsEditing(true)}
-          className="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg text-sm text-white"
-        >
-          Edit Profile
-        </button>
-      ) : (
-        <>
-          <button
-            onClick={() => setIsEditing(false)}
-            className="px-4 py-2 bg-white/10 hover:bg-white/20 rounded-lg text-sm"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={handleSave}
-            disabled={saving}
-            className="px-4 py-2 bg-green-600 hover:bg-green-700 rounded-lg text-sm flex items-center gap-2 disabled:opacity-50"
-          >
-            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-            Save
-          </button>
-        </>
-      )}
-    </div>
-  </div>
-
-  {/* ================= GRID ================= */}
-  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-
-    {/* ============ LEFT COLUMN ============ */}
-    <div className="space-y-5">
-
-      {/* Resume Upload */}
-      <div className="bg-gradient-to-br from-blue-500/10 to-transparent rounded-lg p-4 border border-dashed border-blue-500/30">
-        <h3 className="text-sm font-medium text-black-300 mb-1 flex items-center gap-2">
-          <FileText className="w-4 h-4" />
-          Upload Resume (PDF)
-        </h3>
-        <p className="text-xs text-black-400 mb-3">
-          AI will extract skills automatically
-        </p>
-
-        <label className="block">
-          <input
-            type="file"
-            accept="application/pdf"
-            onChange={handleResumeUpload}
-            disabled={uploadingResume}
-            className="hidden"
-          />
-          <div className="flex items-center justify-center gap-2 px-4 py-3 bg-blue-600/20 hover:bg-blue-600/30 border border-blue-500/40 rounded-lg cursor-pointer transition">
-            {uploadingResume ? (
-              <>
-                <Loader2 className="w-5 h-5 animate-spin text-blue-400" />
-                <span className="text-blue-400 text-sm">Scanning resume…</span>
-              </>
-            ) : (
-              <>
-                <Upload className="w-5 h-5 text-blue-400" />
-                <span className="text-blue-400 text-sm">Choose PDF Resume</span>
-              </>
-            )}
-          </div>
-        </label>
-      </div>
-
-      {/* Manual Skill Input */}
-      <div>
-        <h3 className="text-sm font-medium text-black-300 mb-2">Add Skills Manually</h3>
-
-        <div className="flex flex-col sm:flex-row gap-2 mb-3">
-          <input
-            type="text"
-            value={newSkill}
-            onChange={(e) => setNewSkill(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && isEditing && handleAddSkill()}
-            placeholder={isEditing ? "e.g., Python" : "Enable edit mode"}
-            className="flex-1 px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-sm focus:outline-none focus:border-blue-500 disabled:opacity-60"
-            disabled={!isEditing}
-          />
-          <select
-            value={skillLevel}
-            onChange={(e) => setSkillLevel(e.target.value)}
-            className="px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-sm"
-            disabled={!isEditing}
-          >
-            <option value="beginner">Beginner</option>
-            <option value="intermediate">Intermediate</option>
-            <option value="advanced">Advanced</option>
-          </select>
-          <button
-            onClick={handleAddSkill}
-            disabled={!isEditing || !newSkill.trim()}
-            className="p-2 bg-blue-600 hover:bg-blue-700 rounded-lg disabled:opacity-50"
-          >
-            <Plus className="w-5 h-5" />
-          </button>
+    <div className="bg-white rounded-2xl p-6 md:p-8 border border-slate-200 shadow-sm animate-fade-in-up h-full">
+      <div className="flex justify-between items-center mb-6">
+        <div>
+          <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2">My Skills & Expertise</h2>
+          <p className="text-sm text-slate-500">Manage your technical profile</p>
         </div>
-
-        {/* Skills List */}
-        <div className="flex flex-wrap gap-2 max-h-64 overflow-y-auto rounded-lg border border-white/10 p-3">
-          {skills.map((skill, index) => {
-            const level = typeof skill === "string" ? "basic" : skill.level;
-            const styles = {
-              advanced: "bg-green-500/15 text-green-400 border-green-500/30",
-              intermediate: "bg-blue-500/15 text-blue-400 border-blue-500/30",
-              basic: "bg-black-500/15 text-black-300 border-black-500/30",
-            };
-
-            return (
-              <span
-                key={index}
-                className={`group flex items-center gap-2 rounded-full border px-3 py-1.5 text-sm transition hover:scale-[1.02] ${styles[level]}`}
-              >
-                <span className={`h-2 w-2 rounded-full ${
-                  level === "advanced" ? "bg-green-400" :
-                  level === "intermediate" ? "bg-blue-400" : "bg-black-400"
-                }`} />
-                <span className="font-medium whitespace-nowrap">
-                  {typeof skill === "string" ? skill : skill.name || skill.skill}
-                </span>
-                {isEditing && (
-                  <button
-                    onClick={() => handleRemoveSkill(index)}
-                    className="opacity-0 group-hover:opacity-100 text-black-400 hover:text-red-400 transition"
-                  >
-                    <X className="w-3.5 h-3.5" />
-                  </button>
-                )}
-              </span>
-            );
-          })}
-
-          {skills.length === 0 && (
-            <div className="w-full text-center py-6 border border-dashed border-white/20 rounded-lg">
-              <p className="text-sm text-black-400">No skills added yet</p>
-              <p className="text-xs text-black-500 mt-1">
-                Upload a resume or add skills manually
-              </p>
-            </div>
+        <div className="flex gap-2">
+          {!isEditing ? (
+            <button onClick={() => setIsEditing(true)} className="px-5 py-2 bg-slate-900 text-white rounded-xl text-sm font-medium hover:bg-slate-800 transition-all shadow-sm">Edit Skills</button>
+          ) : (
+            <>
+              <button onClick={() => setIsEditing(false)} className="px-4 py-2 hover:bg-slate-100 rounded-xl text-sm font-medium text-slate-600 transition-colors">Cancel</button>
+              <button onClick={handleSave} disabled={saving} className="px-5 py-2 bg-emerald-600 text-white rounded-xl text-sm font-medium hover:bg-emerald-700 transition-all shadow-sm flex items-center gap-2">
+                {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />} Save
+              </button>
+            </>
           )}
         </div>
       </div>
-    </div>
 
-    {/* ============ RIGHT COLUMN ============ */}
-    <div className="space-y-5">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        {/* Left: Skills Inputs & Grid */}
+        <div className="lg:col-span-8 space-y-6">
+          {isEditing && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="bg-slate-50 border border-dashed border-slate-300 rounded-xl p-4 text-center">
+                <p className="text-xs text-slate-500 mb-2 font-medium">Auto-Extract from Resume</p>
+                <label className="cursor-pointer inline-flex items-center px-4 py-2 bg-white border border-slate-200 text-indigo-600 text-xs font-bold rounded-lg hover:border-indigo-300 transition-all">
+                  {uploadingResume ? <Loader2 className="w-3 h-3 animate-spin mr-2" /> : <Upload className="w-3 h-3 mr-2" />}
+                  {uploadingResume ? "Scanning..." : "Upload PDF"}
+                  <input type="file" accept="application/pdf" className="hidden" onChange={handleResumeUpload} disabled={uploadingResume} />
+                </label>
+              </div>
+              <div className="flex flex-col justify-center gap-2">
+                <div className="flex gap-2">
+                  <input type="text" value={newSkill} onChange={(e) => setNewSkill(e.target.value)} placeholder="Add skill..." className="flex-1 px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm outline-none focus:border-indigo-500" />
+                  <button onClick={handleAddSkill} disabled={!newSkill.trim()} className="p-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"><Plus className="w-4 h-4" /></button>
+                </div>
+                <select value={skillLevel} onChange={(e) => setSkillLevel(e.target.value)} className="px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm outline-none">
+                  <option value="beginner">Beginner</option>
+                  <option value="intermediate">Intermediate</option>
+                  <option value="advanced">Advanced</option>
+                </select>
+              </div>
+            </div>
+          )}
 
-      {/* Target Roles */}
-      <div>
-        <h3 className="text-sm font-medium text-black-300 mb-2">
-          Target Roles <span className="text-black-500">(for job matching)</span>
-        </h3>
-
-        <div className="flex gap-2 mb-3">
-          <input
-            type="text"
-            value={newTargetRole}
-            onChange={(e) => setNewTargetRole(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && isEditing && handleAddTargetRole()}
-            placeholder={isEditing ? "e.g., Backend Developer" : "Enable edit mode"}
-            className="flex-1 px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-sm disabled:opacity-60"
-            disabled={!isEditing}
-          />
-          <button
-            onClick={handleAddTargetRole}
-            disabled={!isEditing || !newTargetRole.trim()}
-            className="p-2 bg-blue-600 hover:bg-blue-700 rounded-lg disabled:opacity-40"
-          >
-            <Plus className="w-5 h-5" />
-          </button>
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+            {skills.map((skill, index) => (
+              <SkillCard key={index} skill={skill} isEditing={isEditing} onDelete={() => handleRemoveSkill(index)} />
+            ))}
+            {skills.length === 0 && <div className="col-span-full text-center py-8 text-slate-400 italic">No skills added yet.</div>}
+          </div>
         </div>
 
-        {targetRoles.length > 0 ? (
-          <div className="flex flex-wrap gap-2">
-            {targetRoles.map((role, index) => (
-              <span
-                key={index}
-                className="group px-3 py-1.5 rounded-full text-sm bg-blue-500/15 text-blue-400 border border-blue-500/30 flex items-center gap-2"
-              >
-                {role}
-                {isEditing && (
-                  <button
-                    onClick={() => handleRemoveTargetRole(role)}
-                    className="opacity-0 group-hover:opacity-100 text-black-400 hover:text-red-400 transition"
-                  >
-                    <X className="w-3.5 h-3.5" />
-                  </button>
-                )}
-              </span>
-            ))}
+        {/* Right: Targets & Exp */}
+        <div className="lg:col-span-4 space-y-6 lg:border-l lg:border-slate-100 lg:pl-6">
+          <div>
+            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Target Roles</h3>
+            {isEditing && (
+              <div className="flex gap-2 mb-3">
+                <input type="text" value={newTargetRole} onChange={(e) => setNewTargetRole(e.target.value)} placeholder="e.g. Backend Dev" className="flex-1 px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm outline-none focus:border-indigo-500" />
+                <button onClick={handleAddTargetRole} disabled={!newTargetRole.trim()} className="p-2 bg-slate-900 text-white rounded-lg hover:bg-slate-800"><Plus className="w-4 h-4" /></button>
+              </div>
+            )}
+            <div className="flex flex-wrap gap-2">
+              {targetRoles.map((role, idx) => (
+                <span key={idx} className="px-3 py-1 bg-slate-100 text-slate-600 rounded-lg text-xs font-bold flex items-center gap-2">
+                  {role}
+                  {isEditing && <button onClick={() => handleRemoveTargetRole(role)} className="hover:text-red-500"><X className="w-3 h-3" /></button>}
+                </span>
+              ))}
+              {targetRoles.length === 0 && <span className="text-xs text-slate-400">No roles set.</span>}
+            </div>
           </div>
-        ) : (
-          <div className="border border-dashed border-white/20 rounded-lg p-4 text-center">
-            <p className="text-sm text-black-400">No target roles added</p>
-            <p className="text-xs text-black-500 mt-1">
-              Add roles to get better job matches
-            </p>
-          </div>
-        )}
-      </div>
 
-      {/* Experience */}
-      <div>
-        <h3 className="text-sm font-medium text-black-300 mb-2">
-          Years of Experience
-        </h3>
-
-        {isEditing ? (
-          <input
-            type="number"
-            min="0"
-            max="50"
-            value={experienceYears}
-            onChange={(e) => setExperienceYears(Number(e.target.value) || 0)}
-            className="w-28 px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-sm"
-          />
-        ) : (
-          <div className="px-3 py-2 bg-white/5 border border-white/10 rounded-lg text-sm w-fit">
-            {experienceYears > 0 ? (
-              <span>{experienceYears} years</span>
+          <div className="p-4 bg-slate-50 rounded-xl">
+            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Experience</h3>
+            {isEditing ? (
+              <div className="flex items-center gap-2">
+                <input type="number" min="0" max="50" value={experienceYears} onChange={(e) => setExperienceYears(Number(e.target.value) || 0)} className="w-20 px-3 py-1.5 bg-white border border-slate-200 rounded-lg text-sm outline-none" />
+                <span className="text-sm font-medium text-slate-600">Years</span>
+              </div>
             ) : (
-              <span className="text-black-500 italic">Not specified</span>
+              <p className="text-xl font-bold text-slate-800">{experienceYears} <span className="text-sm font-normal text-slate-500">Years</span></p>
             )}
           </div>
-        )}
+        </div>
       </div>
     </div>
-  </div>
-</div>
-
   );
 }
 
 
+// --- MAIN PAGE ---
+
 export default function CareerDashboard() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState("skills"); // Default Tab
+
+  // Data State
   const [profile, setProfile] = useState(null);
   const [roadmaps, setRoadmaps] = useState([]);
   const [opportunities, setOpportunities] = useState([]);
   const [insights, setInsights] = useState([]);
   const [rejectionFeedback, setRejectionFeedback] = useState([]);
   const [scanning, setScanning] = useState(false);
-  const [generatingRoadmap, setGeneratingRoadmap] = useState(false);
   const [targetRole, setTargetRole] = useState("");
+  const [generatingRoadmap, setGeneratingRoadmap] = useState(false);
   const [externalJobs, setExternalJobs] = useState([]);
   const [searchingJobs, setSearchingJobs] = useState(false);
-  const [jobSearchError, setJobSearchError] = useState(null);
 
   const API_URL = import.meta.env.VITE_API_URL;
 
+  // Initial Load
   useEffect(() => {
     const loadData = async () => {
-      await fetchDashboardData();
+      const token = getAuthToken();
+      if (!token) { navigate('/login'); return; }
+
+      setLoading(true);
+      try {
+        const headers = { Authorization: `Token ${token}` };
+        const [prof, roads, opps, ins, rejs] = await Promise.all([
+          fetch(`${API_URL}/career/profile/`, { headers }),
+          fetch(`${API_URL}/career/roadmap/`, { headers }),
+          fetch(`${API_URL}/career/matched-interviews/`, { headers }),
+          fetch(`${API_URL}/feedback/insights/?addressed=false`, { headers }),
+          fetch(`${API_URL}/feedback/rejections/`, { headers })
+        ]);
+
+        if (prof.ok) setProfile(await prof.json());
+        if (roads.ok) setRoadmaps(await roads.json());
+        if (opps.ok) { const d = await opps.json(); setOpportunities(d.slice(0, 5)); }
+        if (ins.ok) { const d = await ins.json(); setInsights(d.slice(0, 5)); }
+        if (rejs.ok) { const d = await rejs.json(); setRejectionFeedback(d.slice(0, 5)); }
+
+      } catch (err) { console.error(err); } finally { setLoading(false); }
     };
     loadData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const fetchDashboardData = async () => {
-    const token = getAuthToken();
-    if (!token) {
-      navigate('/login');
-      return;
-    }
-
-    setLoading(true);
-    try {
-      // Fetch skill profile
-      const profileRes = await fetch(`${API_URL}/career/profile/`, {
-        headers: { Authorization: `Token ${token}` },
-      });
-      if (profileRes.ok) {
-        const data = await profileRes.json();
-        setProfile(data);
-      }
-
-      // Fetch roadmaps
-      const roadmapsRes = await fetch(`${API_URL}/career/roadmap/`, {
-        headers: { Authorization: `Token ${token}` },
-      });
-      if (roadmapsRes.ok) {
-        const data = await roadmapsRes.json();
-        setRoadmaps(data);
-      }
-
-      // Fetch skill-matched interviews (curated for user)
-      const matchedRes = await fetch(`${API_URL}/career/matched-interviews/`, {
-        headers: { Authorization: `Token ${token}` },
-      });
-      if (matchedRes.ok) {
-        const data = await matchedRes.json();
-        setOpportunities(data.slice(0, 5));  // Top 5 matches
-      }
-
-      // Fetch insights
-      const insightsRes = await fetch(`${API_URL}/feedback/insights/?addressed=false`, {
-        headers: { Authorization: `Token ${token}` },
-      });
-      if (insightsRes.ok) {
-        const data = await insightsRes.json();
-        setInsights(data.slice(0, 3));
-      }
-
-      // Fetch rejection feedback with AI analysis
-      const rejectionRes = await fetch(`${API_URL}/feedback/rejections/`, {
-        headers: { Authorization: `Token ${token}` },
-      });
-      if (rejectionRes.ok) {
-        const data = await rejectionRes.json();
-        setRejectionFeedback(data.slice(0, 5));  // Show latest 5
-      }
-
-    } catch (error) {
-      console.error("Error fetching dashboard data:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
+  // Handlers
   const handleScanProfile = async () => {
     const token = getAuthToken();
     setScanning(true);
-
     try {
-      const res = await fetch(`${API_URL}/career/profile/scan/`, {
-        method: 'POST',
-        headers: { Authorization: `Token ${token}` },
-      });
-
-      if (res.ok) {
-        const data = await res.json();
-        setProfile(data.profile);
-        toast.success("Profile scanned successfully!");
-      } else {
-        toast.error("Failed to scan profile");
-      }
-    } catch {
-      toast.error("Error scanning profile");
-    } finally {
-      setScanning(false);
-    }
+      await fetch(`${API_URL}/career/profile/scan/`, { method: 'POST', headers: { Authorization: `Token ${token}` } });
+      toast.success("Rescanning complete!");
+      window.location.reload();
+    } catch { toast.error("Scan failed"); } finally { setScanning(false); }
   };
 
   const handleGenerateRoadmap = async () => {
-    if (!targetRole.trim()) {
-      toast.error("Please enter a target role");
-      return;
-    }
-
-    const token = getAuthToken();
+    if (!targetRole.trim()) return toast.error("Enter role");
     setGeneratingRoadmap(true);
-
+    const token = getAuthToken();
     try {
       const res = await fetch(`${API_URL}/career/roadmap/`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Token ${token}`,
-        },
-        body: JSON.stringify({ target_role: targetRole }),
+        headers: { 'Content-Type': 'application/json', Authorization: `Token ${token}` },
+        body: JSON.stringify({ target_role: targetRole })
       });
-
       if (res.ok) {
         const data = await res.json();
         setRoadmaps(prev => [data, ...prev]);
         setTargetRole("");
-        toast.success("Roadmap generated!");
-      } else {
-        toast.error("Failed to generate roadmap");
+        toast.success("Generated!");
       }
-    } catch {
-      toast.error("Error generating roadmap");
-    } finally {
-      setGeneratingRoadmap(false);
-    }
+    } catch { toast.error("Failed"); } finally { setGeneratingRoadmap(false); }
   };
 
   const handleSearchExternalJobs = async () => {
     const token = getAuthToken();
     if (!token) return;
-
     setSearchingJobs(true);
-    setJobSearchError(null);
-
     try {
-      const response = await fetch(`${API_URL}/career/external-jobs/`, {
-        headers: { Authorization: `Token ${token}` },
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        if (data.success) {
-          setExternalJobs(data.jobs || []);
-          if (data.jobs?.length === 0) {
-            toast.info("No external jobs found matching your profile");
-          } else {
-            toast.success(`Found ${data.jobs.length} matching opportunities!`);
-          }
-        } else {
-          setJobSearchError(data.error || "Failed to search jobs");
-        }
-      } else {
-        setJobSearchError("Failed to connect to job search service");
+      const res = await fetch(`${API_URL}/career/external-jobs/`, { headers: { Authorization: `Token ${token}` } });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success) { setExternalJobs(data.jobs || []); toast.success(`Found ${data.jobs?.length} matches`); }
       }
-    } catch {
-      setJobSearchError("Error searching for jobs");
-    } finally {
-      setSearchingJobs(false);
-    }
+    } catch { toast.error("Search failed"); } finally { setSearchingJobs(false); }
   };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-blue-50">
-        <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
-      </div>
-    );
-  }
+  if (loading) return <div className="min-h-screen flex items-center justify-center bg-[#F8FAFC]"><Loader2 className="w-10 h-10 animate-spin text-indigo-600" /></div>;
 
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-50 text-black-900">
-      <Header />
+  // --- CONTENT SECTION RENDERS ---
+  const renderContent = () => {
+    switch (activeTab) {
+      case 'skills':
+        return <ProfileEditor profile={profile} setProfile={setProfile} API_URL={API_URL} />;
 
-      <main className="max-w-7xl mx-auto px-4 py-8">
-        {/* Header Section */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8">
-          <div>
-            <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-green-600 bg-clip-text text-transparent">
-              Career Co-Pilot Dashboard
-            </h1>
-            <p className="text-black-600 mt-1">Your AI-powered career development companion</p>
-          </div>
-          <div className="flex gap-3 mt-4 md:mt-0">
-            <button
-              onClick={handleScanProfile}
-              disabled={scanning}
-              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg flex items-center gap-2 transition-colors disabled:opacity-50"
-            >
-              {scanning ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
-              Scan Profile
-            </button>
-          </div>
-        </div>
-
-        {/* Stats Overview */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-          <div className="bg-white rounded-xl p-4 border border-black-200 shadow-sm hover:shadow-md transition-all duration-300">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-blue-100 rounded-lg">
-                <Brain className="w-5 h-5 text-blue-600" />
-              </div>
-              <div>
-                <p className="text-black-500 text-sm">Skills Tracked</p>
-                <p className="text-2xl font-bold text-black-900">{profile?.skills?.length || 0}</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-xl p-4 border border-black-200 shadow-sm hover:shadow-md transition-all duration-300">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-green-100 rounded-lg">
-                <Target className="w-5 h-5 text-green-600" />
-              </div>
-              <div>
-                <p className="text-black-500 text-sm">Active Roadmaps</p>
-                <p className="text-2xl font-bold text-black-900">{roadmaps.filter(r => r.status === 'active').length}</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-xl p-4 border border-black-200 shadow-sm hover:shadow-md transition-all duration-300">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-yellow-100 rounded-lg">
-                <Briefcase className="w-5 h-5 text-yellow-600" />
-              </div>
-              <div>
-                <p className="text-black-500 text-sm">Matched Jobs</p>
-                <p className="text-2xl font-bold text-black-900">{opportunities.length}</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-xl p-4 border border-black-200 shadow-sm hover:shadow-md transition-all duration-300">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-red-100 rounded-lg">
-                <AlertCircle className="w-5 h-5 text-red-600" />
-              </div>
-              <div>
-                <p className="text-black-500 text-sm">Action Items</p>
-                <p className="text-2xl font-bold text-black-900">{insights.length}</p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Skill Profile Editor - NEW SECTION */}
-        <ProfileEditor
-          profile={profile}
-          setProfile={setProfile}
-          API_URL={API_URL}
-        />
-
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Left Column - Roadmaps & Generate */}
-          <div className="lg:col-span-2 space-y-6">
-            {/* Generate New Roadmap */}
-            <div className="bg-white rounded-xl p-6 border border-black-200 shadow-sm">
-              <h2 className="text-xl font-semibold mb-4 flex items-center gap-2 text-black-900">
-                <Sparkles className="w-5 h-5 text-blue-600" />
-                Generate Learning Roadmap
-              </h2>
-              <div className="flex gap-3">
+      case 'roadmaps':
+        return (
+          <div className="space-y-6 animate-fade-in-up">
+            <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col md:flex-row gap-4 items-end">
+              <div className="flex-1 w-full">
+                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 block">Create New Roadmap</label>
                 <input
                   type="text"
                   value={targetRole}
                   onChange={(e) => setTargetRole(e.target.value)}
-                  placeholder="Enter target role (e.g., Full Stack Developer)"
-                  className="flex-1 px-4 py-2 bg-black-50 border border-black-300 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-200 text-black-900 placeholder-black-400"
+                  placeholder="e.g. Senior Frontend Engineer"
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-indigo-500 transition-colors"
                 />
-                <button
-                  onClick={handleGenerateRoadmap}
-                  disabled={generatingRoadmap}
-                  className="px-6 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg font-medium transition-all disabled:opacity-50 flex items-center gap-2 text-white"
-                >
-                  {generatingRoadmap ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : (
-                    <Zap className="w-4 h-4" />
-                  )}
-                  Generate
-                </button>
               </div>
+              <button onClick={handleGenerateRoadmap} disabled={generatingRoadmap} className="px-6 py-3 bg-indigo-600 text-white font-medium rounded-xl hover:bg-indigo-700 transition-colors flex items-center gap-2 shadow-sm">
+                {generatingRoadmap ? <Loader2 className="w-5 h-5 animate-spin" /> : <Zap className="w-5 h-5" />} Generate
+              </button>
             </div>
 
-            {/* Active Roadmaps */}
-            <div className="bg-white rounded-xl p-6 border border-black-200 shadow-sm">
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl font-semibold flex items-center gap-2 text-black-900">
-                  <Target className="w-5 h-5 text-green-600" />
-                  Your Learning Roadmaps
-                </h2>
-                <Link to="/roadmaps" className="text-blue-600 hover:text-blue-700 text-sm flex items-center gap-1">
-                  View All <ChevronRight className="w-4 h-4" />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {roadmaps.map((map, idx) => (
+                <Link to={`/roadmap/${map.id}`} key={idx} className="bg-white p-6 rounded-2xl border border-slate-200 hover:border-indigo-400 hover:shadow-md transition-all group">
+                  <div className="flex justify-between items-start mb-4">
+                    <h4 className="text-lg font-bold text-slate-800 group-hover:text-indigo-600 transition-colors">{map.target_role}</h4>
+                    <span className={`px-2 py-1 rounded-lg text-xs font-bold uppercase ${map.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-500'}`}>{map.status}</span>
+                  </div>
+                  <div className="flex items-center gap-2 mb-4">
+                    <div className="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden">
+                      <div className="h-full bg-indigo-500 rounded-full" style={{ width: `${map.current_readiness_score}%` }}></div>
+                    </div>
+                    <span className="text-xs font-bold text-indigo-600">{Math.round(map.current_readiness_score)}%</span>
+                  </div>
+                  <p className="text-xs text-slate-400 font-medium flex items-center gap-1"><BookOpen className="w-3 h-3" /> {map.estimated_duration_weeks} Weeks Estimated</p>
                 </Link>
-              </div>
+              ))}
+              {roadmaps.length === 0 && <div className="col-span-2 text-center py-10 text-slate-400 italic">No roadmaps generated yet.</div>}
+            </div>
+          </div>
+        );
 
-              {roadmaps.length === 0 ? (
-                <div className="text-center py-8 text-black-500">
-                  <BookOpen className="w-12 h-12 mx-auto mb-2 opacity-50" />
-                  <p>No roadmaps yet. Generate one above!</p>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {roadmaps.slice(0, 3).map((roadmap) => (
-                    <div key={roadmap.id} className="bg-black-50 rounded-lg p-4 border border-black-200 hover:border-blue-300 transition-colors">
-                      <div className="flex justify-between items-start mb-2">
-                        <div>
-                          <h3 className="font-medium text-black-900">{roadmap.target_role}</h3>
-                          <p className="text-sm text-black-500">{roadmap.estimated_duration_weeks} weeks estimated</p>
-                        </div>
-                        <span className={`px-2 py-1 text-xs rounded-full ${roadmap.status === 'active' ? 'bg-green-100 text-green-700' :
-                          roadmap.status === 'completed' ? 'bg-blue-100 text-blue-700' :
-                            'bg-black-100 text-black-600'
-                          }`}>
-                          {roadmap.status}
-                        </span>
-                      </div>
-
-                      {/* Progress Bar */}
-                      <div className="mt-3">
-                        <div className="flex justify-between text-xs text-black-500 mb-1">
-                          <span>Readiness</span>
-                          <span>{Math.round(roadmap.current_readiness_score)}%</span>
-                        </div>
-                        <div className="h-2 bg-black-200 rounded-full overflow-hidden">
-                          <div
-                            className="h-full bg-gradient-to-r from-blue-500 to-blue-600 rounded-full transition-all"
-                            style={{ width: `${roadmap.current_readiness_score}%` }}
-                          />
-                        </div>
-                      </div>
-
-                      <Link
-                        to={`/roadmap/${roadmap.id}`}
-                        className="mt-3 text-sm text-blue-600 hover:text-blue-700 flex items-center gap-1"
-                      >
-                        View Roadmap <ChevronRight className="w-4 h-4" />
-                      </Link>
+      case 'feedback':
+        return (
+          <div className="space-y-8 animate-fade-in-up">
+            {/* Insights */}
+            <div className="space-y-4">
+              <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider">Action Items</h3>
+              {insights.map((insight, idx) => (
+                <div key={idx} className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm border-l-4 border-l-amber-400 flex flex-col md:flex-row gap-4 items-start">
+                  <div className="p-3 bg-amber-50 text-amber-600 rounded-xl shrink-0"><Brain className="w-6 h-6" /></div>
+                  <div>
+                    <div className="flex items-center gap-3 mb-1">
+                      <h4 className="font-bold text-slate-800">{insight.title}</h4>
+                      <span className="px-2 py-0.5 bg-amber-100 text-amber-700 text-[10px] font-bold uppercase rounded">{insight.priority}</span>
                     </div>
-                  ))}
+                    <p className="text-sm text-slate-600 leading-relaxed">{insight.pattern_description}</p>
+                  </div>
                 </div>
-              )}
+              ))}
+              {insights.length === 0 && <p className="text-slate-400 italic">No pending action items.</p>}
             </div>
 
-            {/* Feedback Insights */}
-            {insights.length > 0 && (
-              <div className="bg-white rounded-xl p-6 border border-black-200 shadow-sm">
-                <div className="flex justify-between items-center mb-4">
-                  <h2 className="text-xl font-semibold flex items-center gap-2 text-black-900">
-                    <AlertCircle className="w-5 h-5 text-yellow-600" />
-                    Action Items
-                  </h2>
-                  <Link to="/feedback" className="text-blue-600 hover:text-blue-700 text-sm flex items-center gap-1">
-                    View All <ChevronRight className="w-4 h-4" />
-                  </Link>
-                </div>
-
-                <div className="space-y-3">
-                  {insights.map((insight) => (
-                    <div key={insight.id} className="bg-black-50 rounded-lg p-4 border-l-4 border-yellow-500">
-                      <div className="flex items-start justify-between">
-                        <div>
-                          <h4 className="font-medium text-black-900">{insight.title}</h4>
-                          <p className="text-sm text-black-600 mt-1">{insight.pattern_description.slice(0, 100)}...</p>
-                        </div>
-                        <span className={`px-2 py-1 text-xs rounded-full ${insight.priority === 'critical' ? 'bg-red-100 text-red-700' :
-                          insight.priority === 'high' ? 'bg-yellow-100 text-yellow-700' :
-                            'bg-blue-100 text-blue-700'
-                          }`}>
-                          {insight.priority}
-                        </span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Application Decisions & AI Feedback */}
+            {/* Rejections */}
             {rejectionFeedback.length > 0 && (
-              <div className="bg-white rounded-xl p-6 border border-black-200 shadow-sm">
-                <div className="flex justify-between items-center mb-4">
-                  <h2 className="text-xl font-semibold flex items-center gap-2 text-black-900">
-                    <Brain className="w-5 h-5 text-blue-600" />
-                    Application Feedback
-                  </h2>
-                </div>
-
-                <div className="space-y-4">
-                  {rejectionFeedback.map((feedback) => (
-                    <div key={feedback.id} className="bg-black-50 rounded-lg p-4 border border-black-200">
-                      <div className="flex items-start justify-between mb-3">
-                        <div>
-                          <h4 className="font-medium text-black-900">{feedback.opportunity_title}</h4>
-                          <p className="text-sm text-blue-600">{feedback.company_name}</p>
-                        </div>
-                        <span className="px-2 py-1 text-xs rounded-full bg-red-100 text-red-700">
-                          Not Selected
-                        </span>
+              <div className="space-y-4">
+                <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider">Application Analysis</h3>
+                {rejectionFeedback.map((fb, idx) => (
+                  <div key={idx} className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+                    <div className="flex justify-between items-start mb-4">
+                      <div>
+                        <h4 className="font-bold text-slate-800">{fb.opportunity_title}</h4>
+                        <p className="text-sm text-slate-500">{fb.company_name}</p>
                       </div>
-
-                      {/* AI Analysis */}
-                      {feedback.ai_analyzed_feedback && (
-                        <div className="space-y-3">
-                          {/* Summary */}
-                          {feedback.ai_analyzed_feedback.summary && (
-                            <p className="text-sm text-black-700">{feedback.ai_analyzed_feedback.summary}</p>
-                          )}
-
-                          {/* Strengths */}
-                          {feedback.ai_analyzed_feedback.strengths && feedback.ai_analyzed_feedback.strengths.length > 0 && (
-                            <div>
-                              <h5 className="text-xs font-semibold text-green-700 mb-1">✓ Strengths</h5>
-                              <ul className="text-xs text-black-600 space-y-1">
-                                {feedback.ai_analyzed_feedback.strengths.map((s, i) => (
-                                  <li key={i} className="flex items-start gap-1">
-                                    <span className="text-green-600">•</span> {s}
-                                  </li>
-                                ))}
-                              </ul>
-                            </div>
-                          )}
-
-                          {/* Improvement Areas */}
-                          {feedback.ai_analyzed_feedback.improvement_areas && feedback.ai_analyzed_feedback.improvement_areas.length > 0 && (
-                            <div>
-                              <h5 className="text-xs font-semibold text-yellow-700 mb-1">↑ Areas to Improve</h5>
-                              <ul className="text-xs text-black-600 space-y-1">
-                                {feedback.ai_analyzed_feedback.improvement_areas.map((a, i) => (
-                                  <li key={i} className="flex items-start gap-1">
-                                    <span className="text-yellow-600">•</span> {a}
-                                  </li>
-                                ))}
-                              </ul>
-                            </div>
-                          )}
-
-                          {/* Action Items */}
-                          {feedback.ai_analyzed_feedback.action_items && feedback.ai_analyzed_feedback.action_items.length > 0 && (
-                            <div>
-                              <h5 className="text-xs font-semibold text-blue-700 mb-1">→ Next Steps</h5>
-                              <ul className="text-xs text-black-600 space-y-1">
-                                {feedback.ai_analyzed_feedback.action_items.map((item, i) => (
-                                  <li key={i} className="flex items-start gap-1">
-                                    <span className="text-blue-600">{i + 1}.</span> {item}
-                                  </li>
-                                ))}
-                              </ul>
-                            </div>
-                          )}
-
-                          {/* Encouragement */}
-                          {feedback.ai_analyzed_feedback.encouragement && (
-                            <p className="text-xs text-blue-700 italic mt-2">
-                              💪 {feedback.ai_analyzed_feedback.encouragement}
-                            </p>
-                          )}
-
-                          {/* Detailed Per-Question Feedback */}
-                          {feedback.ai_analyzed_feedback.detailed_feedback && feedback.ai_analyzed_feedback.detailed_feedback.length > 0 && (
-                            <div className="mt-4 border-t border-black-200 pt-3">
-                              <h5 className="text-xs font-semibold text-black-700 mb-2">📝 Question-by-Question Feedback</h5>
-                              <div className="space-y-2">
-                                {feedback.ai_analyzed_feedback.detailed_feedback.map((fb, i) => {
-                                  const parts = fb.split(' | Feedback: ');
-                                  const question = parts[0]?.replace('Q: ', '') || 'Question';
-                                  const feedbackText = parts[1] || fb;
-
-                                  return (
-                                    <details
-                                      key={i}
-                                      className="group bg-white rounded-lg border border-black-200 overflow-hidden"
-                                    >
-                                      <summary className="cursor-pointer px-3 py-2 flex items-center justify-between text-xs font-medium text-black-700 hover:bg-black-50 transition-colors">
-                                        <span className="truncate pr-2">{question}</span>
-                                        <ChevronDown className="w-4 h-4 flex-shrink-0 text-black-400 group-open:rotate-180 transition-transform" />
-                                      </summary>
-                                      <div className="px-3 py-3 bg-black-50 border-t border-black-100">
-                                        <p className="text-xs text-black-700 leading-relaxed whitespace-pre-wrap">{feedbackText}</p>
-                                      </div>
-                                    </details>
-                                  );
-                                })}
-                              </div>
-                            </div>
-                          )}
-
-                          {/* Scores Summary */}
-                          {feedback.ai_analyzed_feedback.scores && (
-                            <div className="mt-3 flex flex-wrap gap-2">
-                              {feedback.ai_analyzed_feedback.scores.dev_score > 0 && (
-                                <span className="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded">
-                                  Dev: {feedback.ai_analyzed_feedback.scores.dev_score}/10
-                                </span>
-                              )}
-                              {feedback.ai_analyzed_feedback.scores.resume_score > 0 && (
-                                <span className="px-2 py-1 bg-green-100 text-green-700 text-xs rounded">
-                                  Resume: {feedback.ai_analyzed_feedback.scores.resume_score}/10
-                                </span>
-                              )}
-                              {feedback.ai_analyzed_feedback.scores.dsa_score > 0 && (
-                                <span className="px-2 py-1 bg-yellow-100 text-yellow-700 text-xs rounded">
-                                  DSA: {feedback.ai_analyzed_feedback.scores.dsa_score}/10
-                                </span>
-                              )}
-                            </div>
-                          )}
-                        </div>
-                      )}
-
-                      {/* Fallback if no AI analysis */}
-                      {!feedback.ai_analyzed_feedback && feedback.raw_feedback && (
-                        <p className="text-sm text-black-600">{feedback.raw_feedback}</p>
-                      )}
+                      <span className="px-3 py-1 bg-red-50 text-red-600 rounded-lg text-xs font-bold uppercase">Not Selected</span>
                     </div>
-                  ))}
-                </div>
+
+                    {fb.ai_analyzed_feedback ? (
+                      <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 space-y-3">
+                        <p className="text-sm font-medium text-slate-800">{fb.ai_analyzed_feedback.summary}</p>
+                        {fb.ai_analyzed_feedback.improvement_areas && (
+                          <div className="space-y-1">
+                            <p className="text-xs font-bold text-slate-500 uppercase">To Improve:</p>
+                            <ul className="text-sm text-slate-600 list-disc list-inside">
+                              {fb.ai_analyzed_feedback.improvement_areas.map((area, i) => <li key={i}>{area}</li>)}
+                            </ul>
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      <p className="text-sm text-slate-600 italic">"{fb.raw_feedback}"</p>
+                    )}
+                  </div>
+                ))}
               </div>
             )}
           </div>
+        );
 
-          {/* Right Column - Opportunities */}
-          <div className="space-y-6">
-            {/* Matched Opportunities */}
-            <div className="bg-white rounded-xl p-6 border border-black-200 shadow-sm">
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl font-semibold flex items-center gap-2 text-black-900">
-                  <Briefcase className="w-5 h-5 text-yellow-600" />
-                  Matched Interviews
-                </h2>
-                <button
-                  onClick={() => fetchDashboardData()}
-                  disabled={scanning}
-                  className="text-blue-600 hover:text-blue-700 text-sm flex items-center gap-1"
-                >
-                  <RefreshCw className={`w-4 h-4 ${scanning ? 'animate-spin' : ''}`} />
-                  Refresh
-                </button>
-              </div>
+      case 'jobs':
+        return (
+          <div className="space-y-6 animate-fade-in-up">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-lg font-bold text-slate-800">Job Matches</h2>
+              <button onClick={handleSearchExternalJobs} className="px-4 py-2 bg-slate-900 text-white rounded-lg text-sm font-medium hover:bg-slate-800 transition-colors flex items-center gap-2">
+                {searchingJobs ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />} Find External
+              </button>
+            </div>
 
-              {opportunities.length === 0 ? (
-                <div className="text-center py-8 text-black-500">
-                  <Briefcase className="w-12 h-12 mx-auto mb-2 opacity-50" />
-                  <p>No matched interviews yet.</p>
-                  <p className="text-xs mt-1">Add skills to your profile to get personalized matches!</p>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {opportunities.map((interview) => (
-                    <div key={interview.id} className="bg-black-50 rounded-lg p-4 border border-black-200 hover:border-blue-300 transition-colors">
-                      <div className="flex items-start justify-between mb-2">
-                        <div>
-                          <h4 className="font-medium text-black-900 text-sm">{interview.post}</h4>
-                          <p className="text-xs text-black-500">{interview.org_name}</p>
-                        </div>
-                        <span className={`px-2 py-1 text-xs rounded-full font-medium ${interview.match_score >= 80 ? 'bg-green-100 text-green-700' :
-                          interview.match_score >= 60 ? 'bg-blue-100 text-blue-700' :
-                            'bg-black-100 text-black-600'
-                          }`}>
-                          {interview.match_score}% match
-                        </span>
-                      </div>
-                      {interview.match_reasons && interview.match_reasons.length > 0 && (
-                        <div className="mb-2">
-                          <p className="text-xs text-green-600 italic">{interview.match_reasons[0]}</p>
-                        </div>
-                      )}
-                      <div className="flex items-center gap-3 text-xs text-black-500 mb-2">
-                        <span>{interview.experience} exp</span>
-                        <span>•</span>
-                        <span>Deadline: {new Date(interview.submissionDeadline).toLocaleDateString()}</span>
-                      </div>
-                      <Link
-                        to={`/interview/${interview.id}`}
-                        className="mt-2 text-xs text-blue-600 hover:text-blue-700 flex items-center gap-1"
-                      >
-                        View & Apply <ChevronRight className="w-3 h-3" />
-                      </Link>
+            <div className="grid gap-4">
+              {opportunities.map((job, idx) => (
+                <div key={idx} className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm hover:border-emerald-500 transition-all group flex justify-between items-center cursor-pointer">
+                  <div>
+                    <h4 className="font-bold text-slate-800 text-lg group-hover:text-emerald-600 transition-colors">{job.post}</h4>
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className="text-sm font-medium text-slate-500">{job.org_name}</span>
+                      <span className="text-slate-300">•</span>
+                      <span className="text-xs bg-slate-100 text-slate-600 px-2 py-0.5 rounded">{job.experience} Exp</span>
                     </div>
-                  ))}
+                  </div>
+                  <div className="text-right">
+                    <span className="inline-block px-3 py-1 bg-emerald-100 text-emerald-700 rounded-lg text-sm font-bold">{job.match_score}% Match</span>
+                    <p className="text-[10px] text-slate-400 mt-1 uppercase font-bold tracking-wider">Internal</p>
+                  </div>
                 </div>
-              )}
+              ))}
 
-              <Link
-                to="/interview"
-                className="mt-4 block w-full text-center py-2 bg-black-100 hover:bg-black-200 rounded-lg text-sm text-black-700 transition-colors"
+              {externalJobs.map((job, idx) => (
+                <a key={idx} href={job.url} target="_blank" rel="noreferrer" className="bg-slate-50 p-5 rounded-2xl border border-slate-200 hover:bg-white hover:shadow-md transition-all group block">
+                  <div className="flex justify-between items-start mb-2">
+                    <h4 className="font-bold text-slate-800 group-hover:text-blue-600 transition-colors">{job.title}</h4>
+                    <span className="text-xs font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded">{Math.round(job.match_score)}% Match</span>
+                  </div>
+                  <p className="text-xs text-slate-500 font-medium mb-2">{job.source} • {job.location || 'Remote'}</p>
+                  <p className="text-xs text-slate-600 line-clamp-2">{job.snippet}</p>
+                </a>
+              ))}
+
+              {opportunities.length === 0 && externalJobs.length === 0 && <div className="text-center py-12 text-slate-400">No jobs found yet. Try searching external!</div>}
+            </div>
+          </div>
+        );
+
+      default: return null;
+    }
+  };
+
+  // Nav Items Configuration
+  const navItems = [
+    { id: 'skills', label: 'Skills & Profile', icon: CheckSquare },
+    { id: 'roadmaps', label: 'Learning Path', icon: BookOpen },
+    { id: 'feedback', label: 'Feedback & Actions', icon: MessageSquare },
+    { id: 'jobs', label: 'Job Opportunities', icon: Briefcase },
+  ];
+
+  return (
+    <div className="min-h-screen bg-[#F8FAFC] text-slate-800 font-sans selection:bg-indigo-100 flex flex-col">
+      <Header />
+
+      <main className="flex-1 max-w-7xl mx-auto w-full px-4 py-8 flex flex-col md:flex-row gap-8">
+
+        {/* --- SIDEBAR NAVIGATION --- */}
+        <aside className="w-full md:w-64 shrink-0 space-y-6">
+          <div className="px-2">
+            <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">Dashboard</h1>
+            <p className="text-xs font-medium text-slate-500 mt-1">Welcome back, {profile?.name?.split(' ')[0]}</p>
+          </div>
+
+          <nav className="space-y-1">
+            {navItems.map((item) => (
+              <button
+                key={item.id}
+                onClick={() => setActiveTab(item.id)}
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 ${activeTab === item.id
+                    ? 'bg-slate-900 text-white shadow-md transform translate-x-1'
+                    : 'text-slate-600 hover:bg-white hover:text-slate-900'
+                  }`}
               >
-                View All Interviews
-              </Link>
-            </div>
+                <item.icon className={`w-5 h-5 ${activeTab === item.id ? 'text-indigo-300' : 'text-slate-400'}`} />
+                {item.label}
+                {activeTab === item.id && <ChevronRight className="w-4 h-4 ml-auto opacity-50" />}
+              </button>
+            ))}
+          </nav>
 
-            {/* Skills Summary */}
-            {profile?.skills?.length > 0 && (
-              <div className="bg-white rounded-xl p-6 border border-black-200 shadow-sm">
-                <h2 className="text-xl font-semibold mb-4 flex items-center gap-2 text-black-900">
-                  <BarChart3 className="w-5 h-5 text-blue-600" />
-                  Top Skills
-                </h2>
-                <div className="flex flex-wrap gap-2">
-                  {profile.skills.slice(0, 10).map((skill, index) => (
-                    <span
-                      key={index}
-                      className={`px-3 py-1 rounded-full text-sm ${skill.level === 'advanced' ? 'bg-green-100 text-green-700' :
-                        skill.level === 'intermediate' ? 'bg-blue-100 text-blue-700' :
-                          'bg-black-100 text-black-600'
-                        }`}
-                    >
-                      {typeof skill === 'string' ? skill : (skill.name || skill.skill || 'Unknown')}
-                    </span>
-                  ))}
-                </div>
+          {/* Mini Stats in Sidebar */}
+          <div className="p-4 bg-white rounded-2xl border border-slate-200 shadow-sm mt-8">
+            <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Quick Stats</h3>
+            <div className="space-y-3">
+              <div className="flex justify-between text-sm">
+                <span className="text-slate-600">Skills</span>
+                <span className="font-bold text-slate-900">{profile?.skills?.length || 0}</span>
               </div>
-            )}
-
-            {/* External Job Opportunities */}
-            <div className="bg-white rounded-xl p-6 border border-black-200 shadow-sm">
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl font-semibold flex items-center gap-2 text-black-900">
-                  <ExternalLink className="w-5 h-5 text-blue-600" />
-                  External Opportunities
-                </h2>
-                <button
-                  onClick={handleSearchExternalJobs}
-                  disabled={searchingJobs}
-                  className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg flex items-center gap-2 text-sm transition-colors disabled:opacity-50"
-                >
-                  {searchingJobs ? (
-                    <><Loader2 className="w-4 h-4 animate-spin" /> Searching...</>
-                  ) : (
-                    <><Search className="w-4 h-4" /> Find Jobs</>
-                  )}
-                </button>
+              <div className="flex justify-between text-sm">
+                <span className="text-slate-600">Matches</span>
+                <span className="font-bold text-slate-900">{opportunities.length}</span>
               </div>
-
-              {jobSearchError && (
-                <div className="mb-4 p-3 bg-red-50 text-red-700 rounded-lg text-sm border border-red-200">
-                  {jobSearchError}
-                </div>
-              )}
-
-              {externalJobs.length === 0 ? (
-                <div className="text-center py-8 text-black-500">
-                  <Search className="w-12 h-12 mx-auto mb-2 opacity-50" />
-                  <p>Click "Find Jobs" to search external opportunities</p>
-                  <p className="text-xs mt-1">Powered by Tavily - searches LinkedIn, Indeed, Glassdoor & more</p>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {externalJobs.map((job, index) => (
-                    <a
-                      key={index}
-                      href={job.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="block bg-black-50 hover:bg-blue-50 rounded-lg p-4 border border-black-200 hover:border-blue-300 transition-colors"
-                    >
-                      <div className="flex items-start justify-between mb-2">
-                        <div className="flex-1">
-                          <h4 className="font-medium text-black-900 text-sm">{job.title}</h4>
-                          <p className="text-xs text-blue-600">{job.source}</p>
-                        </div>
-                        <span className={`px-2 py-1 text-xs rounded-full font-medium ${job.match_score >= 60 ? 'bg-green-100 text-green-700' :
-                          job.match_score >= 30 ? 'bg-yellow-100 text-yellow-700' :
-                            'bg-black-100 text-black-600'
-                          }`}>
-                          {Math.round(job.match_score)}% match
-                        </span>
-                      </div>
-                      <p className="text-xs text-black-600 mb-2 line-clamp-2">{job.snippet}</p>
-                      {job.skills_matched?.length > 0 && (
-                        <div className="flex flex-wrap gap-1">
-                          {job.skills_matched.slice(0, 4).map((skill, i) => (
-                            <span key={i} className="px-2 py-0.5 bg-green-100 text-green-700 text-xs rounded-full">
-                              ✓ {skill}
-                            </span>
-                          ))}
-                        </div>
-                      )}
-                    </a>
-                  ))}
-                </div>
-              )}
+              <div className="flex justify-between text-sm">
+                <span className="text-slate-600">Actions</span>
+                <span className="font-bold text-slate-900">{insights.length}</span>
+              </div>
             </div>
           </div>
-        </div>
-      </main>
 
+          <div className="px-2 pt-4">
+            <button onClick={handleScanProfile} disabled={scanning} className="w-full py-2 bg-indigo-50 text-indigo-700 text-xs font-bold uppercase rounded-lg hover:bg-indigo-100 transition-colors flex items-center justify-center gap-2">
+              {scanning ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3" />} Rescan Profile
+            </button>
+          </div>
+        </aside>
+
+        {/* --- MAIN CONTENT AREA --- */}
+        <div className="flex-1 min-w-0">
+          {/* Header for Mobile only (hidden on desktop to avoid dup) */}
+          <div className="md:hidden mb-6">
+            <h2 className="text-xl font-bold text-slate-900">{navItems.find(i => i.id === activeTab)?.label}</h2>
+          </div>
+
+          {renderContent()}
+        </div>
+
+      </main>
       <Footer />
     </div>
   );

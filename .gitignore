@@ -2,6 +2,7 @@
 core/venv
 node_modules
 venv
+core/db.sqlite3
 .vscode
 *.log
 npm-debug.log*
