@@ -9,7 +9,8 @@ import {
   AlertCircle, Zap, Brain, Plus, X,
   Upload, FileText, Save, User, ExternalLink, Search,
   Code2, Terminal, Cpu, Globe, Database, Layers, Layout,
-  Smartphone, Cloud, Shield, CheckSquare, MessageSquare, MapPin
+  Smartphone, Cloud, Shield, CheckSquare, MessageSquare, MapPin,
+  FileCode, Download, Copy, Wand2
 } from "lucide-react";
 import { toast } from 'react-toastify';
 
@@ -269,6 +270,182 @@ function ProfileEditor({ profile, setProfile, API_URL }) {
   );
 }
 
+// --- NEW RESUME AI COMPONENTS ---
+const ResumeAI = ({ API_URL }) => {
+  const [jobDesc, setJobDesc] = useState("");
+  const [generating, setGenerating] = useState(false);
+  const [result, setResult] = useState(null);
+  const [activeFormat, setActiveFormat] = useState('matex'); // 'matex' or 'nit'
+
+  const handleGenerate = async () => {
+    if (!jobDesc.trim()) return toast.error("Please enter a Job Description");
+
+    setGenerating(true);
+    const token = getAuthToken();
+    try {
+      const res = await fetch(`${API_URL}/career/generate-resume/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Token ${token}` },
+        body: JSON.stringify({ job_description: jobDesc })
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        setResult(data);
+        toast.success("Resume optimized successfully!");
+      } else {
+        toast.error("Failed to generate. Try again.");
+      }
+    } catch (e) { toast.error("Error connecting to AI service."); }
+    finally { setGenerating(false); }
+  };
+
+  const downloadTeX = (latexCode, filename) => {
+    const blob = new Blob([latexCode], { type: 'text/plain' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${filename}.tex`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    toast.info("Downloaded .tex file. Upload to Overleaf to compile.");
+  };
+
+  const copyToClipboard = (text) => {
+    navigator.clipboard.writeText(text);
+    toast.success("Copied to clipboard!");
+  };
+
+  return (
+    <div className="flex flex-col space-y-6 animate-fade-in-up min-h-[600px]">
+      {/* HEADER */}
+      <div className="bg-gradient-to-r from-indigo-600 to-violet-600 rounded-2xl p-8 text-white shadow-lg relative overflow-hidden">
+        <div className="relative z-10">
+          <h2 className="text-2xl font-bold flex items-center gap-3">
+            <Wand2 className="w-8 h-8 text-indigo-200" />
+            Resume Refactor AI
+          </h2>
+          <p className="text-indigo-100 mt-2 max-w-xl">
+            Identify key requirements from a job description and automatically rewrite your resume tailored to the role. Generates professional LaTeX code ready for Overleaf.
+          </p>
+        </div>
+        {/* Decorative BG */}
+        <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -translate-y-10 translate-x-10 blur-3xl"></div>
+        <div className="absolute bottom-0 left-0 w-48 h-48 bg-purple-500/20 rounded-full translate-y-10 -translate-x-10 blur-2xl"></div>
+      </div>
+
+      <div className={`grid grid-cols-1 ${result ? 'lg:grid-cols-12' : 'lg:grid-cols-1'} gap-6 transition-all duration-500 ease-in-out`}>
+
+        {/* INPUT PANEL */}
+        <div className={`${result ? 'lg:col-span-5' : 'lg:col-span-1'} bg-white rounded-2xl border border-slate-200 shadow-sm flex flex-col transition-all duration-500`}>
+          <div className="p-6 border-b border-slate-100">
+            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block mb-2">Step 1: Input Job Details</label>
+            <p className="text-sm text-slate-600">Paste the full job description below.</p>
+          </div>
+
+          <div className="p-6 flex-1 flex flex-col gap-4">
+            <textarea
+              value={jobDesc}
+              onChange={(e) => setJobDesc(e.target.value)}
+              className="flex-1 w-full min-h-[200px] p-4 bg-slate-50 border border-slate-200 rounded-xl text-sm leading-relaxed focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none resize-y transition-all placeholder:text-slate-400"
+              placeholder="Example: 'We are looking for a Senior React Developer with 5+ years of experience in...'"
+            />
+
+            <button
+              onClick={handleGenerate}
+              disabled={generating || !jobDesc.trim()}
+              className="w-full py-4 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl transition-all shadow-lg hover:shadow-xl hover:-translate-y-1 disabled:opacity-50 disabled:hover:translate-y-0 disabled:shadow-none flex items-center justify-center gap-2 group"
+            >
+              {generating ? <Loader2 className="w-5 h-5 animate-spin" /> : <Zap className="w-5 h-5 group-hover:text-yellow-400 transition-colors" />}
+              {generating ? "Analying & Refactoring..." : "Generate Optimized Resume"}
+            </button>
+          </div>
+        </div>
+
+        {/* RESULTS PANEL (Only shows after generation) */}
+        {result && (
+          <div className="lg:col-span-7 space-y-6 animate-slide-in-right">
+
+            {/* Analysis Cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col items-center justify-center text-center">
+                <div className="w-14 h-14 rounded-full bg-gradient-to-br from-emerald-400 to-green-600 flex items-center justify-center text-white font-bold text-xl shadow-lg shadow-emerald-200 mb-2">
+                  {result.score || 85}
+                </div>
+                <p className="text-xs text-slate-400 font-bold uppercase tracking-wider">Match Score</p>
+              </div>
+
+              <div className="sm:col-span-2 bg-white p-5 rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden">
+                <div className="absolute top-0 left-0 w-1 h-full bg-amber-400"></div>
+                <h4 className="text-sm font-bold text-slate-800 flex items-center gap-2 mb-3">
+                  <Brain className="w-4 h-4 text-amber-500" /> AI Suggestions
+                </h4>
+                <ul className="space-y-2">
+                  {result.tips?.slice(0, 3).map((tip, i) => (
+                    <li key={i} className="text-xs text-slate-600 flex items-start gap-2">
+                      <span className="text-amber-500 mt-0.5">•</span> {tip}
+                    </li>
+                  )) || <li className="text-xs text-slate-500">Add more keywords from JD.</li>}
+                </ul>
+              </div>
+            </div>
+
+            {/* Editor / Preview Area */}
+            <div className="bg-slate-900 rounded-2xl shadow-xl overflow-hidden border border-slate-800 flex flex-col h-[500px]">
+              <div className="flex bg-slate-950/50 border-b border-slate-800 px-2 pt-2">
+                {['matex', 'nit'].map((fmt) => (
+                  <button
+                    key={fmt}
+                    onClick={() => setActiveFormat(fmt)}
+                    className={`px-4 py-2 text-xs font-bold uppercase tracking-wider rounded-t-lg transition-colors ${activeFormat === fmt
+                        ? 'bg-slate-800 text-indigo-400'
+                        : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800/50'
+                      }`}
+                  >
+                    {fmt === 'matex' ? 'Standard (Matex)' : 'Academic (NIT)'}
+                  </button>
+                ))}
+              </div>
+
+              <div className="flex-1 relative group bg-[#0d1117]">
+                <textarea
+                  readOnly
+                  value={activeFormat === 'matex' ? result.matex_latex : result.nit_latex}
+                  className="w-full h-full p-6 bg-transparent text-slate-300 font-mono text-xs leading-5 outline-none resize-none custom-scrollbar selection:bg-indigo-500/30"
+                  spellCheck="false"
+                />
+
+                {/* Floating Actions */}
+                <div className="absolute bottom-6 right-6 flex gap-3">
+                  <button
+                    onClick={() => copyToClipboard(activeFormat === 'matex' ? result.matex_latex : result.nit_latex)}
+                    className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold rounded-xl border border-slate-700 shadow-lg flex items-center gap-2 transition-all hover:-translate-y-1"
+                  >
+                    <Copy className="w-4 h-4 text-indigo-400" /> Copy Code
+                  </button>
+                  <button
+                    onClick={() => downloadTeX(activeFormat === 'matex' ? result.matex_latex : result.nit_latex, `resume_${activeFormat}`)}
+                    className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-xl shadow-lg shadow-indigo-900/20 flex items-center gap-2 transition-all hover:-translate-y-1"
+                  >
+                    <Download className="w-4 h-4" /> Download .tex
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div className="text-center">
+              <a href="https://www.overleaf.com/docs?snip_uri=https://raw.githubusercontent.com/..." target="_blank" rel="noreferrer" className="text-xs text-indigo-500 hover:text-indigo-600 hover:underline font-medium">
+                                How to use: Copy code above -> Paste into Overleaf (New Project)
+              </a>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
 
 // --- MAIN PAGE ---
 
@@ -370,6 +547,9 @@ export default function CareerDashboard() {
     switch (activeTab) {
       case 'skills':
         return <ProfileEditor profile={profile} setProfile={setProfile} API_URL={API_URL} />;
+
+      case 'resume':
+        return <ResumeAI API_URL={API_URL} />;
 
       case 'roadmaps':
         return (
@@ -519,6 +699,7 @@ export default function CareerDashboard() {
   // Nav Items Configuration
   const navItems = [
     { id: 'skills', label: 'Skills & Profile', icon: CheckSquare },
+    { id: 'resume', label: 'Resume AI', icon: FileText },
     { id: 'roadmaps', label: 'Learning Path', icon: BookOpen },
     { id: 'feedback', label: 'Feedback & Actions', icon: MessageSquare },
     { id: 'jobs', label: 'Job Opportunities', icon: Briefcase },
@@ -543,8 +724,8 @@ export default function CareerDashboard() {
                 key={item.id}
                 onClick={() => setActiveTab(item.id)}
                 className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200 ${activeTab === item.id
-                    ? 'bg-slate-900 text-white shadow-md transform translate-x-1'
-                    : 'text-slate-600 hover:bg-white hover:text-slate-900'
+                  ? 'bg-slate-900 text-white shadow-md transform translate-x-1'
+                  : 'text-slate-600 hover:bg-white hover:text-slate-900'
                   }`}
               >
                 <item.icon className={`w-5 h-5 ${activeTab === item.id ? 'text-indigo-300' : 'text-slate-400'}`} />
