@@ -1,5 +1,5 @@
 from django.urls import path
-from . import views
+from . import views, resume_cv_views
 
 urlpatterns = [
     # Skill Profile
@@ -25,4 +25,7 @@ urlpatterns = [
     
     # External Job Search (Tavily)
     path('external-jobs/', views.ExternalJobSearchView.as_view(), name='external_jobs'),
+    
+    # Resume AI Generation
+    path('generate-resume/', resume_cv_views.generate_resume_cv, name='generate_resume'),
 ]

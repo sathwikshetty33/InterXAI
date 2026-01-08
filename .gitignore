@@ -2,6 +2,7 @@
 core/venv
 node_modules
 venv
+core/db.sqlite3
 .vscode
 *.log
 npm-debug.log*
@@ -31,3 +32,7 @@ dist/
 build/assets/index-3oBceVxF.js
 core/.env
 .vercel
+# Django / local DB
+*.sqlite3
+db.sqlite3
+core/db.sqlite3
