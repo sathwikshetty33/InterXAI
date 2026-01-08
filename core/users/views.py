@@ -669,3 +669,104 @@ class getId(APIView):
                 'success': False,
                 'message': 'User is not authenticated'
             }, status=status.HTTP_403_FORBIDDEN)
+
+
+class OrgUserDetailView(APIView):
+    """Get comprehensive user details for organization viewing"""
+    permission_classes = [IsAuthenticated]
+    authentication_classes = [TokenAuthentication]
+
+    def get(self, request, user_id):
+        # Import models inside method to avoid potential circular import issues
+        try:
+            from interview.models import Application, InterviewSession
+        except ImportError:
+            try:
+                from core.interview.models import Application, InterviewSession
+            except ImportError:
+                return Response({'success': False, 'error': 'Server configuration error (Import)'}, status=500)
+
+        # Get target user
+        try:
+            target_user = User.objects.get(id=user_id)
+        except User.DoesNotExist:
+            return Response({
+                'success': False,
+                'error': 'User not found'
+            }, status=status.HTTP_404_NOT_FOUND)
+        
+        # Get user profile
+        try:
+            profile = UserProfile.objects.get(user=target_user)
+            profile_data = {
+                'id': profile.id,
+                'github': profile.github,
+                'leetcode': profile.leetcode,
+                'bio': profile.bio,
+                'photo': profile.photo,
+                'dateJoined': profile.dateJoined.isoformat() if profile.dateJoined else None
+            }
+        except UserProfile.DoesNotExist:
+            profile_data = None
+        
+        # Get all applications
+        # Use simple filter first, then manually build to avoid complex select_related issues if any
+        applications = Application.objects.filter(user=target_user).select_related('interview', 'interview__org')
+        applications_data = []
+        
+        for app in applications:
+            # Get session data if exists (handle multiple sessions safely)
+            session = InterviewSession.objects.filter(Application=app).last() # Get latest session
+            
+            session_data = None
+            if session:
+                session_data = {
+                    'id': session.id,
+                    'status': session.status,
+                    'CodingScore': session.CodingScore,
+                    'Devscore': session.Devscore,
+                    'Resumescore': session.Resumescore,
+                    'DsaScore': session.DsaScore
+                }
+            
+            # Safely handle interview org
+            org_name = "Unknown Organization"
+            try:
+                if app.interview and app.interview.org:
+                    org_name = app.interview.org.orgname
+            except Exception:
+                pass
+
+            applications_data.append({
+                'id': app.id,
+                'interview': {
+                    'id': app.interview.id,
+                    'post': app.interview.post,
+                    'desc': app.interview.desc,
+                    'org_name': org_name,
+                    'experience': app.interview.experience
+                },
+                'resume': app.resume,
+                'extratedResume': app.extratedResume,
+                'rawResume': app.rawResume,
+                'score': app.score,
+                'github_score': app.github_score,
+                'feedback': app.feedback,
+                'final_decision': app.final_decision,
+                'final_feedback': app.final_feedback,
+                'approved': app.approved,
+                'applied_at': app.applied_at.isoformat() if app.applied_at else None,
+                'session': session_data
+            })
+        
+        return Response({
+            'success': True,
+            'user': {
+                'id': target_user.id,
+                'username': target_user.username,
+                'email': target_user.email,
+                'date_joined': target_user.date_joined.isoformat() if target_user.date_joined else None
+            },
+            'profile': profile_data,
+            'applications': applications_data
+        }, status=status.HTTP_200_OK)

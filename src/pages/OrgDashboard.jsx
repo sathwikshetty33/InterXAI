@@ -228,7 +228,7 @@ export default function OrgDashboard() {
         toast.error(data.error || "Import failed");
         setImportResult({ success: false, error: data.error });
       }
-    } catch (err) {
+    } catch {
       toast.error("Server error during import");
       setImportResult({ success: false, error: "Server error" });
     } finally {
@@ -535,7 +535,7 @@ export default function OrgDashboard() {
                             <div className="flex items-center justify-end gap-2">
                               {member.profile_id && (
                                 <button
-                                  onClick={() => navigate(`/profile/${member.profile_id}`)}
+                                  onClick={() => navigate(`/org-user/${member.user_id}`)}
                                   className="flex items-center gap-1 px-3 py-1.5 text-sm text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
                                   title="View Profile"
                                 >

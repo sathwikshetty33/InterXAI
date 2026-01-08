@@ -23,6 +23,7 @@ import FeedbackInsights from '../pages/FeedbackInsights';
 import RoadmapDetail from '../pages/RoadmapDetail';
 import CodingRound from '../pages/CodingRound';
 import ThankYou from '../pages/ThankYou';
+import OrgViewUserProfile from '../pages/OrgViewUserProfile';
 
 export default function AppRoutes() {
   return (
@@ -91,6 +92,7 @@ export default function AppRoutes() {
         }
       />
       <Route path="/thank-you" element={<ThankYou />} />
+      <Route path="/org-user/:userId" element={<OrgViewUserProfile />} />
 
     </Routes>
   );
