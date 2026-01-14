@@ -99,9 +99,9 @@ def generate_resume_cv(request):
         """
 
         # 4. Call Groq API
-        api_key = os.getenv('GROQ_API_KEY')
+        api_key = os.getenv('RESUME_GROK_API')  # or 'GROQ_API_KEY' if you prefer
         if not api_key:
-            logger.error("GROQ_API_KEY is missing in environment variables.")
+            logger.error("RESUME_GROK_API is missing in environment variables.")
             return Response({"error": "Server configuration error: Missing API Key"}, status=500)
 
         headers = {
@@ -110,7 +110,7 @@ def generate_resume_cv(request):
         }
         
         payload = {
-            "model": "openai/gpt-oss-120", 
+            "model": "openai/gpt-oss-120b", 
             "messages": [
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_prompt}

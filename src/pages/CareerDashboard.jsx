@@ -379,7 +379,7 @@ const ResumeAI = ({ API_URL }) => {
               <div className="sm:col-span-2 bg-white p-5 rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden">
                 <div className="absolute top-0 left-0 w-1 h-full bg-amber-400"></div>
                 <h4 className="text-sm font-bold text-slate-800 flex items-center gap-2 mb-3">
-                  <Brain className="w-4 h-4 text-amber-500" /> AI Suggestions
+                  <Brain className="w-4 h-4 text-amber-500" /> Suggestions
                 </h4>
                 <ul className="space-y-2">
                   {result.tips?.slice(0, 3).map((tip, i) => (
