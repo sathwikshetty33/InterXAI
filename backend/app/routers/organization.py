@@ -3,7 +3,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
-from app.exceptions.common import NotFoundError
+from app.exceptions.common import ForbiddenError, NotFoundError
 from app.logger import get_logger
 from app.models.organization import Organization
 from app.models.user import User
@@ -13,7 +13,7 @@ from app.schemas.organization import (
     OrganizationSignupResponse,
     OrganizationUpdate,
 )
-from app.utils.authorization import get_current_user, verify_ownership
+from app.utils.authorization import get_current_user
 from app.utils.jwt_auth import JwtAuth
 
 logger = get_logger(__name__)
@@ -57,46 +57,49 @@ async def signup_organization(
     )
 
 
-@router.get("/{user_id}", response_model=OrganizationResponse)
+@router.get("/{org_id}", response_model=OrganizationResponse)
 async def get_organization(
-    user_id: int,
+    org_id: int,
     db: AsyncSession = Depends(get_db),
     _current_user: User = Depends(get_current_user),
 ) -> OrganizationResponse:
     """
-    Get organization by user ID endpoint.
+    Get organization by organization ID endpoint.
     """
-    logger.info("Get organization request for user id: %d", user_id)
+    logger.info("Get organization request for org id: %d", org_id)
 
-    result = await db.execute(select(Organization).where(Organization.account_id == user_id))
+    result = await db.execute(select(Organization).where(Organization.id == org_id))
     org = result.scalar_one_or_none()
 
     if not org:
-        logger.warning("Organization not found for user: %d", user_id)
-        raise NotFoundError("Organization not found for this user")
+        logger.warning("Organization not found: %d", org_id)
+        raise NotFoundError("Organization not found")
 
-    logger.info("Organization retrieved successfully for user: %d", user_id)
+    logger.info("Organization retrieved successfully: %d", org_id)
     return OrganizationResponse.model_validate(org)
 
 
-@router.put("/{user_id}", response_model=OrganizationResponse)
+@router.put("/{org_id}", response_model=OrganizationResponse)
 async def update_organization(
-    user_id: int,
+    org_id: int,
     org_data: OrganizationUpdate,
     db: AsyncSession = Depends(get_db),
-    _current_user: User = Depends(verify_ownership),
+    _current_user: User = Depends(get_current_user),
 ) -> OrganizationResponse:
     """
-    Update organization by user ID endpoint.
+    Update organization by organization ID endpoint.
     """
-    logger.info("Update organization request for user id: %d", user_id)
+    logger.info("Update organization request for org id: %d", org_id)
 
-    result = await db.execute(select(Organization).where(Organization.account_id == user_id))
+    result = await db.execute(select(Organization).where(Organization.id == org_id))
     org = result.scalar_one_or_none()
 
     if not org:
-        logger.warning("Organization not found for update: %d", user_id)
-        raise NotFoundError("Organization not found for this user")
+        logger.warning("Organization not found for update: %d", org_id)
+        raise NotFoundError("Organization not found")
+
+    if org.account_id != _current_user.id:
+        raise ForbiddenError("You cannot access this resource")
 
     update_data = org_data.model_dump(exclude_unset=True)
     for field, value in update_data.items():
@@ -106,29 +109,32 @@ async def update_organization(
     await db.commit()
     await db.refresh(org)
 
-    logger.info("Organization updated successfully for user: %d", user_id)
+    logger.info("Organization updated successfully: %d", org_id)
     return OrganizationResponse.model_validate(org)
 
 
-@router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/{org_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_organization(
-    user_id: int,
+    org_id: int,
     db: AsyncSession = Depends(get_db),
-    _current_user: User = Depends(verify_ownership),
+    _current_user: User = Depends(get_current_user),
 ) -> None:
     """
-    Delete organization by user ID endpoint.
+    Delete organization by organization ID endpoint.
     """
-    logger.info("Delete organization request for user id: %d", user_id)
+    logger.info("Delete organization request for org id: %d", org_id)
 
-    result = await db.execute(select(Organization).where(Organization.account_id == user_id))
+    result = await db.execute(select(Organization).where(Organization.id == org_id))
     org = result.scalar_one_or_none()
 
     if not org:
-        logger.warning("Organization not found for delete: %d", user_id)
-        raise NotFoundError("Organization not found for this user")
+        logger.warning("Organization not found for delete: %d", org_id)
+        raise NotFoundError("Organization not found")
+
+    if org.account_id != _current_user.id:
+        raise ForbiddenError("You cannot access this resource")
 
     await db.delete(org)
     await db.commit()
 
-    logger.info("Organization deleted successfully for user: %d", user_id)
+    logger.info("Organization deleted successfully: %d", org_id)

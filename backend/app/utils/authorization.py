@@ -1,17 +1,19 @@
 from typing import Annotated
 
 from fastapi import Depends, Path
+from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
 from app.exceptions.auth import InvalidTokenError, UserNotFoundError
 from app.exceptions.common import ForbiddenError
 from app.logger import get_logger
-from app.main import oauth2_scheme
 from app.models.user import User
 from app.utils.jwt_auth import JwtAuth
 
 logger = get_logger(__name__)
+
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/users/login")
 
 
 async def get_current_user(
