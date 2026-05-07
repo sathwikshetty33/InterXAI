@@ -3,7 +3,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
-from app.exceptions.common import ForbiddenError, NotFoundError
+from app.exceptions.common import NotFoundError
 from app.logger import get_logger
 from app.models.organization import Organization
 from app.models.user import User
@@ -13,7 +13,7 @@ from app.schemas.organization import (
     OrganizationSignupResponse,
     OrganizationUpdate,
 )
-from app.utils.authorization import get_current_user
+from app.utils.authorization import get_current_user, verify_org_ownership
 from app.utils.jwt_auth import JwtAuth
 
 logger = get_logger(__name__)
@@ -84,22 +84,12 @@ async def update_organization(
     org_id: int,
     org_data: OrganizationUpdate,
     db: AsyncSession = Depends(get_db),
-    _current_user: User = Depends(get_current_user),
+    org: Organization = Depends(verify_org_ownership),
 ) -> OrganizationResponse:
     """
     Update organization by organization ID endpoint.
     """
     logger.info("Update organization request for org id: %d", org_id)
-
-    result = await db.execute(select(Organization).where(Organization.id == org_id))
-    org = result.scalar_one_or_none()
-
-    if not org:
-        logger.warning("Organization not found for update: %d", org_id)
-        raise NotFoundError("Organization not found")
-
-    if org.account_id != _current_user.id:
-        raise ForbiddenError("You cannot access this resource")
 
     update_data = org_data.model_dump(exclude_unset=True)
     for field, value in update_data.items():
@@ -117,22 +107,12 @@ async def update_organization(
 async def delete_organization(
     org_id: int,
     db: AsyncSession = Depends(get_db),
-    _current_user: User = Depends(get_current_user),
+    org: Organization = Depends(verify_org_ownership),
 ) -> None:
     """
     Delete organization by organization ID endpoint.
     """
     logger.info("Delete organization request for org id: %d", org_id)
-
-    result = await db.execute(select(Organization).where(Organization.id == org_id))
-    org = result.scalar_one_or_none()
-
-    if not org:
-        logger.warning("Organization not found for delete: %d", org_id)
-        raise NotFoundError("Organization not found")
-
-    if org.account_id != _current_user.id:
-        raise ForbiddenError("You cannot access this resource")
 
     await db.delete(org)
     await db.commit()

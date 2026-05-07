@@ -2,12 +2,14 @@ from typing import Annotated
 
 from fastapi import Depends, Path
 from fastapi.security import OAuth2PasswordBearer
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
 from app.exceptions.auth import InvalidTokenError, UserNotFoundError
-from app.exceptions.common import ForbiddenError
+from app.exceptions.common import ForbiddenError, NotFoundError
 from app.logger import get_logger
+from app.models.organization import Organization
 from app.models.user import User
 from app.utils.jwt_auth import JwtAuth
 
@@ -43,3 +45,20 @@ async def verify_ownership(
     if current_user.id != user_id:
         raise ForbiddenError("You cannot access this resource")
     return current_user
+
+
+async def verify_org_ownership(
+    org_id: Annotated[int, Path(...)],
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> Organization:
+    result = await db.execute(select(Organization).where(Organization.id == org_id))
+    org = result.scalar_one_or_none()
+
+    if not org:
+        raise NotFoundError("Organization not found")
+
+    if org.account_id != current_user.id:
+        raise ForbiddenError("You cannot access this resource")
+
+    return org
