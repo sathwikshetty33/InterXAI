@@ -14,6 +14,10 @@ class Settings(BaseSettings):
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30000
 
+    # LLM
+    LLM_MODEL_NAME: str = "groq/openai/gpt-oss-120b"
+    GROQ_API_KEY: str = ""
+
     class Config:
         env_file = ".env"
         case_sensitive = True

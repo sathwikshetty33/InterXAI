@@ -17,6 +17,8 @@ dependencies = [
     "uvicorn[standard]>=0.30.0",
     "aiosqlite>=0.22.1",
     "pydantic[email]>=2.13.0",
+    "langchain-litellm>=0.6.4",
+    "pypdf2>=3.0.1",
 ]
 
 [dependency-groups]
