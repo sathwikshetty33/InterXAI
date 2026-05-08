@@ -14,9 +14,17 @@ class Settings(BaseSettings):
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30000
 
+    # Redis/Celery
+    REDIS_URL: str = "redis://localhost:6379/0"
+
     # LLM
     LLM_MODEL_NAME: str = "groq/openai/gpt-oss-120b"
     GROQ_API_KEY: str = ""
+
+    # Supabase
+    SUPABASE_URL: str = ""
+    SUPABASE_KEY: str = ""
+    SUPABASE_BUCKET_NAME: str = "resumes"
 
     class Config:
         env_file = ".env"
