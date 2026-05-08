@@ -26,7 +26,7 @@ class LiteLLMProvider(LLMProviderInterface):
     ):
         self.client = ChatLiteLLM(model=model_name, api_key=api_key)
 
-    def generate_response(  # type: ignore[override]
+    async def generate_response(  # type: ignore[override]
         self,
         prompt: BasePromptTemplate[Any],
         variables: dict[str, Any],
@@ -38,7 +38,7 @@ class LiteLLMProvider(LLMProviderInterface):
             if hasattr(output_parser, "get_format_instructions"):
                 variables["format_instructions"] = output_parser.get_format_instructions()
 
-            return chain.invoke(variables)
+            return await chain.ainvoke(variables)
         except lite_exc.Timeout as e:
             logger.error("LLM Timeout: %s", str(e))
             raise AITimeoutError(f"Generation timed out: {str(e)}") from e
