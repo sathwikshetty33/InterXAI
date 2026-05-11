@@ -66,14 +66,14 @@ Organizations create fully customized interviews with domain-specific questions 
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                          Client (React)                          │
+│                          Client (React)                         │
 │          React Query · Zustand · React Hook Form · Zod          │
 └───────────────────────────┬─────────────────────────────────────┘
                             │ REST / JSON
 ┌───────────────────────────▼─────────────────────────────────────┐
-│                       FastAPI Backend                            │
+│                       FastAPI Backend                           │
 │   /users  /organizations  /interviews  /applications  /health   │
-│                                                                  │
+│                                                                 │
 │   ┌────────────────┐  ┌──────────────────┐  ┌────────────────┐  │
 │   │  Auth (JWT +   │  │  Routers /       │  │  Exception     │  │
 │   │  bcrypt)       │  │  Business Logic  │  │  Handlers      │  │
