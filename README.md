@@ -21,28 +21,28 @@
 
 InterXAI is an AI-powered interview automation platform designed to make technical hiring smarter, faster, and more scalable. It simulates real interview experiences by dynamically generating follow-up questions based on candidate responses, evaluating answers in real time using large language models, and maintaining a natural conversational flow throughout the entire interview process.
 
-Organizations create fully customized interviews with domain-specific questions and DSA challenges. Candidates apply by submitting their resumes, which are automatically evaluated and scored by an LLM agent against the job requirements — all without manual intervention. To ensure interview integrity, the platform integrates proctoring features including tab-switch detection, page-refresh monitoring, and OpenCV-based malpractice detection.
+Organizations create fully customized interviews with domain-specific questions and DSA challenges. Candidates apply by submitting their resumes, which are automatically evaluated and scored by an LLM agent against the job requirements - all without manual intervention. To ensure interview integrity, the platform integrates proctoring features including tab-switch detection, page-refresh monitoring, and OpenCV-based malpractice detection.
 
 
 ## Features
 
 ### For Organizations
-- **Custom Interview Builder** — Create structured interviews with tailored questions, DSA topics, and evaluation criteria
-- **Automated Resume Screening** — LLM-powered analysis that scores and shortlists candidates automatically
-- **AI-Driven Evaluations** — Real-time answer evaluation with structured, unbiased scoring
-- **Candidate Dashboard** — Track all applications, review scores, and access AI-generated feedback reports
+- **Custom Interview Builder** - Create structured interviews with tailored questions, DSA topics, and evaluation criteria
+- **Automated Resume Screening** - LLM-powered analysis that scores and shortlists candidates automatically
+- **AI-Driven Evaluations** - Real-time answer evaluation with structured, unbiased scoring
+- **Candidate Dashboard** - Track all applications, review scores, and access AI-generated feedback reports
 
 ### For Candidates
-- **Seamless Application Flow** — Upload your resume and let the AI evaluate your fit for the role
-- **Conversational Interviews** — Experience dynamic, follow-up-rich interviews that adapt to your responses
-- **Instant Feedback** — Receive structured feedback on your performance after each session
-- **Multi-Round Sessions** — Navigate through Q&A, DSA, and resume-based rounds in a single interview
+- **Seamless Application Flow** - Upload your resume and let the AI evaluate your fit for the role
+- **Conversational Interviews** - Experience dynamic, follow-up-rich interviews that adapt to your responses
+- **Instant Feedback** - Receive structured feedback on your performance after each session
+- **Multi-Round Sessions** - Navigate through Q&A, DSA, and resume-based rounds in a single interview
 
 ### Platform Intelligence
-- **Dynamic Question Generation** — LLMs generate context-aware follow-up questions based on candidate answers
-- **Resume Intelligence** — Extracts, standardizes, and evaluates resume content against job requirements
-- **Interview Proctoring** — Tab-switch detection, page-refresh monitoring, and OpenCV-based malpractice detection ensure integrity
-- **Event-Driven Processing** — Asynchronous background jobs via TaskIQ + Redis ensure interviews scale without bottlenecks
+- **Dynamic Question Generation** - LLMs generate context-aware follow-up questions based on candidate answers
+- **Resume Intelligence** - Extracts, standardizes, and evaluates resume content against job requirements
+- **Interview Proctoring** - Tab-switch detection, page-refresh monitoring, and OpenCV-based malpractice detection ensure integrity
+- **Event-Driven Processing** - Asynchronous background jobs via TaskIQ + Redis ensure interviews scale without bottlenecks
 
 
 ## Tech Stack
@@ -169,7 +169,7 @@ InterXAI-re/
 - Python 3.12+
 - Node.js 20+
 - Redis (or run everything via Docker)
-- [`uv`](https://github.com/astral-sh/uv) — fast Python package manager
+- [`uv`](https://github.com/astral-sh/uv) - fast Python package manager
 
 ### Environment Variables
 
@@ -183,16 +183,16 @@ cp backend/.env.example backend/.env
 |---|---|---|
 | `DATABASE_URL` | `sqlite+aiosqlite:///./dev.db` | PostgreSQL URL for production |
 | `REDIS_URL` | `redis://localhost:6379/0` | TaskIQ broker + result backend |
-| `SECRET_KEY` | `secret` | JWT signing key — **change in production** |
+| `SECRET_KEY` | `secret` | JWT signing key - **change in production** |
 | `ALGORITHM` | `HS256` | JWT signing algorithm |
 | `ACCESS_TOKEN_EXPIRE_MINUTES` | `30000` | Token lifetime |
-| `GROQ_API_KEY` | — | Required for LLM inference |
-| `SUPABASE_URL` | — | Supabase project URL |
-| `SUPABASE_KEY` | — | Supabase service role key |
+| `GROQ_API_KEY` | - | Required for LLM inference |
+| `SUPABASE_URL` | - | Supabase project URL |
+| `SUPABASE_KEY` | - | Supabase service role key |
 | `SUPABASE_BUCKET_NAME` | `resumes` | Storage bucket for resume PDFs |
 | `LLM_MODEL_NAME` | `groq/openai/gpt-oss-120b` | LiteLLM model string |
 
-### Option A — Docker (Recommended)
+### Option A - Docker (Recommended)
 
 The Docker Compose file starts the API server, TaskIQ worker, and Redis in one command:
 
@@ -202,7 +202,7 @@ docker-compose up --build
 
 The API will be available at `http://localhost:8000`.
 
-### Option B — Local Development
+### Option B - Local Development
 
 **1. Backend:**
 
@@ -248,13 +248,13 @@ FastAPI auto-generates interactive documentation:
 
 | Method | Endpoint | Auth | Description |
 |---|---|---|---|
-| `GET` | `/health` | — | Health check |
-| `POST` | `/users/signup` | — | Register a candidate account |
-| `POST` | `/users/login` | — | Authenticate and receive JWT |
+| `GET` | `/health` | - | Health check |
+| `POST` | `/users/signup` | - | Register a candidate account |
+| `POST` | `/users/login` | - | Authenticate and receive JWT |
 | `GET` | `/users/{user_id}` | User | Get user profile |
 | `PUT` | `/users/{user_id}` | User | Update user profile |
 | `DELETE` | `/users/{user_id}` | User | Delete user account |
-| `POST` | `/organizations/signup` | — | Register an organization |
+| `POST` | `/organizations/signup` | - | Register an organization |
 | `GET` | `/organizations/{org_id}` | Org | Get organization details |
 | `PUT` | `/organizations/{org_id}` | Org | Update organization |
 | `POST` | `/interviews/` | Org | Create a new interview |
@@ -331,10 +331,10 @@ Contributions are welcome. Please follow these steps:
 
 ### Code Guidelines
 
-- Business logic lives inline in routers — no separate service layer yet
+- Business logic lives inline in routers - no separate service layer yet
 - New abstractions go in `app/interfaces/`, implementations in `app/utils/`
 - All environment variables must be declared in `app/config.py` via `pydantic-settings`
-- Type annotations are mandatory — `mypy --strict` must pass without errors
+- Type annotations are mandatory - `mypy --strict` must pass without errors
 - Line length: 100 characters (enforced by Ruff)
 
 
