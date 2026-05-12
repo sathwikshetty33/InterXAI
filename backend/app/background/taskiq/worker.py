@@ -4,7 +4,6 @@ from app.interfaces.background_worker import BackgroundWorkerInterface
 
 
 class TaskiqWorker(BackgroundWorkerInterface):
-
     async def startup(self) -> None:
         await broker.startup()
 

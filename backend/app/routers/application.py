@@ -106,7 +106,9 @@ async def apply_for_interview(
     await db.refresh(application)
 
     file_bytes_b64 = base64.b64encode(file_bytes).decode("utf-8")
-    await default_worker_provider().process_resume_task(file_bytes_b64, new_filename, application.id)
+    await default_worker_provider().process_resume_task(
+        file_bytes_b64, new_filename, application.id
+    )
 
     logger.info("Application created successfully: %d", application.id)
     return ApplicationResponse.model_validate(application)
