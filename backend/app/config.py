@@ -26,6 +26,10 @@ class Settings(BaseSettings):
     SUPABASE_KEY: str = ""
     SUPABASE_BUCKET_NAME: str = "resumes"
 
+    # Providers
+    STORAGE_PROVIDER: str = "supabase"
+    BACKGROUND_WORKER: str = "taskiq"
+
     class Config:
         env_file = ".env"
         case_sensitive = True
