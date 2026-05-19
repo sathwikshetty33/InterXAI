@@ -33,5 +33,15 @@ services:
     volumes:
       - redis_data:/data
 
+  piston:
+    image: ghcr.io/engineer-man/piston
+    privileged: true
+    ports:
+      - "2000:2000"
+    volumes:
+      - piston_data:/piston
+    restart: always
+
 volumes:
   redis_data:
+  piston_data:
