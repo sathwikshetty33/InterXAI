@@ -785,7 +785,8 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
           interviewId={applyingToId}
           token={token}
           interviewTitle={
-            available.find((i) => i.id === applyingToId)?.position ?? "Interview"
+            available.find((i) => i.id === applyingToId)?.position ??
+            "Interview"
           }
           onClose={() => setApplyingToId(null)}
           onSuccess={() => {
@@ -832,7 +833,10 @@ const ApplyModal: React.FC<{
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!file) { setError("Please select your resume PDF."); return; }
+    if (!file) {
+      setError("Please select your resume PDF.");
+      return;
+    }
     setIsSubmitting(true);
     setError(null);
     try {
@@ -845,7 +849,9 @@ const ApplyModal: React.FC<{
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        throw new Error(data?.detail ?? "Application failed. Please try again.");
+        throw new Error(
+          data?.detail ?? "Application failed. Please try again.",
+        );
       }
       setSucceeded(true);
       setTimeout(onSuccess, 1800);
@@ -886,13 +892,21 @@ const ApplyModal: React.FC<{
           border: "1px solid rgba(255,255,255,0.95)",
           borderRadius: 28,
           padding: 32,
-          boxShadow: "0 35px 80px -15px rgba(15,23,42,0.22), inset 0 1px 2px rgba(255,255,255,0.7)",
+          boxShadow:
+            "0 35px 80px -15px rgba(15,23,42,0.22), inset 0 1px 2px rgba(255,255,255,0.7)",
         }}
       >
         {succeeded ? (
           <div style={{ textAlign: "center", padding: "16px 0" }}>
             <div style={{ fontSize: 52, marginBottom: 14 }}>🎉</div>
-            <div style={{ fontSize: 20, fontWeight: 800, color: "#0f172a", marginBottom: 6 }}>
+            <div
+              style={{
+                fontSize: 20,
+                fontWeight: 800,
+                color: "#0f172a",
+                marginBottom: 6,
+              }}
+            >
               Application submitted!
             </div>
             <div style={{ fontSize: 13.5, color: "#64748b" }}>
@@ -901,30 +915,97 @@ const ApplyModal: React.FC<{
           </div>
         ) : (
           <>
-            <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 20 }}>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "flex-start",
+                justifyContent: "space-between",
+                marginBottom: 20,
+              }}
+            >
               <div>
-                <div style={{ fontSize: 11.5, fontWeight: 700, color: "#3b82f6", letterSpacing: "0.04em", textTransform: "uppercase", marginBottom: 6 }}>
+                <div
+                  style={{
+                    fontSize: 11.5,
+                    fontWeight: 700,
+                    color: "#3b82f6",
+                    letterSpacing: "0.04em",
+                    textTransform: "uppercase",
+                    marginBottom: 6,
+                  }}
+                >
                   Apply · {interviewTitle}
                 </div>
-                <h2 style={{ fontSize: 20, fontWeight: 800, color: "#0f172a", letterSpacing: "-0.4px" }}>
+                <h2
+                  style={{
+                    fontSize: 20,
+                    fontWeight: 800,
+                    color: "#0f172a",
+                    letterSpacing: "-0.4px",
+                  }}
+                >
                   Upload your resume
                 </h2>
               </div>
               <button
                 onClick={onClose}
-                style={{ width: 30, height: 30, borderRadius: "50%", background: "rgba(241,245,249,0.8)", border: "1px solid rgba(226,232,240,0.7)", color: "#64748b", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
+                style={{
+                  width: 30,
+                  height: 30,
+                  borderRadius: "50%",
+                  background: "rgba(241,245,249,0.8)",
+                  border: "1px solid rgba(226,232,240,0.7)",
+                  color: "#64748b",
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                }}
                 aria-label="Close"
               >
                 <svg width="11" height="11" viewBox="0 0 12 12" fill="none">
-                  <path d="M2 2l8 8M10 2l-8 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                  <path
+                    d="M2 2l8 8M10 2l-8 8"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                    strokeLinecap="round"
+                  />
                 </svg>
               </button>
             </div>
 
             <form id="apply-form" onSubmit={handleSubmit} noValidate>
               {error && (
-                <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "10px 14px", background: "rgba(254,226,226,0.7)", border: "1px solid rgba(248,113,113,0.4)", borderRadius: 12, fontSize: 13, color: "#b91c1c", fontWeight: 500, marginBottom: 16 }}>
-                  <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="7" stroke="currentColor" strokeWidth="1.4" /><path d="M8 5v3.5M8 11h.01" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" /></svg>
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 8,
+                    padding: "10px 14px",
+                    background: "rgba(254,226,226,0.7)",
+                    border: "1px solid rgba(248,113,113,0.4)",
+                    borderRadius: 12,
+                    fontSize: 13,
+                    color: "#b91c1c",
+                    fontWeight: 500,
+                    marginBottom: 16,
+                  }}
+                >
+                  <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+                    <circle
+                      cx="8"
+                      cy="8"
+                      r="7"
+                      stroke="currentColor"
+                      strokeWidth="1.4"
+                    />
+                    <path
+                      d="M8 5v3.5M8 11h.01"
+                      stroke="currentColor"
+                      strokeWidth="1.4"
+                      strokeLinecap="round"
+                    />
+                  </svg>
                   {error}
                 </div>
               )}
@@ -942,7 +1023,9 @@ const ApplyModal: React.FC<{
                   padding: "32px 20px",
                   border: `2px dashed ${file ? "rgba(59,130,246,0.6)" : "rgba(203,213,225,0.8)"}`,
                   borderRadius: 18,
-                  background: file ? "rgba(219,234,254,0.3)" : "rgba(248,250,252,0.6)",
+                  background: file
+                    ? "rgba(219,234,254,0.3)"
+                    : "rgba(248,250,252,0.6)",
                   cursor: "pointer",
                   transition: "all 0.2s",
                   marginBottom: 20,
@@ -950,11 +1033,20 @@ const ApplyModal: React.FC<{
               >
                 <div style={{ fontSize: 32 }}>{file ? "📄" : "☁️"}</div>
                 <div style={{ textAlign: "center" }}>
-                  <div style={{ fontSize: 14, fontWeight: 700, color: "#0f172a", marginBottom: 3 }}>
+                  <div
+                    style={{
+                      fontSize: 14,
+                      fontWeight: 700,
+                      color: "#0f172a",
+                      marginBottom: 3,
+                    }}
+                  >
                     {file ? file.name : "Click to upload your resume"}
                   </div>
                   <div style={{ fontSize: 12, color: "#94a3b8" }}>
-                    {file ? `${(file.size / 1024).toFixed(0)} KB · PDF` : "PDF only · max 5 MB"}
+                    {file
+                      ? `${(file.size / 1024).toFixed(0)} KB · PDF`
+                      : "PDF only · max 5 MB"}
                   </div>
                 </div>
                 <input
@@ -970,7 +1062,17 @@ const ApplyModal: React.FC<{
                 <button
                   type="button"
                   onClick={onClose}
-                  style={{ flex: 1, padding: "12px", borderRadius: 99, border: "1px solid rgba(226,232,240,0.9)", background: "transparent", fontSize: 13.5, fontWeight: 600, color: "#64748b", cursor: "pointer" }}
+                  style={{
+                    flex: 1,
+                    padding: "12px",
+                    borderRadius: 99,
+                    border: "1px solid rgba(226,232,240,0.9)",
+                    background: "transparent",
+                    fontSize: 13.5,
+                    fontWeight: 600,
+                    color: "#64748b",
+                    cursor: "pointer",
+                  }}
                 >
                   Cancel
                 </button>
@@ -983,14 +1085,18 @@ const ApplyModal: React.FC<{
                     padding: "12px",
                     borderRadius: 99,
                     border: "none",
-                    background: isSubmitting || !file
-                      ? "rgba(203,213,225,0.6)"
-                      : "linear-gradient(135deg,#3b82f6,#1d4ed8)",
+                    background:
+                      isSubmitting || !file
+                        ? "rgba(203,213,225,0.6)"
+                        : "linear-gradient(135deg,#3b82f6,#1d4ed8)",
                     color: isSubmitting || !file ? "#94a3b8" : "#fff",
                     fontSize: 13.5,
                     fontWeight: 700,
                     cursor: isSubmitting || !file ? "not-allowed" : "pointer",
-                    boxShadow: !file || isSubmitting ? "none" : "0 6px 18px rgba(59,130,246,0.35)",
+                    boxShadow:
+                      !file || isSubmitting
+                        ? "none"
+                        : "0 6px 18px rgba(59,130,246,0.35)",
                     transition: "all 0.2s",
                   }}
                 >

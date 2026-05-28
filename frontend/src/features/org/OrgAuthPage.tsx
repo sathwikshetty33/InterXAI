@@ -101,7 +101,7 @@ const OrgAuthPage: React.FC<OrgAuthPageProps> = ({
       >
         {/* LEFT: hiring-focused marketing */}
         <div style={{ position: "relative" }}>
-          <Pill text="Organisation Portal" />
+          <Pill text="Admin Portal" />
           <h1
             style={{
               fontSize: 56,
@@ -127,8 +127,8 @@ const OrgAuthPage: React.FC<OrgAuthPageProps> = ({
               fontWeight: 500,
             }}
           >
-            Set up your organisation in minutes. Let AI run first-round
-            interviews so your team only meets the candidates worth meeting.
+            Sign in to manage interviews, review candidates, and view the
+            leaderboard once sessions complete.
           </p>
 
           <div
@@ -278,7 +278,7 @@ const OrgAuthPage: React.FC<OrgAuthPageProps> = ({
                     transition: "all 0.2s",
                   }}
                 >
-                  {t === "signup" ? "Create Organisation" : "Sign In"}
+                  {t === "signup" ? "Create Admin" : "Sign In"}
                 </button>
               ))}
             </div>
@@ -367,7 +367,7 @@ const OrgSignupInline: React.FC<OrgSignupInlineProps> = ({
     <LightInput
       id="org-signup-username"
       name="username"
-      label="Organisation Username"
+      label="Admin Username"
       type="text"
       placeholder="acme_corp"
       autoComplete="username"
@@ -424,7 +424,7 @@ const OrgSignupInline: React.FC<OrgSignupInlineProps> = ({
         </>
       ) : (
         <>
-          Create Organisation Account
+          Create Admin Account
           <ArrowIcon />
         </>
       )}
@@ -555,7 +555,7 @@ const OrgLoginInline: React.FC<OrgLoginInlineProps> = ({
           padding: 0,
         }}
       >
-        Register your organisation
+        Register an admin account
       </button>
     </p>
   </form>

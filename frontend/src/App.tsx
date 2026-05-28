@@ -39,16 +39,30 @@ function parseOidcHash(): {
   return { token: params.get("oidc_token"), error: params.get("oidc_error") };
 }
 
+/** Hidden admin entry: visiting /admin or /admin/* routes straight to org-auth. */
+function isAdminPath(): boolean {
+  return window.location.pathname.replace(/\/+$/, "").startsWith("/admin");
+}
+
+function initialPage(): Page {
+  if (parseOidcHash()?.error) return "login";
+  if (isAdminPath()) {
+    const storedOrgToken = localStorage.getItem("org_token");
+    return storedOrgToken ? "org-dashboard" : "org-auth";
+  }
+  return "landing";
+}
+
 function App() {
-  // Initial page/loader are derived from the URL so an OIDC return never flashes
-  // the landing page: a token shows the loader, an error drops straight to login.
-  const [page, setPage] = useState<Page>(() =>
-    parseOidcHash()?.error ? "login" : "landing",
-  );
+  const [page, setPage] = useState<Page>(initialPage);
   const [auth, setAuth] = useState<AuthState | null>(null);
   const [activeInterviewId, setActiveInterviewId] = useState<number | null>(
     null,
   );
+  const [orgToken, setOrgToken] = useState<string | null>(() =>
+    localStorage.getItem("org_token"),
+  );
+  const [orgName, setOrgName] = useState<string | undefined>(undefined);
   const [hydrating, setHydrating] = useState<boolean>(() =>
     Boolean(parseOidcHash()?.token),
   );
@@ -59,7 +73,6 @@ function App() {
     const oidc = parseOidcHash();
     if (!oidc) return;
 
-    // Strip the token/error from the URL so it isn't kept in history or re-read.
     window.history.replaceState(
       null,
       "",
@@ -67,7 +80,7 @@ function App() {
     );
 
     const token = oidc.token;
-    if (!token) return; // error case already reflected in the initial page state
+    if (!token) return;
 
     localStorage.setItem("token", token);
     fetchCurrentUser(token)
@@ -109,15 +122,14 @@ function App() {
   };
 
   const handleOrgLoginSuccess = (token: string) => {
+    localStorage.setItem("org_token", token);
     setOrgToken(token);
     setPage("org-dashboard");
   };
 
   const handleOrgSignupSuccess = (data: OrgSignupResponse) => {
-    const token = data.organization
-      ? (localStorage.getItem("org_token") ?? "")
-      : "";
-    setOrgToken(token);
+    localStorage.setItem("org_token", data.access_token);
+    setOrgToken(data.access_token);
     setOrgName(data.organization?.id?.toString());
     setPage("org-dashboard");
   };
@@ -126,7 +138,8 @@ function App() {
     localStorage.removeItem("org_token");
     setOrgToken(null);
     setOrgName(undefined);
-    setPage("landing");
+    // Keep the user on /admin so they can sign back in without retyping the URL.
+    setPage("org-auth");
   };
 
   const handleAttemptInterview = (interviewId: number) => {
@@ -137,6 +150,15 @@ function App() {
   const handleExitInterview = () => {
     setActiveInterviewId(null);
     setPage("dashboard");
+  };
+
+  const handleBackFromOrgAuth = () => {
+    // /admin URL: there's no public landing for admins, so a back press just
+    // clears the admin path and sends them home.
+    if (isAdminPath()) {
+      window.history.replaceState(null, "", "/");
+    }
+    setPage("landing");
   };
 
   if (hydrating) {
@@ -199,26 +221,34 @@ function App() {
         <OrgAuthPage
           onLoginSuccess={handleOrgLoginSuccess}
           onSignupSuccess={handleOrgSignupSuccess}
-          onBack={() => setPage("landing")}
+          onBack={handleBackFromOrgAuth}
         />
       );
 
-    case "org-dashboard":
+    case "org-dashboard": {
+      const token = orgToken ?? localStorage.getItem("org_token") ?? "";
+      if (!token) {
+        // No token: render the auth page directly instead of mutating
+        // page state during render (would violate React purity rules).
+        return (
+          <OrgAuthPage
+            onLoginSuccess={handleOrgLoginSuccess}
+            onSignupSuccess={handleOrgSignupSuccess}
+            onBack={handleBackFromOrgAuth}
+          />
+        );
+      }
       return (
         <OrgDashboardPage
-          token={orgToken ?? localStorage.getItem("org_token") ?? ""}
+          token={token}
           orgName={orgName}
           onLogout={handleOrgLogout}
         />
       );
+    }
 
     default:
-      return (
-        <LandingPage
-          onLoginClick={() => setPage("login")}
-          onOrgLoginClick={() => setPage("org-auth")}
-        />
-      );
+      return <LandingPage onLoginClick={() => setPage("login")} />;
   }
 }
 
@@ -231,20 +261,4 @@ function OidcLoader() {
   );
 }
 
-function Placeholder({ label, onBack }: { label: string; onBack: () => void }) {
-  return (
-    <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center gap-4 text-slate-900">
-      <div className="text-5xl">🚀</div>
-      <p className="text-xl font-semibold">{label} — coming soon</p>
-      <button
-        onClick={onBack}
-        className="text-blue-600 hover:underline text-sm mt-2"
-      >
-        ← Back to home
-      </button>
-    </div>
-  );
-}
-
 export default App;
-

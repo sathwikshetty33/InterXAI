@@ -3,7 +3,6 @@ import Orb from "./Orb";
 
 export interface LandingPageProps {
   onLoginClick?: () => void;
-  onOrgLoginClick?: () => void;
 }
 
 interface Stat {
@@ -28,7 +27,6 @@ const STATS: Stat[] = [
 
 export default function LandingPage({
   onLoginClick,
-  onOrgLoginClick,
 }: LandingPageProps): JSX.Element {
   return (
     <div
@@ -151,19 +149,6 @@ export default function LandingPage({
         </div>
 
         <div style={{ display: "flex", gap: 14, alignItems: "center" }}>
-          <button
-            onClick={onOrgLoginClick}
-            style={{
-              background: "transparent",
-              border: "none",
-              color: "#4b5563",
-              fontSize: 14,
-              fontWeight: 500,
-              cursor: "pointer",
-            }}
-          >
-            For Organisations
-          </button>
           <button
             onClick={onLoginClick}
             style={{
