@@ -325,7 +325,14 @@ const ListView: React.FC<{
           Open an interview to view candidates and the leaderboard.
         </p>
       </div>
-      <div style={{ display: "flex", gap: 10, flexDirection: "column", alignItems: "flex-end" }}>
+      <div
+        style={{
+          display: "flex",
+          gap: 10,
+          flexDirection: "column",
+          alignItems: "flex-end",
+        }}
+      >
         <div style={{ display: "flex", gap: 10 }}>
           <button
             id="seed-test-interview-btn"
@@ -346,13 +353,22 @@ const ListView: React.FC<{
               fontWeight: 700,
               cursor: isSeedingTest ? "not-allowed" : "pointer",
               opacity: isSeedingTest ? 0.7 : 1,
-              boxShadow: isSeedingTest ? "none" : "0 8px 22px rgba(124,58,237,0.35)",
+              boxShadow: isSeedingTest
+                ? "none"
+                : "0 8px 22px rgba(124,58,237,0.35)",
               transition: "all 0.2s",
             }}
           >
             {isSeedingTest ? (
               <>
-                <span style={{ display: "inline-block", animation: "spin 1s linear infinite" }}>⏳</span>
+                <span
+                  style={{
+                    display: "inline-block",
+                    animation: "spin 1s linear infinite",
+                  }}
+                >
+                  ⏳
+                </span>
                 Seeding…
               </>
             ) : (
@@ -916,9 +932,7 @@ const ApplicationsTab: React.FC<{ interviewId: number; token: string }> = ({
     try {
       const updated = await toggleShortlist(applicationId, token);
       setData((prev) =>
-        prev
-          ? prev.map((a) => (a.id === updated.id ? updated : a))
-          : prev,
+        prev ? prev.map((a) => (a.id === updated.id ? updated : a)) : prev,
       );
     } catch {
       // silently ignore — the button state reverts automatically
@@ -1036,7 +1050,11 @@ const ApplicationRow: React.FC<{
             label="✓ Listed"
           />
         ) : (
-          <BadgePill color="#94a3b8" bg="rgba(241,245,249,0.8)" label="Pending" />
+          <BadgePill
+            color="#94a3b8"
+            bg="rgba(241,245,249,0.8)"
+            label="Pending"
+          />
         )}
       </div>
       <div style={{ textAlign: "center" }}>
@@ -1069,9 +1087,7 @@ const ApplicationRow: React.FC<{
               ? "rgba(254,226,226,0.8)"
               : "linear-gradient(135deg,#10b981,#059669)",
             color: approved ? "#b91c1c" : "#fff",
-            boxShadow: approved
-              ? "none"
-              : "0 4px 12px rgba(16,185,129,0.35)",
+            boxShadow: approved ? "none" : "0 4px 12px rgba(16,185,129,0.35)",
             whiteSpace: "nowrap",
           }}
         >

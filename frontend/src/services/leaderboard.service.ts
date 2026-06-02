@@ -7,7 +7,7 @@
  *   - app/routers/leaderboard.py   (GET /leaderboard/{interview_id})
  */
 
-const BASE_URL = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
+const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
 // ── Interview list / detail / create types ──────────────────────────────────
 
@@ -253,7 +253,6 @@ export async function toggleShortlist(
   );
   return handle<ApplicationResponse>(res);
 }
-
 
 // ── Leaderboard ─────────────────────────────────────────────────────────────
 

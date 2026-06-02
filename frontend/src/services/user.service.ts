@@ -4,7 +4,7 @@
  * Mirrors backend schemas: app/schemas/user.py + app/schemas/interview.py
  */
 
-const BASE_URL = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
+const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 export class UserServiceError extends Error {

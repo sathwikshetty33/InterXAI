@@ -7,7 +7,7 @@ import { useState } from "react";
 import { AuthServiceError } from "../../../services/auth.service";
 import type { TokenResponse } from "../../../services/auth.service";
 
-const BASE_URL = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
+const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
 export interface SignupFormState {
   fullName: string;

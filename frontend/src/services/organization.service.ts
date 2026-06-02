@@ -4,7 +4,7 @@
  * Mirrors app/schemas/organization.py and app/routers/organization.py
  */
 
-const BASE_URL = import.meta.env.VITE_API_URL ?? "http://localhost:8000";
+const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
 // ── Types (mirrors backend schemas) ─────────────────────────────────────────
 
