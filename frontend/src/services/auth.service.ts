@@ -25,6 +25,7 @@ export interface UserResponse {
   id: number;
   username: string;
   email: string;
+  is_organization: boolean;
   profile: UserProfileResponse | null;
 }
 

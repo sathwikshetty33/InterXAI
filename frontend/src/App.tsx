@@ -85,9 +85,16 @@ function App() {
     localStorage.setItem("token", token);
     fetchCurrentUser(token)
       .then((user) => {
-        const hasProfile = Boolean(user.profile?.bio || user.profile?.github);
-        setAuth({ token, user, isNewUser: false });
-        setPage(hasProfile ? "dashboard" : "profile-setup");
+        if (user.is_organization) {
+          localStorage.setItem("org_token", token);
+          setOrgToken(token);
+          setOrgName(user.username);
+          setPage("org-dashboard");
+        } else {
+          const hasProfile = Boolean(user.profile?.bio || user.profile?.github);
+          setAuth({ token, user, isNewUser: false });
+          setPage(hasProfile ? "dashboard" : "profile-setup");
+        }
       })
       .catch(() => {
         localStorage.removeItem("token");
@@ -97,6 +104,13 @@ function App() {
   }, []);
 
   const handleUserLoginSuccess = (data: TokenResponse) => {
+    if (data.user.is_organization) {
+      localStorage.setItem("org_token", data.token);
+      setOrgToken(data.token);
+      setOrgName(data.user.username);
+      setPage("org-dashboard");
+      return;
+    }
     const hasProfile = Boolean(
       data.user.profile?.bio || data.user.profile?.github,
     );

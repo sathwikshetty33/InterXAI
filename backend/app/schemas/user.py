@@ -42,6 +42,7 @@ class UserResponse(BaseModel):
     id: int
     username: str
     email: str
+    is_organization: bool = False
     profile: UserProfileResponse | None = None
 
     class Config:
