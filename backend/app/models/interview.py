@@ -23,7 +23,7 @@ class CustomInterview(BaseTable):
     )
     description: Mapped[str] = mapped_column(Text, nullable=False)
     position: Mapped[str] = mapped_column(Text, nullable=False)
-    experience: Mapped[str] = mapped_column(String(10), nullable=False)
+    experience: Mapped[str] = mapped_column(String(50), nullable=False)
     submission_deadline: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     start_time: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     end_time: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)

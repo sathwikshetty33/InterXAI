@@ -996,104 +996,197 @@ const ApplicationRow: React.FC<{
   onToggle: (id: number) => Promise<void>;
 }> = ({ application, onToggle }) => {
   const [loading, setLoading] = useState(false);
+  const [expanded, setExpanded] = useState(false);
 
-  const handleClick = async () => {
+  const handleClick = async (e: React.MouseEvent) => {
+    e.stopPropagation(); // don't toggle the detail panel when shortlisting
     setLoading(true);
     await onToggle(application.id);
     setLoading(false);
   };
 
   const approved = application.shortlisting_decision;
+  // The resume evaluation populates feedback/score; use that to tell a
+  // finished-but-not-shortlisted candidate apart from one still processing.
+  const evaluated =
+    Boolean(application.feedback) ||
+    Boolean(application.extracted_resume) ||
+    application.score > 0;
 
   return (
-    <div
-      style={{
-        display: "grid",
-        gridTemplateColumns: "70px 1fr 110px 130px 110px 160px 130px",
-        gap: 10,
-        padding: "14px 18px",
-        alignItems: "center",
-        borderBottom: "1px solid rgba(241,245,249,0.7)",
-        fontSize: 13,
-      }}
-    >
-      <div style={{ color: "#64748b", fontWeight: 700 }}>#{application.id}</div>
-      <div>
-        <div style={{ fontSize: 13, fontWeight: 700, color: "#0f172a" }}>
-          User #{application.user_id}
+    <div style={{ borderBottom: "1px solid rgba(241,245,249,0.7)" }}>
+      <div
+        onClick={() => setExpanded((v) => !v)}
+        style={{
+          display: "grid",
+          gridTemplateColumns: "70px 1fr 110px 130px 110px 160px 130px",
+          gap: 10,
+          padding: "14px 18px",
+          alignItems: "center",
+          fontSize: 13,
+          cursor: "pointer",
+        }}
+      >
+        <div style={{ color: "#64748b", fontWeight: 700 }}>
+          <span style={{ color: "#cbd5e1", marginRight: 4 }}>
+            {expanded ? "▾" : "▸"}
+          </span>
+          #{application.id}
+        </div>
+        <div>
+          <div style={{ fontSize: 13, fontWeight: 700, color: "#0f172a" }}>
+            User #{application.user_id}
+          </div>
+          <div
+            style={{
+              fontSize: 11.5,
+              color: "#94a3b8",
+              marginTop: 2,
+              fontFamily:
+                "ui-monospace, SFMono-Regular, 'SF Mono', Menlo, monospace",
+              maxWidth: 320,
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+            }}
+            title={application.resume ?? ""}
+          >
+            {application.resume ?? "no resume"}
+          </div>
+        </div>
+        <div style={{ textAlign: "center" }}>
+          <ScoreChip value={application.score} />
+        </div>
+        <div style={{ textAlign: "center" }}>
+          {approved ? (
+            <BadgePill
+              color="#10b981"
+              bg="rgba(209,250,229,0.7)"
+              label="✓ Listed"
+            />
+          ) : evaluated ? (
+            <BadgePill
+              color="#b45309"
+              bg="rgba(254,243,199,0.7)"
+              label="Not shortlisted"
+            />
+          ) : (
+            <BadgePill
+              color="#94a3b8"
+              bg="rgba(241,245,249,0.8)"
+              label="Pending"
+            />
+          )}
+        </div>
+        <div style={{ textAlign: "center" }}>
+          <StatusPill status={application.status} />
         </div>
         <div
           style={{
+            textAlign: "right",
             fontSize: 11.5,
-            color: "#94a3b8",
-            marginTop: 2,
-            fontFamily:
-              "ui-monospace, SFMono-Regular, 'SF Mono', Menlo, monospace",
-            maxWidth: 320,
-            overflow: "hidden",
-            textOverflow: "ellipsis",
-            whiteSpace: "nowrap",
+            color: "#64748b",
           }}
-          title={application.resume ?? ""}
         >
-          {application.resume ?? "no resume"}
+          {formatDate(application.created_at)}
+        </div>
+        <div style={{ textAlign: "center" }}>
+          <button
+            id={`shortlist-btn-${application.id}`}
+            onClick={handleClick}
+            disabled={loading}
+            style={{
+              padding: "6px 14px",
+              borderRadius: 99,
+              fontSize: 12,
+              fontWeight: 700,
+              border: "none",
+              cursor: loading ? "not-allowed" : "pointer",
+              opacity: loading ? 0.6 : 1,
+              transition: "all 0.18s",
+              background: approved
+                ? "rgba(254,226,226,0.8)"
+                : "linear-gradient(135deg,#10b981,#059669)",
+              color: approved ? "#b91c1c" : "#fff",
+              boxShadow: approved ? "none" : "0 4px 12px rgba(16,185,129,0.35)",
+              whiteSpace: "nowrap",
+            }}
+          >
+            {loading ? "…" : approved ? "✕ Reject" : "✓ Approve"}
+          </button>
         </div>
       </div>
-      <div style={{ textAlign: "center" }}>
-        <ScoreChip value={application.score} />
-      </div>
-      <div style={{ textAlign: "center" }}>
-        {approved ? (
-          <BadgePill
-            color="#10b981"
-            bg="rgba(209,250,229,0.7)"
-            label="✓ Listed"
-          />
-        ) : (
-          <BadgePill
-            color="#94a3b8"
-            bg="rgba(241,245,249,0.8)"
-            label="Pending"
-          />
-        )}
-      </div>
-      <div style={{ textAlign: "center" }}>
-        <StatusPill status={application.status} />
-      </div>
-      <div
-        style={{
-          textAlign: "right",
-          fontSize: 11.5,
-          color: "#64748b",
-        }}
-      >
-        {formatDate(application.created_at)}
-      </div>
-      <div style={{ textAlign: "center" }}>
-        <button
-          id={`shortlist-btn-${application.id}`}
-          onClick={handleClick}
-          disabled={loading}
+
+      {expanded && (
+        <div
           style={{
-            padding: "6px 14px",
-            borderRadius: 99,
-            fontSize: 12,
-            fontWeight: 700,
-            border: "none",
-            cursor: loading ? "not-allowed" : "pointer",
-            opacity: loading ? 0.6 : 1,
-            transition: "all 0.18s",
-            background: approved
-              ? "rgba(254,226,226,0.8)"
-              : "linear-gradient(135deg,#10b981,#059669)",
-            color: approved ? "#b91c1c" : "#fff",
-            boxShadow: approved ? "none" : "0 4px 12px rgba(16,185,129,0.35)",
-            whiteSpace: "nowrap",
+            padding: "4px 18px 18px",
+            background: "rgba(248,250,252,0.7)",
           }}
         >
-          {loading ? "…" : approved ? "✕ Reject" : "✓ Approve"}
-        </button>
-      </div>
+          {application.feedback ? (
+            <NoteBox label="AI resume feedback" body={application.feedback} />
+          ) : (
+            <Muted>
+              No evaluation yet — the resume may still be processing.
+            </Muted>
+          )}
+
+          {application.extracted_resume && (
+            <div
+              style={{
+                background: "rgba(255,255,255,0.9)",
+                border: "1px solid rgba(226,232,240,0.9)",
+                borderRadius: 12,
+                padding: "10px 14px",
+                marginBottom: 10,
+              }}
+            >
+              <div
+                style={{
+                  fontSize: 10.5,
+                  fontWeight: 800,
+                  color: "#475569",
+                  textTransform: "uppercase",
+                  letterSpacing: "0.06em",
+                  marginBottom: 6,
+                }}
+              >
+                Extracted resume
+              </div>
+              <div
+                style={{
+                  fontSize: 12.5,
+                  color: "#334155",
+                  whiteSpace: "pre-wrap",
+                  maxHeight: 320,
+                  overflowY: "auto",
+                  lineHeight: 1.5,
+                }}
+              >
+                {application.extracted_resume}
+              </div>
+            </div>
+          )}
+
+          {application.resume && (
+            <a
+              href={application.resume}
+              target="_blank"
+              rel="noreferrer"
+              style={{
+                display: "inline-block",
+                fontSize: 12.5,
+                fontWeight: 700,
+                color: "#2563eb",
+                textDecoration: "none",
+              }}
+            >
+              Open resume PDF ↗
+            </a>
+          )}
+        </div>
+      )}
     </div>
   );
 };
@@ -2189,6 +2282,7 @@ const Step1Basics: React.FC<{
         value={form.experience}
         onChange={(v) => set("experience", v)}
         placeholder="Mid / Senior / Staff"
+        maxLength={50}
       />
     </div>
     <FieldArea
@@ -2240,11 +2334,18 @@ const Step1Basics: React.FC<{
         onChange={(v) => set("duration", parseInt(v) || 0)}
       />
       <Field
-        label="Resume shortlist threshold"
+        label="Resume shortlist threshold (0–10)"
         type="number"
         step="0.1"
+        min={0}
+        max={10}
         value={String(form.resume_shortlist_score)}
-        onChange={(v) => set("resume_shortlist_score", parseFloat(v) || 0)}
+        onChange={(v) =>
+          set(
+            "resume_shortlist_score",
+            Math.min(10, Math.max(0, parseFloat(v) || 0)),
+          )
+        }
       />
     </div>
 
@@ -3032,7 +3133,20 @@ const Field: React.FC<{
   placeholder?: string;
   type?: string;
   step?: string;
-}> = ({ label, value, onChange, placeholder, type = "text", step }) => (
+  min?: number;
+  max?: number;
+  maxLength?: number;
+}> = ({
+  label,
+  value,
+  onChange,
+  placeholder,
+  type = "text",
+  step,
+  min,
+  max,
+  maxLength,
+}) => (
   <label style={{ display: "block", marginTop: 6 }}>
     <span
       style={{
@@ -3048,6 +3162,9 @@ const Field: React.FC<{
     <input
       type={type}
       step={step}
+      min={min}
+      max={max}
+      maxLength={maxLength}
       value={value}
       placeholder={placeholder}
       onChange={(e) => onChange(e.target.value)}

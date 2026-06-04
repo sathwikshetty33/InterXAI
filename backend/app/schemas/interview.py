@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from pydantic import BaseModel, model_validator
+from pydantic import BaseModel, Field, model_validator
 
 
 class CustomQuestionCreate(BaseModel):
@@ -16,14 +16,14 @@ class DsaTopicCreate(BaseModel):
 class CustomInterviewCreate(BaseModel):
     description: str
     position: str
-    experience: str
+    experience: str = Field(min_length=1, max_length=50)
     submission_deadline: datetime
     start_time: datetime
     end_time: datetime
     duration: int = 60
     dsa_score: int = 50
     dev_score: int = 50
-    resume_shortlist_score: float = 0
+    resume_shortlist_score: float = Field(default=0, ge=0, le=10)
     ask_questions_on_resume: bool = False
 
     questions: list[CustomQuestionCreate] = []

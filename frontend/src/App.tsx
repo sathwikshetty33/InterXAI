@@ -63,44 +63,72 @@ function App() {
     localStorage.getItem("org_token"),
   );
   const [orgName, setOrgName] = useState<string | undefined>(undefined);
-  const [hydrating, setHydrating] = useState<boolean>(() =>
-    Boolean(parseOidcHash()?.token),
-  );
+  const [hydrating, setHydrating] = useState<boolean>(() => {
+    // Show the loader while we either consume an OIDC return token or restore a
+    // previously stored session on reload. The /admin path restores its own
+    // org_token synchronously in initialPage(), so it needs no async hydration.
+    if (parseOidcHash()?.token) return true;
+    return Boolean(localStorage.getItem("token")) && !isAdminPath();
+  });
 
-  // Handle the Google OIDC return: the backend redirects to `/#oidc_token=<jwt>`
-  // (or `/#oidc_error=<reason>`). Pick the token up, hydrate the user, route.
+  // On mount, establish the session in one of three ways:
+  //   1. Google OIDC return — the backend redirects to `/#oidc_token=<jwt>`
+  //      (or `/#oidc_error=<reason>`); consume the token from the URL hash.
+  //   2. Reload with a stored token — restore the session so a refresh doesn't
+  //      bounce the user back to the landing page / login.
+  //   3. Nothing stored — render the initial public page.
   useEffect(() => {
-    const oidc = parseOidcHash();
-    if (!oidc) return;
+    // Route a freshly-resolved user to the correct page based on their role.
+    const routeForUser = (user: UserResponse, token: string) => {
+      if (user.is_organization) {
+        localStorage.setItem("org_token", token);
+        setOrgToken(token);
+        setOrgName(user.username);
+        setPage("org-dashboard");
+      } else {
+        const hasProfile = Boolean(user.profile?.bio || user.profile?.github);
+        setAuth({ token, user, isNewUser: false });
+        setPage(hasProfile ? "dashboard" : "profile-setup");
+      }
+    };
 
-    window.history.replaceState(
-      null,
-      "",
-      window.location.pathname + window.location.search,
-    );
+    const oidcToken = parseOidcHash()?.token;
+    if (oidcToken) {
+      window.history.replaceState(
+        null,
+        "",
+        window.location.pathname + window.location.search,
+      );
+      localStorage.setItem("token", oidcToken);
+      fetchCurrentUser(oidcToken)
+        .then((user) => routeForUser(user, oidcToken))
+        .catch(() => {
+          localStorage.removeItem("token");
+          setPage("login");
+        })
+        .finally(() => setHydrating(false));
+      return;
+    }
 
-    const token = oidc.token;
-    if (!token) return;
+    // The /admin path resolves its own org_token synchronously in initialPage().
+    const storedToken = localStorage.getItem("token");
+    if (storedToken && !isAdminPath()) {
+      fetchCurrentUser(storedToken)
+        .then((user) => routeForUser(user, storedToken))
+        .catch(() => {
+          // Expired or invalid token: drop it and fall back to the landing page.
+          localStorage.removeItem("token");
+          localStorage.removeItem("org_token");
+          setOrgToken(null);
+          setPage("landing");
+        })
+        .finally(() => setHydrating(false));
+      return;
+    }
 
-    localStorage.setItem("token", token);
-    fetchCurrentUser(token)
-      .then((user) => {
-        if (user.is_organization) {
-          localStorage.setItem("org_token", token);
-          setOrgToken(token);
-          setOrgName(user.username);
-          setPage("org-dashboard");
-        } else {
-          const hasProfile = Boolean(user.profile?.bio || user.profile?.github);
-          setAuth({ token, user, isNewUser: false });
-          setPage(hasProfile ? "dashboard" : "profile-setup");
-        }
-      })
-      .catch(() => {
-        localStorage.removeItem("token");
-        setPage("login");
-      })
-      .finally(() => setHydrating(false));
+    // Nothing to hydrate: `hydrating` was already initialized to false for this
+    // path (no OIDC token, and no stored token on a non-admin route), so there
+    // is no state to update here.
   }, []);
 
   const handleUserLoginSuccess = (data: TokenResponse) => {
@@ -130,6 +158,8 @@ function App() {
 
   const handleLogout = () => {
     localStorage.removeItem("token");
+    localStorage.removeItem("org_token");
+    setOrgToken(null);
     setAuth(null);
     setActiveInterviewId(null);
     setPage("landing");
@@ -150,8 +180,12 @@ function App() {
 
   const handleOrgLogout = () => {
     localStorage.removeItem("org_token");
+    // OIDC org logins also leave a "token"; clear it so a reload doesn't
+    // silently restore the session via rehydration.
+    localStorage.removeItem("token");
     setOrgToken(null);
     setOrgName(undefined);
+    setAuth(null);
     // Keep the user on /admin so they can sign back in without retyping the URL.
     setPage("org-auth");
   };
