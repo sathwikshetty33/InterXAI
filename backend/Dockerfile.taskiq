@@ -14,4 +14,6 @@ COPY . .
 
 ENV PYTHONPATH=/app
 
-CMD ["taskiq", "worker", "app.background.taskiq.taskiq:broker", "--tasks-pattern", "app/background/taskiq/tasks/*.py"]
+# --fs-discover is required for --tasks-pattern to take effect; without it
+# taskiq imports no task modules and every task fails with "task not found".
+CMD ["taskiq", "worker", "app.background.taskiq.taskiq:broker", "--fs-discover", "--tasks-pattern", "app/background/taskiq/tasks/*.py"]
