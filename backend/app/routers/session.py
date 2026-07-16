@@ -121,7 +121,7 @@ async def _handle_questions_answer(
         raise BadRequestError("No pending question to answer for this session")
 
     pending.answer = answer_text
-    await db.flush()
+    await db.commit()
 
     used = await followups_used(interaction.id, db)
     custom_q = await db.get(CustomQuestion, interaction.custom_question_id)
