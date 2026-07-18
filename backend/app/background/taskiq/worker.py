@@ -34,9 +34,15 @@ class TaskiqWorker(BackgroundWorkerInterface):
         await dsa_execution.run_code_task.kiq(source_code, language, stdin)
 
     async def evaluate_submission_task(
-        self, dsa_interaction_id: int, source_code: str, language: str
+        self,
+        dsa_interaction_id: int,
+        source_code: str,
+        language: str,
+        submitted_at_iso: str | None = None,
     ) -> None:
-        await dsa_execution.evaluate_submission_task.kiq(dsa_interaction_id, source_code, language)
+        await dsa_execution.evaluate_submission_task.kiq(
+            dsa_interaction_id, source_code, language, submitted_at_iso
+        )
 
     async def generate_resume_questions_task(self, session_id: int) -> None:
         await resume_generation.generate_resume_questions_task.kiq(session_id)

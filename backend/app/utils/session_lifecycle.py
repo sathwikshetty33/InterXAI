@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta
 
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
@@ -35,6 +36,23 @@ async def disqualify_if_stale(session: InterviewSession, db: AsyncSession) -> bo
         return False
 
     threshold = timedelta(seconds=settings.HEARTBEAT_THRESHOLD_S)
+    elapsed = datetime.utcnow() - session.last_heartbeat_at
+    if elapsed <= threshold:
+        return False
+
+    # The checks above ran on a possibly-stale unlocked read. Re-load the row
+    # FOR UPDATE and re-check on fresh state, so a concurrent transition
+    # (dsa/finish completing the session, a parallel heartbeat) can't be
+    # clobbered by stamping DISQUALIFIED over it.
+    locked = await db.execute(
+        select(InterviewSession)
+        .where(InterviewSession.id == session.id)
+        .with_for_update()
+        .execution_options(populate_existing=True)
+    )
+    session = locked.scalar_one()
+    if session.status in TERMINAL_STATUSES:
+        return False
     elapsed = datetime.utcnow() - session.last_heartbeat_at
     if elapsed <= threshold:
         return False

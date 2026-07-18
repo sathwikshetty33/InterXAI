@@ -23,7 +23,9 @@ class QuestionInteractionResult(BaseModel):
 
 
 class DsaInteractionResult(BaseModel):
-    """One DSA question attempt: the problem, the candidate's code and its score."""
+    """One DSA question attempt: the problem, the candidate's code and its score.
+    code/score/case tallies describe the LAST submission (resubmission allowed);
+    attempts counts how many submissions were graded in total."""
 
     id: int
     problem_name: str | None
@@ -33,6 +35,9 @@ class DsaInteractionResult(BaseModel):
     language: str | None
     code: str | None
     score: float | None
+    attempts: int
+    passed_cases: int | None
+    total_cases: int | None
 
 
 class ResumeQuestionResult(BaseModel):

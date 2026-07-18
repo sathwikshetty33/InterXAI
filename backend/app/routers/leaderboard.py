@@ -69,6 +69,9 @@ def _build_session(
                 language=dsa.language,
                 code=dsa.code,
                 score=dsa.score,
+                attempts=dsa.attempts,
+                passed_cases=dsa.passed_cases,
+                total_cases=dsa.total_cases,
             )
         )
 

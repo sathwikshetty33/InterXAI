@@ -3,7 +3,7 @@ from datetime import datetime
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.exceptions.common import BadRequestError
+from app.exceptions.common import BadRequestError, NotFoundError
 from app.logger import get_logger
 from app.models.application import (
     Application,
@@ -19,9 +19,8 @@ from app.models.interaction import (
     ResumeConversation,
     ResumeQuestion,
 )
-from app.models.interview import CustomInterview, CustomQuestion
+from app.models.interview import CustomInterview, CustomQuestion, DsaTopic
 from app.schemas.session import (
-    DsaQuestionPayload,
     InterviewStateResponse,
     ResumeQuestionPayload,
 )
@@ -107,62 +106,43 @@ async def next_custom_question(
     return result.scalar_one_or_none()
 
 
-async def first_dsa_interaction(
+async def session_dsa_interactions(
     session_id: int, db: AsyncSession
-) -> tuple[DsaInteraction, DsaQuestion] | None:
+) -> list[tuple[DsaInteraction, DsaQuestion]]:
     """
-    The first (oldest) DsaInteraction assigned to this session, paired with its
-    DsaQuestion. Returns None when the session has no DSA interactions.
+    All DsaInteractions assigned to this session (oldest first), each paired
+    with its DsaQuestion. Interactions whose question row was deleted
+    (question_id is NULL via ondelete=SET NULL) are excluded by the join.
     """
     result = await db.execute(
-        select(DsaInteraction)
+        select(DsaInteraction, DsaQuestion)
+        .join(DsaQuestion, DsaInteraction.question_id == DsaQuestion.id)
         .where(DsaInteraction.session_id == session_id)
         .order_by(DsaInteraction.id.asc())
-        .limit(1)
     )
-    interaction = result.scalar_one_or_none()
-    if interaction is None or interaction.question_id is None:
-        return None
-    question = await db.get(DsaQuestion, interaction.question_id)
-    if question is None:
-        return None
-    return interaction, question
+    return list(result.tuples().all())
 
 
-async def current_dsa_interaction(
-    session: InterviewSession, db: AsyncSession
-) -> tuple[DsaInteraction, DsaQuestion] | None:
+async def dsa_interaction_by_id(
+    session_id: int, interaction_id: int, db: AsyncSession
+) -> tuple[DsaInteraction, DsaQuestion]:
     """
-    The DsaInteraction at session.current_question_index (1-based), paired with
-    its DsaQuestion. Returns None if the index is out of range or the question
-    record is missing.
+    Load one of this session's DsaInteractions by id, paired with its question.
+    The session check prevents a candidate from targeting another session's
+    interaction; raising (rather than falling back to a cursor) is what makes
+    run/test/submit safe to retry.
     """
-    offset = max(0, session.current_question_index - 1)
-    result = await db.execute(
-        select(DsaInteraction)
-        .where(DsaInteraction.session_id == session.id)
-        .order_by(DsaInteraction.id.asc())
-        .offset(offset)
-        .limit(1)
+    interaction = await db.get(DsaInteraction, interaction_id)
+    if interaction is None or interaction.session_id != session_id:
+        raise NotFoundError("DSA question not found for this session")
+    question = (
+        await db.get(DsaQuestion, interaction.question_id)
+        if interaction.question_id is not None
+        else None
     )
-    interaction = result.scalar_one_or_none()
-    if interaction is None or interaction.question_id is None:
-        return None
-    question = await db.get(DsaQuestion, interaction.question_id)
     if question is None:
-        return None
+        raise BadRequestError("This DSA question is no longer available")
     return interaction, question
-
-
-def dsa_payload_for(interaction: DsaInteraction, question: DsaQuestion) -> DsaQuestionPayload:
-    """Build the candidate-facing DSA payload (no hidden test cases)."""
-    return DsaQuestionPayload(
-        interaction_id=interaction.id,
-        problem_name=question.problem_name,
-        description=question.description,
-        sample_test_cases=question.sample_test_cases,
-        time_limit_ms=question.time_limit_ms,
-    )
 
 
 async def mark_session_completed(
@@ -260,20 +240,28 @@ async def transition_to_resume(
 
 async def transition_to_dsa(session: InterviewSession, db: AsyncSession) -> InterviewStateResponse:
     """
-    Flip the session to the DSA round (index reset to 1) and return the first
-    DSA question. If the session has no DSA interactions assigned (interview
-    has no DSA topics, or the background-assign task hasn't produced any),
-    fall through to the RESUME round instead.
+    Flip the session to the DSA round if the interview has DSA topics,
+    otherwise fall through to the RESUME round.
+
+    The decision is made on DsaTopics (what the org configured), NOT on
+    DsaInteraction rows (what the background assignment task has produced so
+    far) — so a candidate who reaches this point before the task has run gets
+    a "preparing" DSA round instead of silently losing it. The envelope
+    carries no question: the round serves all its questions at once via
+    GET /sessions/{id}/dsa and is left via POST /sessions/{id}/dsa/finish.
     """
-    pair = await first_dsa_interaction(session.id, db)
-    if pair is None:
+    interview = await interview_metadata(session, db)
+    topic_count = await db.execute(
+        select(func.count(DsaTopic.id)).where(DsaTopic.interview_id == interview.id)
+    )
+    if int(topic_count.scalar_one() or 0) == 0:
         logger.info(
-            "Session %d has no DSA interactions — falling through to resume round",
+            "Interview %d has no DSA topics — session %d falls through to resume round",
+            interview.id,
             session.id,
         )
         return await transition_to_resume(session, db)
 
-    interaction, question = pair
     session.current_round = CurrentRound.DSA.value
     session.current_question_index = 1
     await db.commit()
@@ -282,7 +270,7 @@ async def transition_to_dsa(session: InterviewSession, db: AsyncSession) -> Inte
         session_id=session.id,
         round=session.current_round,
         completed=False,
-        question=dsa_payload_for(interaction, question),
+        question=None,
     )
 
 

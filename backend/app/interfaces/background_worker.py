@@ -32,7 +32,11 @@ class BackgroundWorkerInterface(ABC):
 
     @abstractmethod
     async def evaluate_submission_task(
-        self, dsa_interaction_id: int, source_code: str, language: str
+        self,
+        dsa_interaction_id: int,
+        source_code: str,
+        language: str,
+        submitted_at_iso: str | None = None,
     ) -> None:
         pass
 

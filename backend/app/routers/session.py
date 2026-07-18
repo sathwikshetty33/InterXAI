@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Literal
 
 from fastapi import APIRouter, Depends
 from sqlalchemy import select
@@ -12,14 +13,16 @@ from app.background.taskiq.tasks.dsa_execution import run_evaluate_submission
 from app.database import get_db
 from app.exceptions.common import BadRequestError, ForbiddenError, NotFoundError
 from app.logger import get_logger
-from app.models.application import CurrentRound, InterviewSession
-from app.models.interaction import FollowUpQuestion, Interaction
+from app.models.application import CurrentRound, InterviewSession, InterviewStatus
+from app.models.dsa_question import DsaQuestion
+from app.models.interaction import DsaInteraction, FollowUpQuestion, Interaction
 from app.models.interview import CustomQuestion
 from app.models.user import User
 from app.schemas.session import (
     AnswerRequest,
     CustomQuestionPayload,
-    DsaCaseResult,
+    DsaRoundQuestion,
+    DsaRoundResponse,
     DsaRunRequest,
     DsaRunResponse,
     DsaSubmitRequest,
@@ -36,9 +39,8 @@ from app.utils.default_providers import default_worker_provider
 from app.utils.interview_flow import (
     MAX_FOLLOWUPS,
     conversation_context,
-    current_dsa_interaction,
     current_resume_question,
-    dsa_payload_for,
+    dsa_interaction_by_id,
     followups_used,
     interview_metadata,
     latest_interaction,
@@ -46,6 +48,7 @@ from app.utils.interview_flow import (
     next_custom_question,
     next_resume_question,
     open_follow_up,
+    session_dsa_interactions,
     transition_to_dsa,
     transition_to_resume,
 )
@@ -255,6 +258,80 @@ async def _handle_resume_answer(
     )
 
 
+async def _load_dsa_context(
+    session_id: int, interaction_id: int, user: User, db: AsyncSession
+) -> tuple[InterviewSession, DsaInteraction, DsaQuestion]:
+    """
+    Shared guard for the DSA run/test/submit endpoints: ownership, liveness,
+    round check, then resolve the interaction the CLIENT named. Keying every
+    DSA operation on an explicit interaction_id (instead of a server-side
+    cursor) is what makes these endpoints safe to retry.
+    """
+    session = await _load_owned_session(session_id, user, db)
+    await assert_session_alive(session, db)
+
+    if session.current_round != CurrentRound.DSA.value:
+        raise BadRequestError(
+            f"DSA endpoints are only valid during the DSA round (current: {session.current_round})"
+        )
+
+    interaction, question = await dsa_interaction_by_id(session_id, interaction_id, db)
+    return session, interaction, question
+
+
+@router.get("/{session_id}/dsa", response_model=DsaRoundResponse)
+async def dsa_round(
+    session_id: int,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user),
+) -> DsaRoundResponse:
+    """
+    The full DSA round: every assigned question plus the candidate's own
+    submission state (attempts, score, cases passed). Serves both the round
+    overview and rehydration after a page refresh.
+
+    status="preparing" means the assignment task hasn't finished yet — poll
+    again (we re-dispatch the idempotent task on each such poll, so a lost
+    dispatch self-heals). status="ready" with an empty questions list means
+    assignment finished but the question bank had no match for any topic:
+    nothing more is coming and the candidate should POST /dsa/finish.
+    """
+    session = await _load_owned_session(session_id, user, db)
+    await assert_session_alive(session, db)
+
+    if session.current_round != CurrentRound.DSA.value:
+        raise BadRequestError(
+            f"The DSA overview is only valid during the DSA round "
+            f"(current: {session.current_round})"
+        )
+
+    pairs = await session_dsa_interactions(session_id, db)
+    if pairs or session.dsa_assigned_at is not None:
+        round_status: Literal["preparing", "ready"] = "ready"
+    else:
+        round_status = "preparing"
+        await default_worker_provider().assign_dsa_questions_task(session_id)
+
+    return DsaRoundResponse(
+        session_id=session.id,
+        status=round_status,
+        questions=[
+            DsaRoundQuestion(
+                interaction_id=interaction.id,
+                problem_name=question.problem_name,
+                description=question.description,
+                sample_test_cases=question.sample_test_cases,
+                time_limit_ms=question.time_limit_ms,
+                attempts=interaction.attempts,
+                score=interaction.score,
+                passed_cases=interaction.passed_cases,
+                total_cases=interaction.total_cases,
+            )
+            for interaction, question in pairs
+        ],
+    )
+
+
 @router.post("/{session_id}/dsa/run", response_model=DsaRunResponse)
 async def dsa_run(
     session_id: int,
@@ -267,21 +344,10 @@ async def dsa_run(
     submitted source against the provided stdin (custom input or sample input
     chosen by the frontend) and returns stdout/stderr/exit_code.
 
-    This endpoint does NOT update score or advance the session — it's the
-    candidate's scratchpad. Final grading happens via /dsa/submit.
+    This endpoint does NOT touch the DsaInteraction — it's the candidate's
+    scratchpad. The interaction_id only supplies the question's time limit.
     """
-    session = await _load_owned_session(session_id, user, db)
-    await assert_session_alive(session, db)
-
-    if session.current_round != CurrentRound.DSA.value:
-        raise BadRequestError(
-            f"/dsa/run is only valid during the DSA round (current: {session.current_round})"
-        )
-
-    pair = await current_dsa_interaction(session, db)
-    if pair is None:
-        raise BadRequestError("No active DSA question for this session")
-    _, question = pair
+    _, _, question = await _load_dsa_context(session_id, body.interaction_id, user, db)
 
     client = PistonClient()
     result = await client.execute(
@@ -305,25 +371,12 @@ async def dsa_test(
     user: User = Depends(get_current_user),
 ) -> DsaTestResponse:
     """
-    Dry-run the candidate's code against the active DSA question's HIDDEN test
-    cases and return only pass/fail/error per case. Does NOT update the
-    DsaInteraction — score and code are only persisted on /dsa/submit.
-
-    Useful for letting the candidate gauge their solution against the same
-    inputs that grading will use, without consuming their final submission.
+    Dry-run the candidate's code against the named question's HIDDEN test
+    cases. Like /dsa/submit, the response carries only per-case status and
+    counts — never the cases' inputs or outputs. Does NOT update the
+    DsaInteraction; code and score are only persisted on /dsa/submit.
     """
-    session = await _load_owned_session(session_id, user, db)
-    await assert_session_alive(session, db)
-
-    if session.current_round != CurrentRound.DSA.value:
-        raise BadRequestError(
-            f"/dsa/test is only valid during the DSA round (current: {session.current_round})"
-        )
-
-    pair = await current_dsa_interaction(session, db)
-    if pair is None:
-        raise BadRequestError("No active DSA question for this session")
-    _, question = pair
+    _, _, question = await _load_dsa_context(session_id, body.interaction_id, user, db)
 
     cases: list[dict[str, str]] = question.test_cases or []
     client = PistonClient()
@@ -349,7 +402,8 @@ async def dsa_test(
             )
         )
 
-    return DsaTestResponse(case_results=results)
+    passed = sum(1 for r in results if r.status == "passed")
+    return DsaTestResponse(case_results=results, passed=passed, total=len(results))
 
 
 @router.post("/{session_id}/dsa/submit", response_model=DsaSubmitResponse)
@@ -360,56 +414,95 @@ async def dsa_submit(
     user: User = Depends(get_current_user),
 ) -> DsaSubmitResponse:
     """
-    Final submission for the current DSA question. Runs the candidate's code
-    against every hidden test_case on the DsaQuestion, persists code/language/
-    score onto the DsaInteraction, then advances the session — either to the
-    next DSA question, the RESUME round, or terminal COMPLETED.
+    Grade a submission for the named DSA question: run the code against every
+    hidden test case and persist code/language/score onto the DsaInteraction.
 
-    The response carries both the per-case results (so the frontend can show
-    pass/fail per case) and next_state so a single roundtrip is enough.
+    Resubmission is allowed and the LAST SUBMITTED code wins — each recorded
+    submit overwrites the stored solution wholesale, ordered by the time the
+    request arrived (not by how long grading took). Submitting never advances
+    the session; the candidate leaves the round explicitly via POST
+    /dsa/finish. A duplicate or retried submit therefore just re-grades the
+    same question. recorded=false means this run's result was not stored
+    (the session left the DSA round mid-grade, or a newer submission
+    superseded this one).
     """
-    session = await _load_owned_session(session_id, user, db)
-    await assert_session_alive(session, db)
+    submitted_at = datetime.utcnow()
+    await _load_dsa_context(session_id, body.interaction_id, user, db)
 
-    if session.current_round != CurrentRound.DSA.value:
-        raise BadRequestError(
-            f"/dsa/submit is only valid during the DSA round (current: {session.current_round})"
-        )
+    # Grades + commits in its own session under row locks; the summary describes
+    # THIS run, so the response never mixes results from concurrent attempts.
+    summary = await run_evaluate_submission(
+        body.interaction_id, body.source_code, body.language, submitted_at
+    )
+    if not summary:
+        raise BadRequestError("This DSA question is no longer available")
 
-    pair = await current_dsa_interaction(session, db)
-    if pair is None:
-        raise BadRequestError("No active DSA question for this session")
-    interaction, _ = pair
-    interaction_id = interaction.id
-
-    # run_evaluate_submission opens its own AsyncSession and commits the
-    # candidate's code/language/score onto the DsaInteraction internally.
-    case_results_raw = await run_evaluate_submission(
-        interaction_id, body.source_code, body.language
+    return DsaSubmitResponse(
+        case_results=[DsaTestCaseStatus(**c) for c in summary["case_results"]],
+        passed=summary["passed"],
+        total=summary["total"],
+        score=summary["score"],
+        attempts=summary["attempts"],
+        recorded=summary["recorded"],
     )
 
-    # Re-load the interaction so we can read the freshly-committed score.
-    await db.refresh(interaction)
-    score = interaction.score or 0.0
 
-    # Advance to the next DSA question, or transition out of the DSA round.
-    session.current_question_index += 1
-    await db.commit()
+@router.post("/{session_id}/dsa/finish", response_model=InterviewStateResponse)
+async def dsa_finish(
+    session_id: int,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user),
+) -> InterviewStateResponse:
+    """
+    Explicitly leave the DSA round — on to the RESUME round, or straight to
+    COMPLETED when the interview asks no resume questions.
 
-    next_pair = await current_dsa_interaction(session, db)
-    if next_pair is not None:
-        next_interaction, next_question = next_pair
-        next_state = InterviewStateResponse(
+    Idempotent: repeating the call after the transition returns the current
+    state instead of erroring, so a retried request can never double-advance
+    the session.
+    """
+    session = await _load_owned_session(session_id, user, db)
+
+    # Lock the session row so concurrent finishes serialize: a duplicate blocks
+    # here, then sees the committed transition and replays — so the transition
+    # (and its final-grading dispatch) happens exactly once.
+    locked = await db.execute(
+        select(InterviewSession)
+        .where(InterviewSession.id == session.id)
+        .with_for_update()
+        .execution_options(populate_existing=True)
+    )
+    session = locked.scalar_one()
+
+    # Replay after a finish that completed the session (no resume round).
+    if session.status == InterviewStatus.COMPLETED.value:
+        return InterviewStateResponse(
+            session_id=session.id,
+            round=session.current_round,
+            completed=True,
+            question=None,
+        )
+
+    await assert_session_alive(session, db)
+
+    # Replay after a finish that moved us into the resume round.
+    if session.current_round == CurrentRound.RESUME.value:
+        current = await current_resume_question(session, db)
+        if current is None:
+            raise BadRequestError("No active resume question for this session")
+        return InterviewStateResponse(
             session_id=session.id,
             round=session.current_round,
             completed=False,
-            question=dsa_payload_for(next_interaction, next_question),
+            question=ResumeQuestionPayload(
+                question_id=current.id,
+                question=current.question,
+            ),
         )
-    else:
-        next_state = await transition_to_resume(session, db)
 
-    return DsaSubmitResponse(
-        case_results=[DsaCaseResult(**c) for c in case_results_raw],
-        score=score,
-        next_state=next_state,
-    )
+    if session.current_round != CurrentRound.DSA.value:
+        raise BadRequestError(
+            f"/dsa/finish is only valid during the DSA round (current: {session.current_round})"
+        )
+
+    return await transition_to_resume(session, db)

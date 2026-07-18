@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import DateTime, Float, ForeignKey, String, Text, func
+from sqlalchemy import DateTime, Float, ForeignKey, Integer, String, Text, UniqueConstraint, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import BaseTable
@@ -52,6 +52,12 @@ class FollowUpQuestion(BaseTable):
 class DsaInteraction(BaseTable):
     __tablename__ = "dsa_interactions"
 
+    # One question per topic per session — DB backstop for the (serialized)
+    # assignment task, so concurrent assigns can never duplicate a question.
+    __table_args__ = (
+        UniqueConstraint("session_id", "topic_id", name="uq_dsa_interactions_session_topic"),
+    )
+
     session_id: Mapped[int | None] = mapped_column(
         ForeignKey("interview_sessions.id", ondelete="CASCADE"), nullable=True
     )
@@ -64,6 +70,14 @@ class DsaInteraction(BaseTable):
     code: Mapped[str | None] = mapped_column(Text, nullable=True)
     language: Mapped[str | None] = mapped_column(String(50), nullable=True)
     score: Mapped[float | None] = mapped_column(Float, nullable=True)
+    # Submission bookkeeping: resubmissions are allowed (last one wins), so we
+    # track how many attempts were made and the last run's hidden-case tally.
+    # last_submitted_at orders overlapping grading runs — "last" means last
+    # SUBMITTED, not last to finish grading.
+    attempts: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
+    passed_cases: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    total_cases: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    last_submitted_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
     session = relationship(
         "InterviewSession", back_populates="dsa_sessions", foreign_keys=[session_id]

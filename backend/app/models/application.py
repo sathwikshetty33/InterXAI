@@ -66,6 +66,10 @@ class InterviewSession(BaseTable):
     )
     current_round: Mapped[str] = mapped_column(String(20), default=CurrentRound.QUESTIONS.value)
     current_question_index: Mapped[int] = mapped_column(Integer, default=1)
+    # Set by run_assign_dsa_questions when it finishes (even with zero matches),
+    # so GET /sessions/{id}/dsa can tell "assignment still pending" apart from
+    # "assignment done — this is all the questions there will be".
+    dsa_assigned_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     status: Mapped[str] = mapped_column(String(20), default=InterviewStatus.SCHEDULED.value)
     feedback: Mapped[str | None] = mapped_column(Text, nullable=True)
     score: Mapped[float | None] = mapped_column(Float, nullable=True)
