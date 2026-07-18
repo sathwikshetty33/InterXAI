@@ -26,8 +26,10 @@ const InterviewSessionPage: React.FC<InterviewSessionPageProps> = ({
     error,
     isSubmitting,
     followUpIndex,
+    dsaRound,
     answer,
-    applyState,
+    refreshDsaRound,
+    finishDsa,
   } = useInterviewSession(interviewId, token);
 
   return (
@@ -62,17 +64,26 @@ const InterviewSessionPage: React.FC<InterviewSessionPageProps> = ({
 
         {phase === "active" &&
           state &&
-          state.question &&
-          renderRound({
-            state,
-            question: state.question,
-            isSubmitting,
-            error,
-            onAnswer: answer,
-            applyState,
-            token,
-            followUpIndex,
-          })}
+          (state.round === "dsa" ? (
+            <DsaPanel
+              sessionId={state.session_id}
+              token={token}
+              round={dsaRound}
+              error={error}
+              isFinishing={isSubmitting}
+              onRefreshRound={refreshDsaRound}
+              onFinish={finishDsa}
+            />
+          ) : (
+            state.question &&
+            renderRound({
+              question: state.question,
+              isSubmitting,
+              error,
+              onAnswer: answer,
+              followUpIndex,
+            })
+          ))}
 
         {phase === "completed" && <CompletedScreen onExit={onExit} />}
 
@@ -85,24 +96,18 @@ const InterviewSessionPage: React.FC<InterviewSessionPageProps> = ({
 };
 
 interface RenderArgs {
-  state: InterviewStateResponse;
   question: NonNullable<InterviewStateResponse["question"]>;
   isSubmitting: boolean;
   error: string | null;
   onAnswer: (text: string) => Promise<void>;
-  applyState: (next: InterviewStateResponse) => void;
-  token: string;
   followUpIndex: number;
 }
 
 function renderRound({
-  state,
   question,
   isSubmitting,
   error,
   onAnswer,
-  applyState,
-  token,
   followUpIndex,
 }: RenderArgs) {
   if (question.type === "custom") {
@@ -118,26 +123,15 @@ function renderRound({
       />
     );
   }
-  if (question.type === "resume") {
-    return (
-      <TextQAPanel
-        key={`r-${question.question_id}`}
-        question={question}
-        round="resume"
-        followUpIndex={0}
-        isSubmitting={isSubmitting}
-        error={error}
-        onSubmit={onAnswer}
-      />
-    );
-  }
   return (
-    <DsaPanel
-      key={`d-${question.interaction_id}`}
-      sessionId={state.session_id}
-      token={token}
+    <TextQAPanel
+      key={`r-${question.question_id}`}
       question={question}
-      onAdvance={applyState}
+      round="resume"
+      followUpIndex={0}
+      isSubmitting={isSubmitting}
+      error={error}
+      onSubmit={onAnswer}
     />
   );
 }

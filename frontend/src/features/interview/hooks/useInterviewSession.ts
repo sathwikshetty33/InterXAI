@@ -3,9 +3,12 @@ import {
   startInterview,
   submitAnswer,
   sendHeartbeat,
+  getDsaRound,
+  dsaFinish,
   InterviewServiceError,
 } from "../../../services/interview.service";
 import type {
+  DsaRoundResponse,
   InterviewStateResponse,
   SessionStatus,
 } from "../../../services/interview.service";
@@ -24,11 +27,17 @@ export interface UseInterviewSessionReturn {
   error: string | null;
   isSubmitting: boolean;
   followUpIndex: number;
+  dsaRound: DsaRoundResponse | null;
   answer: (text: string) => Promise<void>;
+  refreshDsaRound: () => Promise<void>;
+  finishDsa: () => Promise<void>;
   applyState: (next: InterviewStateResponse) => void;
 }
 
 const HEARTBEAT_MS = 5000;
+// Poll cadence while the DSA round reports status="preparing" — each poll
+// also makes the backend re-dispatch the assignment task, so this self-heals.
+const DSA_PREPARING_POLL_MS = 2500;
 
 export function useInterviewSession(
   interviewId: number,
@@ -42,6 +51,7 @@ export function useInterviewSession(
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [followUpIndex, setFollowUpIndex] = useState(0);
+  const [dsaRound, setDsaRound] = useState<DsaRoundResponse | null>(null);
 
   const heartbeatRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const stoppedRef = useRef(false);
@@ -53,6 +63,16 @@ export function useInterviewSession(
     }
   }, []);
 
+  const goTerminal = useCallback(
+    (status: SessionStatus) => {
+      stoppedRef.current = true;
+      stopHeartbeat();
+      setTerminalStatus(status);
+      setPhase(status === "completed" ? "completed" : "terminal");
+    },
+    [stopHeartbeat],
+  );
+
   const startHeartbeat = useCallback(
     (sessionId: number) => {
       stopHeartbeat();
@@ -61,17 +81,14 @@ export function useInterviewSession(
         try {
           const res = await sendHeartbeat(sessionId, token);
           if (res.status !== "ongoing") {
-            stoppedRef.current = true;
-            stopHeartbeat();
-            setTerminalStatus(res.status);
-            setPhase(res.status === "completed" ? "completed" : "terminal");
+            goTerminal(res.status);
           }
         } catch {
           // transient network error — ignore, next tick will try again
         }
       }, HEARTBEAT_MS);
     },
-    [token, stopHeartbeat],
+    [token, stopHeartbeat, goTerminal],
   );
 
   const applyState = useCallback(
@@ -92,6 +109,9 @@ export function useInterviewSession(
         }
         return next;
       });
+      if (next.round !== "dsa") {
+        setDsaRound(null);
+      }
       if (next.completed) {
         stoppedRef.current = true;
         stopHeartbeat();
@@ -136,6 +156,54 @@ export function useInterviewSession(
     };
   }, [interviewId, token, startHeartbeat, stopHeartbeat]);
 
+  // DSA round overview: fetch when the session enters the DSA round, and
+  // keep polling while the backend reports "preparing".
+  const sessionId = state?.session_id;
+  const inDsaRound = phase === "active" && state?.round === "dsa";
+
+  const refreshDsaRound = useCallback(async () => {
+    if (!inDsaRound || sessionId === undefined) return;
+    try {
+      const round = await getDsaRound(sessionId, token);
+      setDsaRound(round);
+    } catch (e) {
+      if (e instanceof InterviewServiceError && e.statusCode === 403) {
+        goTerminal("disqualified");
+      }
+      // other errors: keep the last snapshot; the next poll/refresh retries
+    }
+  }, [inDsaRound, sessionId, token, goTerminal]);
+
+  useEffect(() => {
+    if (!inDsaRound || sessionId === undefined) return;
+    let cancelled = false;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+
+    const tick = async () => {
+      try {
+        const round = await getDsaRound(sessionId, token);
+        if (cancelled) return;
+        setDsaRound(round);
+        if (round.status === "preparing") {
+          timer = setTimeout(tick, DSA_PREPARING_POLL_MS);
+        }
+      } catch (e) {
+        if (cancelled) return;
+        if (e instanceof InterviewServiceError && e.statusCode === 403) {
+          goTerminal("disqualified");
+          return;
+        }
+        timer = setTimeout(tick, DSA_PREPARING_POLL_MS);
+      }
+    };
+    tick();
+
+    return () => {
+      cancelled = true;
+      if (timer) clearTimeout(timer);
+    };
+  }, [inDsaRound, sessionId, token, goTerminal]);
+
   const answer = useCallback(
     async (text: string) => {
       if (!state || isSubmitting) return;
@@ -147,10 +215,7 @@ export function useInterviewSession(
       } catch (e) {
         if (e instanceof InterviewServiceError) {
           if (e.statusCode === 403) {
-            stoppedRef.current = true;
-            stopHeartbeat();
-            setTerminalStatus("disqualified");
-            setPhase("terminal");
+            goTerminal("disqualified");
           } else {
             setError(e.message);
           }
@@ -161,8 +226,31 @@ export function useInterviewSession(
         setIsSubmitting(false);
       }
     },
-    [state, isSubmitting, token, applyState, stopHeartbeat],
+    [state, isSubmitting, token, applyState, goTerminal],
   );
+
+  // Leave the DSA round. Idempotent server-side, so a retry is safe.
+  const finishDsa = useCallback(async () => {
+    if (!state || isSubmitting) return;
+    setIsSubmitting(true);
+    setError(null);
+    try {
+      const next = await dsaFinish(state.session_id, token);
+      applyState(next);
+    } catch (e) {
+      if (e instanceof InterviewServiceError) {
+        if (e.statusCode === 403) {
+          goTerminal("disqualified");
+        } else {
+          setError(e.message);
+        }
+      } else {
+        setError("Network error. Please try again.");
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, [state, isSubmitting, token, applyState, goTerminal]);
 
   return {
     phase,
@@ -171,7 +259,10 @@ export function useInterviewSession(
     error,
     isSubmitting,
     followUpIndex,
+    dsaRound,
     answer,
+    refreshDsaRound,
+    finishDsa,
     applyState,
   };
 }

@@ -7,18 +7,21 @@ import {
   InterviewServiceError,
 } from "../../../services/interview.service";
 import type {
-  DsaCaseResult,
+  DsaRoundQuestion,
+  DsaRoundResponse,
   DsaRunResponse,
+  DsaSubmitResponse,
   DsaTestResponse,
-  InterviewStateResponse,
-  QuestionPayload,
 } from "../../../services/interview.service";
 
 interface Props {
   sessionId: number;
   token: string;
-  question: Extract<QuestionPayload, { type: "dsa" }>;
-  onAdvance: (next: InterviewStateResponse) => void;
+  round: DsaRoundResponse | null;
+  error: string | null;
+  isFinishing: boolean;
+  onRefreshRound: () => Promise<void>;
+  onFinish: () => Promise<void>;
 }
 
 type LangOpt =
@@ -81,455 +84,792 @@ type ConsoleState =
   | { kind: "running"; label: string }
   | { kind: "run-result"; result: DsaRunResponse }
   | { kind: "test-result"; result: DsaTestResponse }
-  | {
-      kind: "submit-result";
-      results: DsaCaseResult[];
-      score: number;
-      hasNext: boolean;
-    }
+  | { kind: "submit-result"; result: DsaSubmitResponse }
   | { kind: "error"; message: string };
+
+interface EditorState {
+  language: LangOpt;
+  source: string;
+  stdin: string;
+  showStdin: boolean;
+  console: ConsoleState;
+}
+
+const defaultEditor = (): EditorState => ({
+  language: "python",
+  source: LANGUAGES.find((l) => l.value === "python")?.starter ?? "",
+  stdin: "",
+  showStdin: false,
+  console: { kind: "idle" },
+});
 
 export default function DsaPanel({
   sessionId,
   token,
-  question,
-  onAdvance,
+  round,
+  error,
+  isFinishing,
+  onRefreshRound,
+  onFinish,
 }: Props) {
-  const [language, setLanguage] = useState<LangOpt>("python");
-  const [source, setSource] = useState<string>(
-    LANGUAGES.find((l) => l.value === "python")?.starter ?? "",
-  );
-  const [stdin, setStdin] = useState("");
-  const [showStdin, setShowStdin] = useState(false);
-  const [consoleState, setConsoleState] = useState<ConsoleState>({
-    kind: "idle",
-  });
-  const [showConfirm, setShowConfirm] = useState(false);
+  const [selectedId, setSelectedId] = useState<number | null>(null);
+  const [editors, setEditors] = useState<Record<number, EditorState>>({});
+  const [showFinishConfirm, setShowFinishConfirm] = useState(false);
 
-  // Question changes are handled by parent remounting via React key.
-  // Language switch swaps the editor starter only if the user hasn't typed
-  // anything significant — keep their code if they have, otherwise load the
-  // new starter.
-  const handleLanguageChange = (next: LangOpt) => {
-    const currentStarter =
-      LANGUAGES.find((l) => l.value === language)?.starter ?? "";
-    const nextStarter = LANGUAGES.find((l) => l.value === next)?.starter ?? "";
-    setLanguage(next);
-    if (source.trim() === currentStarter.trim() || source.trim() === "") {
-      setSource(nextStarter);
-    }
+  const questions = round?.questions ?? [];
+
+  if (
+    round === null ||
+    (round.status === "preparing" && questions.length === 0)
+  ) {
+    return <PreparingScreen />;
+  }
+
+  if (questions.length === 0) {
+    // Assignment finished with nothing to serve — let the candidate move on.
+    return (
+      <EmptyRoundScreen
+        isFinishing={isFinishing}
+        error={error}
+        onFinish={onFinish}
+      />
+    );
+  }
+
+  const selected =
+    questions.find((q) => q.interaction_id === selectedId) ?? questions[0];
+  const editor = editors[selected.interaction_id] ?? defaultEditor();
+
+  const patchEditor = (patch: Partial<EditorState>) => {
+    setEditors((prev) => ({
+      ...prev,
+      [selected.interaction_id]: {
+        ...(prev[selected.interaction_id] ?? defaultEditor()),
+        ...patch,
+      },
+    }));
   };
 
-  const isBusy = consoleState.kind === "running";
+  const handleLanguageChange = (next: LangOpt) => {
+    const currentStarter =
+      LANGUAGES.find((l) => l.value === editor.language)?.starter ?? "";
+    const nextStarter = LANGUAGES.find((l) => l.value === next)?.starter ?? "";
+    const keepCode =
+      editor.source.trim() !== currentStarter.trim() &&
+      editor.source.trim() !== "";
+    patchEditor({
+      language: next,
+      source: keepCode ? editor.source : nextStarter,
+    });
+  };
+
+  const isBusy = editor.console.kind === "running";
 
   const handleRun = async () => {
-    setConsoleState({ kind: "running", label: "Running…" });
+    patchEditor({ console: { kind: "running", label: "Running…" } });
     try {
       const res = await dsaRun(
         sessionId,
-        { source_code: source, language, stdin },
+        {
+          interaction_id: selected.interaction_id,
+          source_code: editor.source,
+          language: editor.language,
+          stdin: editor.stdin,
+        },
         token,
       );
-      setConsoleState({ kind: "run-result", result: res });
+      patchEditor({ console: { kind: "run-result", result: res } });
     } catch (e) {
-      setConsoleState({
-        kind: "error",
-        message:
-          e instanceof InterviewServiceError ? e.message : "Network error.",
+      patchEditor({
+        console: {
+          kind: "error",
+          message:
+            e instanceof InterviewServiceError ? e.message : "Network error.",
+        },
       });
     }
   };
 
   const handleTest = async () => {
-    setConsoleState({ kind: "running", label: "Running hidden test cases…" });
+    patchEditor({
+      console: { kind: "running", label: "Running hidden test cases…" },
+    });
     try {
       const res = await dsaTest(
         sessionId,
-        { source_code: source, language },
+        {
+          interaction_id: selected.interaction_id,
+          source_code: editor.source,
+          language: editor.language,
+        },
         token,
       );
-      setConsoleState({ kind: "test-result", result: res });
+      patchEditor({ console: { kind: "test-result", result: res } });
     } catch (e) {
-      setConsoleState({
-        kind: "error",
-        message:
-          e instanceof InterviewServiceError ? e.message : "Network error.",
+      patchEditor({
+        console: {
+          kind: "error",
+          message:
+            e instanceof InterviewServiceError ? e.message : "Network error.",
+        },
       });
     }
   };
 
   const handleSubmit = async () => {
-    setShowConfirm(false);
-    setConsoleState({ kind: "running", label: "Grading your submission…" });
+    patchEditor({
+      console: { kind: "running", label: "Grading your submission…" },
+    });
     try {
       const res = await dsaSubmit(
         sessionId,
-        { source_code: source, language },
+        {
+          interaction_id: selected.interaction_id,
+          source_code: editor.source,
+          language: editor.language,
+        },
         token,
       );
-      setConsoleState({
-        kind: "submit-result",
-        results: res.case_results,
-        score: res.score,
-        hasNext: !res.next_state.completed,
-      });
-      // Slight delay so the candidate sees the per-case results before transition
-      setTimeout(() => onAdvance(res.next_state), 1800);
+      patchEditor({ console: { kind: "submit-result", result: res } });
+      // Refresh the round overview so the tab badges show the new state.
+      void onRefreshRound();
     } catch (e) {
-      setConsoleState({
-        kind: "error",
-        message:
-          e instanceof InterviewServiceError ? e.message : "Network error.",
+      patchEditor({
+        console: {
+          kind: "error",
+          message:
+            e instanceof InterviewServiceError ? e.message : "Network error.",
+        },
       });
     }
   };
 
   const applySampleStdin = (i: number) => {
-    const sample = question.sample_test_cases?.[i];
+    const sample = selected.sample_test_cases?.[i];
     if (sample) {
-      setStdin(sample.stdin);
-      setShowStdin(true);
+      patchEditor({ stdin: sample.stdin, showStdin: true });
     }
   };
+
+  const submittedCount = questions.filter((q) => q.attempts > 0).length;
 
   return (
     <div
       style={{
-        display: "grid",
-        gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1.15fr)",
-        gap: 18,
-        padding: "20px 32px 60px",
         maxWidth: 1500,
         margin: "0 auto",
-        minHeight: "calc(100vh - 110px)",
+        padding: "16px 32px 60px",
       }}
     >
-      {/* LEFT: problem statement */}
-      <section
-        style={{
-          background: "rgba(255,255,255,0.78)",
-          backdropFilter: "blur(24px)",
-          WebkitBackdropFilter: "blur(24px)",
-          border: "1px solid rgba(255,255,255,0.95)",
-          borderRadius: 22,
-          padding: 28,
-          boxShadow: "0 18px 40px -12px rgba(15,23,42,0.1)",
-          overflow: "auto",
-          maxHeight: "calc(100vh - 110px)",
-        }}
-      >
-        <span
-          style={{
-            fontSize: 11,
-            fontWeight: 700,
-            color: "#1d4ed8",
-            background: "rgba(219,234,254,0.7)",
-            border: "1px solid rgba(96,165,250,0.4)",
-            borderRadius: 99,
-            padding: "4px 11px",
-            letterSpacing: "0.05em",
-            textTransform: "uppercase",
-          }}
-        >
-          Coding round
-        </span>
-        <h2
-          style={{
-            fontSize: 24,
-            fontWeight: 800,
-            color: "#0f172a",
-            letterSpacing: "-0.5px",
-            marginTop: 12,
-            marginBottom: 14,
-          }}
-        >
-          {question.problem_name}
-        </h2>
+      <QuestionTabs
+        questions={questions}
+        selectedId={selected.interaction_id}
+        onSelect={setSelectedId}
+        submittedCount={submittedCount}
+        isFinishing={isFinishing}
+        onFinishClick={() => setShowFinishConfirm(true)}
+      />
+
+      {error && (
         <div
           style={{
-            fontSize: 11.5,
-            color: "#64748b",
+            margin: "10px 0 0",
+            padding: "10px 16px",
+            background: "rgba(254,226,226,0.8)",
+            border: "1px solid rgba(252,165,165,0.7)",
+            borderRadius: 12,
+            color: "#b91c1c",
+            fontSize: 13,
             fontWeight: 600,
-            marginBottom: 18,
-            display: "flex",
-            alignItems: "center",
-            gap: 10,
           }}
         >
-          <span
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 5,
-            }}
-          >
-            <ClockIcon /> {(question.time_limit_ms / 1000).toFixed(1)}s per case
-          </span>
+          {error}
         </div>
+      )}
 
-        <MarkdownView source={question.description} />
-
-        {question.sample_test_cases &&
-          question.sample_test_cases.length > 0 && (
-            <div style={{ marginTop: 22 }}>
-              <div
-                style={{
-                  fontSize: 12,
-                  fontWeight: 800,
-                  color: "#0f172a",
-                  textTransform: "uppercase",
-                  letterSpacing: "0.08em",
-                  marginBottom: 12,
-                }}
-              >
-                Sample test cases
-              </div>
-              {question.sample_test_cases.map((c, i) => (
-                <div
-                  key={i}
-                  style={{
-                    marginBottom: 14,
-                    background: "rgba(248,250,252,0.6)",
-                    border: "1px solid rgba(226,232,240,0.7)",
-                    borderRadius: 12,
-                    padding: 12,
-                  }}
-                >
-                  <div
-                    style={{
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center",
-                      marginBottom: 8,
-                    }}
-                  >
-                    <span
-                      style={{
-                        fontSize: 11,
-                        fontWeight: 700,
-                        color: "#475569",
-                        textTransform: "uppercase",
-                        letterSpacing: "0.06em",
-                      }}
-                    >
-                      Case {i + 1}
-                    </span>
-                    <button
-                      onClick={() => applySampleStdin(i)}
-                      style={{
-                        fontSize: 11,
-                        fontWeight: 700,
-                        color: "#2563eb",
-                        background: "rgba(219,234,254,0.6)",
-                        border: "1px solid rgba(147,197,253,0.5)",
-                        borderRadius: 99,
-                        padding: "3px 10px",
-                        cursor: "pointer",
-                      }}
-                    >
-                      Use as input
-                    </button>
-                  </div>
-                  <CodeBlock label="stdin" body={c.stdin} />
-                  <div style={{ height: 6 }} />
-                  <CodeBlock label="expected" body={c.expected_stdout} />
-                </div>
-              ))}
-            </div>
-          )}
-      </section>
-
-      {/* RIGHT: editor + console */}
-      <section
+      <div
         style={{
-          display: "flex",
-          flexDirection: "column",
-          gap: 12,
+          display: "grid",
+          gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1.15fr)",
+          gap: 18,
+          marginTop: 14,
+          minHeight: "calc(100vh - 190px)",
         }}
       >
-        <div
+        {/* LEFT: problem statement */}
+        <section
           style={{
             background: "rgba(255,255,255,0.78)",
             backdropFilter: "blur(24px)",
             WebkitBackdropFilter: "blur(24px)",
             border: "1px solid rgba(255,255,255,0.95)",
             borderRadius: 22,
-            padding: 18,
+            padding: 28,
             boxShadow: "0 18px 40px -12px rgba(15,23,42,0.1)",
-            display: "flex",
-            flexDirection: "column",
-            gap: 12,
-            flex: 1,
-            minHeight: 380,
+            overflow: "auto",
+            maxHeight: "calc(100vh - 190px)",
           }}
         >
           <div
             style={{
               display: "flex",
               alignItems: "center",
-              justifyContent: "space-between",
-              gap: 12,
+              gap: 8,
+              flexWrap: "wrap",
             }}
           >
-            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <span
+              style={{
+                fontSize: 11,
+                fontWeight: 700,
+                color: "#1d4ed8",
+                background: "rgba(219,234,254,0.7)",
+                border: "1px solid rgba(96,165,250,0.4)",
+                borderRadius: 99,
+                padding: "4px 11px",
+                letterSpacing: "0.05em",
+                textTransform: "uppercase",
+              }}
+            >
+              Coding round
+            </span>
+            {selected.attempts > 0 && (
               <span
                 style={{
                   fontSize: 11,
                   fontWeight: 700,
-                  color: "#64748b",
-                  textTransform: "uppercase",
-                  letterSpacing: "0.08em",
+                  color: "#047857",
+                  background: "rgba(209,250,229,0.7)",
+                  border: "1px solid rgba(110,231,183,0.5)",
+                  borderRadius: 99,
+                  padding: "4px 11px",
                 }}
               >
-                Editor
+                Submitted · {selected.passed_cases ?? 0}/
+                {selected.total_cases ?? 0} cases ·{" "}
+                {selected.attempts === 1
+                  ? "1 attempt"
+                  : `${selected.attempts} attempts`}
               </span>
-              <select
-                value={language}
-                onChange={(e) =>
-                  handleLanguageChange(e.target.value as LangOpt)
-                }
-                disabled={isBusy}
-                style={{
-                  background: "rgba(255,255,255,0.95)",
-                  border: "1px solid rgba(203,213,225,0.7)",
-                  borderRadius: 8,
-                  padding: "5px 10px",
-                  fontSize: 12.5,
-                  fontWeight: 600,
-                  color: "#0f172a",
-                  fontFamily: "inherit",
-                  cursor: "pointer",
-                }}
-              >
-                {LANGUAGES.map((l) => (
-                  <option key={l.value} value={l.value}>
-                    {l.label}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div style={{ display: "flex", gap: 8 }}>
-              <EditorBtn onClick={handleRun} disabled={isBusy} kind="ghost">
-                <PlayIcon /> Run
-              </EditorBtn>
-              <EditorBtn onClick={handleTest} disabled={isBusy} kind="ghost">
-                <BeakerIcon /> Test Hidden
-              </EditorBtn>
-              <EditorBtn
-                onClick={() => setShowConfirm(true)}
-                disabled={isBusy}
-                kind="primary"
-              >
-                <CheckIcon /> Submit
-              </EditorBtn>
-            </div>
+            )}
           </div>
-
-          <textarea
-            value={source}
-            onChange={(e) => setSource(e.target.value)}
-            spellCheck={false}
+          <h2
             style={{
-              flex: 1,
-              minHeight: 320,
-              background: "#0f172a",
-              color: "#e2e8f0",
-              border: "1px solid rgba(15,23,42,0.6)",
-              borderRadius: 14,
-              padding: "14px 16px",
-              fontFamily:
-                "ui-monospace, SFMono-Regular, 'SF Mono', Menlo, monospace",
-              fontSize: 13,
-              lineHeight: 1.6,
-              outline: "none",
-              resize: "vertical",
-              tabSize: 4,
-            }}
-            onKeyDown={(e) => {
-              if (e.key === "Tab") {
-                e.preventDefault();
-                const t = e.currentTarget;
-                const s = t.selectionStart;
-                const next = source.slice(0, s) + "    " + source.slice(s);
-                setSource(next);
-                requestAnimationFrame(() => {
-                  t.selectionStart = t.selectionEnd = s + 4;
-                });
-              }
-            }}
-          />
-
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              gap: 12,
+              fontSize: 24,
+              fontWeight: 800,
+              color: "#0f172a",
+              letterSpacing: "-0.5px",
+              marginTop: 12,
+              marginBottom: 14,
             }}
           >
-            <button
-              onClick={() => setShowStdin((s) => !s)}
-              style={{
-                fontSize: 12,
-                color: "#2563eb",
-                background: "transparent",
-                border: "none",
-                cursor: "pointer",
-                fontWeight: 600,
-                display: "flex",
-                alignItems: "center",
-                gap: 6,
-              }}
-            >
-              {showStdin ? "▾" : "▸"} Custom stdin
-            </button>
+            {selected.problem_name}
+          </h2>
+          <div
+            style={{
+              fontSize: 11.5,
+              color: "#64748b",
+              fontWeight: 600,
+              marginBottom: 18,
+              display: "flex",
+              alignItems: "center",
+              gap: 10,
+            }}
+          >
             <span
-              style={{
-                fontSize: 11,
-                color: "#94a3b8",
-                fontWeight: 500,
-              }}
+              style={{ display: "inline-flex", alignItems: "center", gap: 5 }}
             >
-              Auto-save: in-memory only · submit before refresh
+              <ClockIcon /> {(selected.time_limit_ms / 1000).toFixed(1)}s per
+              case
             </span>
           </div>
 
-          {showStdin && (
-            <textarea
-              value={stdin}
-              onChange={(e) => setStdin(e.target.value)}
-              placeholder="Enter custom stdin for the Run button…"
-              rows={3}
+          <MarkdownView source={selected.description} />
+
+          {selected.sample_test_cases &&
+            selected.sample_test_cases.length > 0 && (
+              <div style={{ marginTop: 22 }}>
+                <div
+                  style={{
+                    fontSize: 12,
+                    fontWeight: 800,
+                    color: "#0f172a",
+                    textTransform: "uppercase",
+                    letterSpacing: "0.08em",
+                    marginBottom: 12,
+                  }}
+                >
+                  Sample test cases
+                </div>
+                {selected.sample_test_cases.map((c, i) => (
+                  <div
+                    key={i}
+                    style={{
+                      marginBottom: 14,
+                      background: "rgba(248,250,252,0.6)",
+                      border: "1px solid rgba(226,232,240,0.7)",
+                      borderRadius: 12,
+                      padding: 12,
+                    }}
+                  >
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        marginBottom: 8,
+                      }}
+                    >
+                      <span
+                        style={{
+                          fontSize: 11,
+                          fontWeight: 700,
+                          color: "#475569",
+                          textTransform: "uppercase",
+                          letterSpacing: "0.06em",
+                        }}
+                      >
+                        Case {i + 1}
+                      </span>
+                      <button
+                        onClick={() => applySampleStdin(i)}
+                        style={{
+                          fontSize: 11,
+                          fontWeight: 700,
+                          color: "#2563eb",
+                          background: "rgba(219,234,254,0.6)",
+                          border: "1px solid rgba(147,197,253,0.5)",
+                          borderRadius: 99,
+                          padding: "3px 10px",
+                          cursor: "pointer",
+                        }}
+                      >
+                        Use as input
+                      </button>
+                    </div>
+                    <CodeBlock label="stdin" body={c.stdin} />
+                    <div style={{ height: 6 }} />
+                    <CodeBlock label="expected" body={c.expected_stdout} />
+                  </div>
+                ))}
+              </div>
+            )}
+        </section>
+
+        {/* RIGHT: editor + console */}
+        <section
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: 12,
+          }}
+        >
+          <div
+            style={{
+              background: "rgba(255,255,255,0.78)",
+              backdropFilter: "blur(24px)",
+              WebkitBackdropFilter: "blur(24px)",
+              border: "1px solid rgba(255,255,255,0.95)",
+              borderRadius: 22,
+              padding: 18,
+              boxShadow: "0 18px 40px -12px rgba(15,23,42,0.1)",
+              display: "flex",
+              flexDirection: "column",
+              gap: 12,
+              flex: 1,
+              minHeight: 380,
+            }}
+          >
+            <div
               style={{
-                background: "rgba(15,23,42,0.05)",
-                border: "1px solid rgba(203,213,225,0.7)",
-                borderRadius: 10,
-                padding: "10px 12px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: 12,
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <span
+                  style={{
+                    fontSize: 11,
+                    fontWeight: 700,
+                    color: "#64748b",
+                    textTransform: "uppercase",
+                    letterSpacing: "0.08em",
+                  }}
+                >
+                  Editor
+                </span>
+                <select
+                  value={editor.language}
+                  onChange={(e) =>
+                    handleLanguageChange(e.target.value as LangOpt)
+                  }
+                  disabled={isBusy}
+                  style={{
+                    background: "rgba(255,255,255,0.95)",
+                    border: "1px solid rgba(203,213,225,0.7)",
+                    borderRadius: 8,
+                    padding: "5px 10px",
+                    fontSize: 12.5,
+                    fontWeight: 600,
+                    color: "#0f172a",
+                    fontFamily: "inherit",
+                    cursor: "pointer",
+                  }}
+                >
+                  {LANGUAGES.map((l) => (
+                    <option key={l.value} value={l.value}>
+                      {l.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div style={{ display: "flex", gap: 8 }}>
+                <EditorBtn onClick={handleRun} disabled={isBusy} kind="ghost">
+                  <PlayIcon /> Run
+                </EditorBtn>
+                <EditorBtn onClick={handleTest} disabled={isBusy} kind="ghost">
+                  <BeakerIcon /> Test Hidden
+                </EditorBtn>
+                <EditorBtn
+                  onClick={handleSubmit}
+                  disabled={isBusy}
+                  kind="primary"
+                >
+                  <CheckIcon /> {selected.attempts > 0 ? "Resubmit" : "Submit"}
+                </EditorBtn>
+              </div>
+            </div>
+
+            <textarea
+              value={editor.source}
+              onChange={(e) => patchEditor({ source: e.target.value })}
+              spellCheck={false}
+              style={{
+                flex: 1,
+                minHeight: 320,
+                background: "#0f172a",
+                color: "#e2e8f0",
+                border: "1px solid rgba(15,23,42,0.6)",
+                borderRadius: 14,
+                padding: "14px 16px",
                 fontFamily:
                   "ui-monospace, SFMono-Regular, 'SF Mono', Menlo, monospace",
-                fontSize: 12.5,
-                color: "#0f172a",
+                fontSize: 13,
+                lineHeight: 1.6,
                 outline: "none",
                 resize: "vertical",
+                tabSize: 4,
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Tab") {
+                  e.preventDefault();
+                  const t = e.currentTarget;
+                  const s = t.selectionStart;
+                  const next =
+                    editor.source.slice(0, s) + "    " + editor.source.slice(s);
+                  patchEditor({ source: next });
+                  requestAnimationFrame(() => {
+                    t.selectionStart = t.selectionEnd = s + 4;
+                  });
+                }
               }}
             />
-          )}
-        </div>
 
-        <Console state={consoleState} />
-      </section>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: 12,
+              }}
+            >
+              <button
+                onClick={() => patchEditor({ showStdin: !editor.showStdin })}
+                style={{
+                  fontSize: 12,
+                  color: "#2563eb",
+                  background: "transparent",
+                  border: "none",
+                  cursor: "pointer",
+                  fontWeight: 600,
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 6,
+                }}
+              >
+                {editor.showStdin ? "▾" : "▸"} Custom stdin
+              </button>
+              <span
+                style={{
+                  fontSize: 11,
+                  color: "#94a3b8",
+                  fontWeight: 500,
+                }}
+              >
+                Resubmissions allowed · your last submission counts
+              </span>
+            </div>
 
-      {showConfirm && (
-        <ConfirmModal
-          onCancel={() => setShowConfirm(false)}
-          onConfirm={handleSubmit}
+            {editor.showStdin && (
+              <textarea
+                value={editor.stdin}
+                onChange={(e) => patchEditor({ stdin: e.target.value })}
+                placeholder="Enter custom stdin for the Run button…"
+                rows={3}
+                style={{
+                  background: "rgba(15,23,42,0.05)",
+                  border: "1px solid rgba(203,213,225,0.7)",
+                  borderRadius: 10,
+                  padding: "10px 12px",
+                  fontFamily:
+                    "ui-monospace, SFMono-Regular, 'SF Mono', Menlo, monospace",
+                  fontSize: 12.5,
+                  color: "#0f172a",
+                  outline: "none",
+                  resize: "vertical",
+                }}
+              />
+            )}
+          </div>
+
+          <Console state={editor.console} />
+        </section>
+      </div>
+
+      {showFinishConfirm && (
+        <FinishConfirmModal
+          submittedCount={submittedCount}
+          totalCount={questions.length}
+          isFinishing={isFinishing}
+          onCancel={() => setShowFinishConfirm(false)}
+          onConfirm={() => {
+            setShowFinishConfirm(false);
+            void onFinish();
+          }}
         />
       )}
     </div>
   );
 }
 
-// ── Sub-components ──────────────────────────────────────────────────────────
+// ── Round-level screens & tabs ──────────────────────────────────────────────
+
+const QuestionTabs: React.FC<{
+  questions: DsaRoundQuestion[];
+  selectedId: number;
+  onSelect: (id: number) => void;
+  submittedCount: number;
+  isFinishing: boolean;
+  onFinishClick: () => void;
+}> = ({
+  questions,
+  selectedId,
+  onSelect,
+  submittedCount,
+  isFinishing,
+  onFinishClick,
+}) => (
+  <div
+    style={{
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "space-between",
+      gap: 12,
+      flexWrap: "wrap",
+    }}
+  >
+    <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+      {questions.map((q, i) => {
+        const active = q.interaction_id === selectedId;
+        const done = q.attempts > 0;
+        return (
+          <button
+            key={q.interaction_id}
+            onClick={() => onSelect(q.interaction_id)}
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: 8,
+              padding: "8px 14px",
+              borderRadius: 12,
+              fontSize: 12.5,
+              fontWeight: 700,
+              cursor: "pointer",
+              border: active
+                ? "1px solid rgba(59,130,246,0.6)"
+                : "1px solid rgba(255,255,255,0.95)",
+              background: active
+                ? "linear-gradient(135deg,rgba(59,130,246,0.16),rgba(29,78,216,0.16))"
+                : "rgba(255,255,255,0.7)",
+              color: active ? "#1e3a8a" : "#475569",
+              boxShadow: active ? "0 6px 18px rgba(59,130,246,0.18)" : "none",
+            }}
+          >
+            <span>Q{i + 1}</span>
+            <span
+              style={{
+                fontWeight: 600,
+                maxWidth: 160,
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
+              }}
+            >
+              {q.problem_name}
+            </span>
+            {done && (
+              <span
+                style={{
+                  fontSize: 10.5,
+                  fontWeight: 800,
+                  color: "#047857",
+                  background: "rgba(209,250,229,0.85)",
+                  border: "1px solid rgba(110,231,183,0.5)",
+                  borderRadius: 99,
+                  padding: "2px 8px",
+                }}
+              >
+                {q.passed_cases ?? 0}/{q.total_cases ?? 0}
+              </span>
+            )}
+          </button>
+        );
+      })}
+    </div>
+    <button
+      onClick={onFinishClick}
+      disabled={isFinishing}
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: 7,
+        background: "linear-gradient(135deg,#059669,#047857)",
+        color: "#fff",
+        border: "none",
+        borderRadius: 99,
+        padding: "9px 20px",
+        fontSize: 13,
+        fontWeight: 700,
+        cursor: isFinishing ? "not-allowed" : "pointer",
+        opacity: isFinishing ? 0.6 : 1,
+        boxShadow: "0 8px 22px rgba(5,150,105,0.35)",
+      }}
+    >
+      {isFinishing
+        ? "Finishing…"
+        : `Finish round (${submittedCount}/${questions.length} submitted)`}
+    </button>
+  </div>
+);
+
+const PreparingScreen = () => (
+  <div
+    style={{
+      display: "flex",
+      flexDirection: "column",
+      alignItems: "center",
+      justifyContent: "center",
+      padding: "90px 32px",
+      gap: 14,
+    }}
+  >
+    <div
+      style={{
+        width: 48,
+        height: 48,
+        borderRadius: "50%",
+        border: "3px solid rgba(59,130,246,0.2)",
+        borderTopColor: "#2563eb",
+        animation: "spin 0.9s linear infinite",
+      }}
+    />
+    <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+    <div
+      style={{
+        fontSize: 15,
+        fontWeight: 700,
+        color: "#0f172a",
+        letterSpacing: "-0.3px",
+      }}
+    >
+      Preparing your coding problems…
+    </div>
+    <div style={{ fontSize: 13, color: "#64748b" }}>
+      This usually takes a few seconds. The round will start automatically.
+    </div>
+  </div>
+);
+
+const EmptyRoundScreen: React.FC<{
+  isFinishing: boolean;
+  error: string | null;
+  onFinish: () => Promise<void>;
+}> = ({ isFinishing, error, onFinish }) => (
+  <div
+    style={{
+      maxWidth: 520,
+      margin: "60px auto",
+      padding: "36px 32px",
+      background: "rgba(255,255,255,0.8)",
+      backdropFilter: "blur(24px)",
+      WebkitBackdropFilter: "blur(24px)",
+      border: "1px solid rgba(255,255,255,0.95)",
+      borderRadius: 28,
+      boxShadow: "0 25px 50px -12px rgba(15,23,42,0.18)",
+      textAlign: "center",
+    }}
+  >
+    <h2
+      style={{
+        fontSize: 21,
+        fontWeight: 800,
+        color: "#0f172a",
+        letterSpacing: "-0.5px",
+        marginBottom: 8,
+      }}
+    >
+      No coding problems available
+    </h2>
+    <p
+      style={{
+        fontSize: 14,
+        color: "#475569",
+        lineHeight: 1.55,
+        marginBottom: 22,
+      }}
+    >
+      There are no coding problems for this interview. Continue to the next
+      round — this won't count against you.
+    </p>
+    {error && (
+      <p style={{ fontSize: 13, color: "#b91c1c", marginBottom: 14 }}>
+        {error}
+      </p>
+    )}
+    <button
+      onClick={() => void onFinish()}
+      disabled={isFinishing}
+      style={{
+        background: "linear-gradient(135deg,#3b82f6,#1d4ed8)",
+        color: "#fff",
+        border: "none",
+        borderRadius: 99,
+        padding: "11px 26px",
+        fontSize: 13.5,
+        fontWeight: 700,
+        cursor: isFinishing ? "not-allowed" : "pointer",
+        opacity: isFinishing ? 0.6 : 1,
+        boxShadow: "0 8px 22px rgba(59,130,246,0.4)",
+      }}
+    >
+      {isFinishing ? "Continuing…" : "Continue to next round"}
+    </button>
+  </div>
+);
+
+// ── Console ─────────────────────────────────────────────────────────────────
 
 const Console: React.FC<{ state: ConsoleState }> = ({ state }) => (
   <div
@@ -651,16 +991,13 @@ const ConsoleBody: React.FC<{ state: ConsoleState }> = ({ state }) => {
     );
   }
   if (state.kind === "test-result") {
-    const passed = state.result.case_results.filter(
-      (c) => c.status === "passed",
-    ).length;
     return (
       <div>
         <div style={{ marginBottom: 10, color: "#cbd5e1" }}>
           <strong style={{ color: "#fff" }}>
-            {passed} / {state.result.case_results.length}
+            {state.result.passed} / {state.result.total}
           </strong>{" "}
-          cases passed
+          hidden cases passed
         </div>
         <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
           {state.result.case_results.map((c) => (
@@ -671,33 +1008,48 @@ const ConsoleBody: React.FC<{ state: ConsoleState }> = ({ state }) => {
     );
   }
   if (state.kind === "submit-result") {
-    const passed = state.results.filter((c) => c.status === "passed").length;
+    const r = state.result;
     return (
       <div>
+        <div style={{ marginBottom: 10, color: "#cbd5e1" }}>
+          <strong style={{ color: "#fff" }}>
+            {r.passed} / {r.total}
+          </strong>{" "}
+          cases passed · score{" "}
+          <strong style={{ color: "#a7f3d0" }}>{r.score.toFixed(1)}</strong> ·
+          attempt <strong style={{ color: "#fff" }}>{r.attempts}</strong>
+        </div>
+        {!r.recorded && (
+          <div
+            style={{
+              marginBottom: 10,
+              padding: "8px 10px",
+              background: "rgba(251,191,36,0.12)",
+              border: "1px solid rgba(251,191,36,0.4)",
+              borderRadius: 8,
+              color: "#fde68a",
+            }}
+          >
+            ⚠ This result was not recorded — the round ended or a newer
+            submission superseded it.
+          </div>
+        )}
         <div
           style={{
             display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            marginBottom: 12,
+            flexWrap: "wrap",
+            gap: 6,
+            marginBottom: 10,
           }}
         >
-          <div style={{ color: "#cbd5e1" }}>
-            <strong style={{ color: "#fff" }}>
-              {passed} / {state.results.length}
-            </strong>{" "}
-            cases passed · score{" "}
-            <strong style={{ color: "#a7f3d0" }}>
-              {state.score.toFixed(1)}
-            </strong>
-          </div>
-          <div style={{ color: "#94a3b8", fontSize: 11 }}>
-            {state.hasNext ? "Advancing to next question…" : "Wrapping up…"}
-          </div>
+          {r.case_results.map((c) => (
+            <CaseDot key={c.case} idx={c.case} status={c.status} />
+          ))}
         </div>
-        {state.results.map((c) => (
-          <CaseRow key={c.case} result={c} />
-        ))}
+        <div style={{ color: "#94a3b8", fontSize: 11.5 }}>
+          You can resubmit until you finish the round — your last submission
+          counts.
+        </div>
       </div>
     );
   }
@@ -733,77 +1085,6 @@ const CaseDot: React.FC<{
     >
       <span>{label}</span>
       Case {idx}
-    </div>
-  );
-};
-
-const CaseRow: React.FC<{ result: DsaCaseResult }> = ({ result }) => {
-  const color =
-    result.status === "passed"
-      ? "#10b981"
-      : result.status === "failed"
-        ? "#f59e0b"
-        : "#ef4444";
-  return (
-    <div
-      style={{
-        background: "rgba(255,255,255,0.04)",
-        border: `1px solid ${color}33`,
-        borderRadius: 10,
-        padding: 10,
-        marginBottom: 8,
-      }}
-    >
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          marginBottom: 6,
-        }}
-      >
-        <span style={{ color, fontWeight: 700, fontSize: 12 }}>
-          Case {result.case} · {result.status.toUpperCase()}
-        </span>
-      </div>
-      {result.status !== "passed" && (
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "1fr 1fr",
-            gap: 8,
-            fontSize: 11.5,
-          }}
-        >
-          <div>
-            <div style={{ color: "#94a3b8", marginBottom: 3 }}>expected</div>
-            <pre
-              style={{
-                whiteSpace: "pre-wrap",
-                background: "rgba(16,185,129,0.08)",
-                padding: 6,
-                borderRadius: 6,
-                color: "#bbf7d0",
-              }}
-            >
-              {result.expected}
-            </pre>
-          </div>
-          <div>
-            <div style={{ color: "#94a3b8", marginBottom: 3 }}>actual</div>
-            <pre
-              style={{
-                whiteSpace: "pre-wrap",
-                background: "rgba(248,113,113,0.08)",
-                padding: 6,
-                borderRadius: 6,
-                color: "#fecaca",
-              }}
-            >
-              {result.actual}
-            </pre>
-          </div>
-        </div>
-      )}
     </div>
   );
 };
@@ -903,10 +1184,13 @@ const EditorBtn: React.FC<{
   </button>
 );
 
-const ConfirmModal: React.FC<{
+const FinishConfirmModal: React.FC<{
+  submittedCount: number;
+  totalCount: number;
+  isFinishing: boolean;
   onCancel: () => void;
   onConfirm: () => void;
-}> = ({ onCancel, onConfirm }) => (
+}> = ({ submittedCount, totalCount, isFinishing, onCancel, onConfirm }) => (
   <div
     role="dialog"
     aria-modal="true"
@@ -930,7 +1214,7 @@ const ConfirmModal: React.FC<{
         border: "1px solid rgba(255,255,255,0.95)",
         borderRadius: 22,
         padding: 28,
-        maxWidth: 420,
+        maxWidth: 440,
         width: "92%",
         boxShadow: "0 35px 60px -15px rgba(15,23,42,0.3)",
       }}
@@ -967,7 +1251,7 @@ const ConfirmModal: React.FC<{
           marginBottom: 6,
         }}
       >
-        Submit final answer?
+        Finish coding round?
       </h3>
       <p
         style={{
@@ -977,8 +1261,11 @@ const ConfirmModal: React.FC<{
           marginBottom: 22,
         }}
       >
-        This is your final submission for this question. You won't be able to
-        resubmit. The session will advance once grading completes.
+        You've submitted {submittedCount} of {totalCount} problem
+        {totalCount === 1 ? "" : "s"}. Once you finish, you can't come back to
+        this round or resubmit.
+        {submittedCount < totalCount &&
+          " Unsubmitted problems will score zero."}
       </p>
       <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
         <button
@@ -994,23 +1281,25 @@ const ConfirmModal: React.FC<{
             cursor: "pointer",
           }}
         >
-          Keep editing
+          Keep working
         </button>
         <button
           onClick={onConfirm}
+          disabled={isFinishing}
           style={{
-            background: "linear-gradient(135deg,#3b82f6,#1d4ed8)",
+            background: "linear-gradient(135deg,#059669,#047857)",
             color: "#fff",
             border: "none",
             borderRadius: 99,
             padding: "10px 22px",
             fontSize: 13,
             fontWeight: 700,
-            cursor: "pointer",
-            boxShadow: "0 6px 18px rgba(59,130,246,0.4)",
+            cursor: isFinishing ? "not-allowed" : "pointer",
+            opacity: isFinishing ? 0.6 : 1,
+            boxShadow: "0 6px 18px rgba(5,150,105,0.35)",
           }}
         >
-          Submit final
+          Finish round
         </button>
       </div>
     </div>
