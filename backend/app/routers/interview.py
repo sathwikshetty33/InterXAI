@@ -115,11 +115,17 @@ async def get_applied_interviews(
 ) -> list[AppliedInterviewResponse]:
     """
     Get all interviews that the current user has applied to.
+
+    `status` is derived from the application's shortlisting decision —
+    "approved" once the org (or the resume screener) has shortlisted the
+    candidate, "pending" otherwise. The raw Application.status column is
+    deliberately NOT used: nothing ever transitions it past "applied", and
+    the dashboard gates the "Attempt Interview" button on "approved".
     """
     logger.info("Get applied interviews request for user: %d", current_user.id)
 
     stmt = (
-        select(CustomInterview, Application.status)
+        select(CustomInterview, Application.shortlisting_decision)
         .join(Application, CustomInterview.id == Application.interview_id)
         .where(Application.user_id == current_user.id)
     )
@@ -127,9 +133,9 @@ async def get_applied_interviews(
     result = await db.execute(stmt)
 
     applied_interviews = []
-    for interview, app_status in result:
+    for interview, shortlisted in result:
         data = CustomInterviewBasicResponse.model_validate(interview).model_dump()
-        data["status"] = app_status
+        data["status"] = "approved" if shortlisted else "pending"
         applied_interviews.append(AppliedInterviewResponse(**data))
 
     return applied_interviews
