@@ -4,6 +4,8 @@
  * Mirrors backend schemas: app/schemas/user.py + app/schemas/interview.py
  */
 
+import { extractErrorDetail } from "./apiError";
+
 const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -26,7 +28,10 @@ function authHeaders(token: string) {
 async function handleResponse<T>(res: Response): Promise<T> {
   if (!res.ok) {
     const data = await res.json().catch(() => ({}));
-    throw new UserServiceError(res.status, data?.detail ?? "Request failed.");
+    throw new UserServiceError(
+      res.status,
+      extractErrorDetail(data, "Request failed."),
+    );
   }
   return res.json() as Promise<T>;
 }

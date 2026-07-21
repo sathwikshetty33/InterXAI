@@ -4,6 +4,8 @@
  * Mirrors the backend schemas in app/schemas/user.py
  */
 
+import { extractErrorDetail } from "./apiError";
+
 const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
 // ── Request / Response types (mirrors backend schemas) ──────────────────────
@@ -58,7 +60,7 @@ export async function loginUser(
     const data = await response.json().catch(() => ({}));
     throw new AuthServiceError(
       response.status,
-      data?.detail ?? "Login failed. Please check your credentials.",
+      extractErrorDetail(data, "Login failed. Please check your credentials."),
     );
   }
 
@@ -89,7 +91,7 @@ export async function fetchCurrentUser(token: string): Promise<UserResponse> {
     const data = await response.json().catch(() => ({}));
     throw new AuthServiceError(
       response.status,
-      data?.detail ?? "Could not load your account.",
+      extractErrorDetail(data, "Could not load your account."),
     );
   }
 

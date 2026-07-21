@@ -7,6 +7,8 @@
  *   - app/routers/leaderboard.py   (GET /leaderboard/{interview_id})
  */
 
+import { extractErrorDetail } from "./apiError";
+
 const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
 // ── Interview list / detail / create types ──────────────────────────────────
@@ -178,7 +180,7 @@ async function handle<T>(res: Response): Promise<T> {
     const data = await res.json().catch(() => ({}));
     throw new LeaderboardServiceError(
       res.status,
-      data?.detail ?? "Request failed. Please try again.",
+      extractErrorDetail(data, "Request failed. Please try again."),
     );
   }
   return res.json() as Promise<T>;

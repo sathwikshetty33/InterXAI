@@ -4,6 +4,8 @@
  * Mirrors app/schemas/organization.py and app/routers/organization.py
  */
 
+import { extractErrorDetail } from "./apiError";
+
 const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
 // ── Types (mirrors backend schemas) ─────────────────────────────────────────
@@ -48,7 +50,7 @@ async function handleResponse<T>(response: Response): Promise<T> {
     const data = await response.json().catch(() => ({}));
     throw new OrgServiceError(
       response.status,
-      data?.detail ?? "Request failed. Please try again.",
+      extractErrorDetail(data, "Request failed. Please try again."),
     );
   }
   return response.json() as Promise<T>;

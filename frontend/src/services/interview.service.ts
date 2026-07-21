@@ -1,3 +1,5 @@
+import { extractErrorDetail } from "./apiError";
+
 const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
 export class InterviewServiceError extends Error {
@@ -119,7 +121,7 @@ async function handle<T>(res: Response): Promise<T> {
     const data = await res.json().catch(() => ({}));
     throw new InterviewServiceError(
       res.status,
-      data?.detail ?? "Request failed.",
+      extractErrorDetail(data, "Request failed."),
     );
   }
   return res.json() as Promise<T>;
