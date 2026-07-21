@@ -4,6 +4,7 @@ from datetime import datetime
 from fastapi import APIRouter, Depends, File, UploadFile, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.database import get_db
 from app.exceptions.common import BadRequestError, ForbiddenError, NotFoundError
@@ -19,6 +20,20 @@ from app.utils.default_providers import default_worker_provider
 logger = get_logger(__name__)
 
 router: APIRouter = APIRouter(prefix="/applications", tags=["applications"])
+
+
+def _application_response(
+    app: Application, username: str | None = None, email: str | None = None
+) -> ApplicationResponse:
+    """Serialize an Application, filling in the applicant's name/email so the
+    org UI can show who applied instead of a bare user id."""
+    resp = ApplicationResponse.model_validate(app)
+    if username is None and app.user is not None:
+        username = app.user.username
+        email = app.user.email
+    resp.username = username
+    resp.email = email
+    return resp
 
 
 @router.get("/{interview_id}", response_model=list[ApplicationResponse])
@@ -44,11 +59,13 @@ async def get_interview_applications(
         raise ForbiddenError("You cannot access this resource")
 
     applications_result = await db.execute(
-        select(Application).where(Application.interview_id == interview_id)
+        select(Application)
+        .options(selectinload(Application.user))
+        .where(Application.interview_id == interview_id)
     )
     applications = applications_result.scalars().all()
 
-    return [ApplicationResponse.model_validate(app) for app in applications]
+    return [_application_response(app) for app in applications]
 
 
 @router.post(
@@ -111,7 +128,9 @@ async def apply_for_interview(
     )
 
     logger.info("Application created successfully: %d", application.id)
-    return ApplicationResponse.model_validate(application)
+    return _application_response(
+        application, username=current_user.username, email=current_user.email
+    )
 
 
 @router.patch("/{application_id}/shortlist", response_model=ApplicationResponse)
@@ -130,7 +149,11 @@ async def shortlist_application(
         org.id,
     )
 
-    app_result = await db.execute(select(Application).where(Application.id == application_id))
+    app_result = await db.execute(
+        select(Application)
+        .options(selectinload(Application.user))
+        .where(Application.id == application_id)
+    )
     application = app_result.scalar_one_or_none()
 
     if not application:
@@ -154,4 +177,4 @@ async def shortlist_application(
         application_id,
         application.shortlisting_decision,
     )
-    return ApplicationResponse.model_validate(application)
+    return _application_response(application)
