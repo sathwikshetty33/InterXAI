@@ -1,5 +1,46 @@
-@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap");
 @import "tailwindcss";
+
+/*
+ * InterXAI design language — "Signal".
+ * An interview is a signal that gets measured and scored. Warm ink + paper,
+ * a single amber "signal" accent (spent only on scores / focus / live state),
+ * a technical grotesque for display and a mono for the numeric readouts.
+ */
+:root {
+  --ink: #17181c;
+  --ink-2: #34353c;
+  --paper: #f4f2ec;
+  --surface: #ffffff;
+  --surface-2: #faf9f4;
+  --line: #e6e3da;
+  --line-strong: #d8d4c8;
+  --muted: #6f6b63;
+  --muted-2: #928d82;
+
+  --signal: #e29c12;
+  --signal-strong: #c9860a;
+  --signal-tint: #fbf0d6;
+
+  --positive: #157567;
+  --positive-tint: #e2f1ee;
+  --negative: #bf462e;
+  --negative-tint: #f7e6e1;
+
+  --radius: 14px;
+  --radius-sm: 10px;
+  --radius-lg: 22px;
+
+  --shadow-sm:
+    0 1px 2px rgba(23, 24, 28, 0.06), 0 1px 3px rgba(23, 24, 28, 0.05);
+  --shadow-md: 0 12px 32px -14px rgba(23, 24, 28, 0.2);
+  --shadow-lg: 0 34px 64px -26px rgba(23, 24, 28, 0.32);
+
+  --font-display: "Space Grotesk", "Inter", system-ui, sans-serif;
+  --font-body:
+    "Inter", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: "Space Mono", ui-monospace, "SF Mono", Menlo, monospace;
+}
 
 *,
 *::before,
@@ -14,30 +55,129 @@ html {
 body {
   margin: 0;
   padding: 0;
-  background-color: #050e0a;
-  font-family:
-    "Inter",
-    system-ui,
-    -apple-system,
-    sans-serif;
+  background-color: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-body);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Scrollbar styling */
+:focus-visible {
+  outline: 2px solid var(--signal);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+::selection {
+  background: var(--signal-tint);
+  color: var(--ink);
+}
+
+/* Motion primitives — used sparingly, disabled under reduced-motion. */
+@keyframes ix-reveal {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes ix-live {
+  0%,
+  100% {
+    opacity: 1;
+    box-shadow: 0 0 0 0 rgba(226, 156, 18, 0.5);
+  }
+  50% {
+    opacity: 0.65;
+    box-shadow: 0 0 0 5px rgba(226, 156, 18, 0);
+  }
+}
+
+.ix-reveal {
+  animation: ix-reveal 0.72s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+.ix-live-dot {
+  animation: ix-live 1.8s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
+/* Layout helpers (inline styles can't express media queries). */
+.ix-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 24px;
+  width: 100%;
+}
+.ix-hero-grid {
+  display: grid;
+  grid-template-columns: 1.05fr 0.95fr;
+  gap: 56px;
+  align-items: center;
+}
+.ix-steps {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 18px;
+}
+.ix-nav-links {
+  display: flex;
+  align-items: center;
+  gap: 28px;
+}
+.ix-org-grid {
+  display: grid;
+  grid-template-columns: 0.9fr 1.1fr;
+  gap: 48px;
+  align-items: center;
+}
+@media (max-width: 940px) {
+  .ix-hero-grid,
+  .ix-org-grid {
+    grid-template-columns: 1fr;
+    gap: 40px;
+  }
+}
+@media (max-width: 820px) {
+  .ix-steps {
+    grid-template-columns: 1fr;
+  }
+}
+@media (max-width: 680px) {
+  .ix-nav-links {
+    display: none;
+  }
+}
+
+/* Scrollbar — neutral, matches paper. */
 ::-webkit-scrollbar {
-  width: 6px;
+  width: 10px;
+  height: 10px;
 }
-
 ::-webkit-scrollbar-track {
-  background: #050e0a;
+  background: transparent;
 }
-
 ::-webkit-scrollbar-thumb {
-  background: #1f2e25;
-  border-radius: 3px;
+  background: var(--line-strong);
+  border-radius: 6px;
+  border: 2px solid var(--paper);
 }
-
 ::-webkit-scrollbar-thumb:hover {
-  background: #3ddc84;
+  background: var(--muted-2);
 }
