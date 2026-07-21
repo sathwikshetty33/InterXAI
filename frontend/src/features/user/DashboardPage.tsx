@@ -1,4 +1,6 @@
 import React, { useMemo, useState } from "react";
+import Logo from "../../ui/Logo";
+import Button from "../../ui/Button";
 import { useDashboard } from "./hooks/useDashboard";
 import type {
   InterviewBasic,
@@ -17,31 +19,27 @@ type Tab = "available" | "applied";
 
 const STATUS_STYLES: Record<
   string,
-  { bg: string; border: string; color: string; dot: string }
+  { bg: string; color: string; dot: string }
 > = {
   pending: {
-    bg: "rgba(254,243,199,0.7)",
-    border: "rgba(251,191,36,0.5)",
-    color: "#b45309",
-    dot: "#f59e0b",
+    bg: "var(--signal-tint)",
+    color: "var(--signal-strong)",
+    dot: "var(--signal)",
   },
   approved: {
-    bg: "rgba(209,250,229,0.7)",
-    border: "rgba(52,211,153,0.5)",
-    color: "#047857",
-    dot: "#10b981",
+    bg: "var(--positive-tint)",
+    color: "var(--positive)",
+    dot: "var(--positive)",
   },
   rejected: {
-    bg: "rgba(254,226,226,0.7)",
-    border: "rgba(248,113,113,0.5)",
-    color: "#b91c1c",
-    dot: "#ef4444",
+    bg: "var(--negative-tint)",
+    color: "var(--negative)",
+    dot: "var(--negative)",
   },
   completed: {
-    bg: "rgba(219,234,254,0.7)",
-    border: "rgba(96,165,250,0.5)",
-    color: "#1d4ed8",
-    dot: "#3b82f6",
+    bg: "var(--surface-2)",
+    color: "var(--muted)",
+    dot: "var(--muted-2)",
   },
 };
 
@@ -61,6 +59,12 @@ function timeRemaining(deadline: string) {
   const hours = Math.floor(diff / (1000 * 60 * 60));
   return { label: `${hours}h remaining`, urgent: true };
 }
+
+const CARD_GRID: React.CSSProperties = {
+  display: "grid",
+  gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))",
+  gap: 16,
+};
 
 const DashboardPage: React.FC<DashboardPageProps> = ({
   user,
@@ -106,67 +110,36 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
       id="dashboard-page"
       style={{
         minHeight: "100vh",
-        background:
-          "linear-gradient(155deg, #bdd9f2 0%, #cfe8fb 12%, #dff0ff 28%, #ecf7ff 45%, #f4faff 62%, #e8f4fd 78%, #d2e9f8 100%)",
-        fontFamily:
-          "'Inter', system-ui, -apple-system, BlinkMacSystemFont, sans-serif",
+        background: "var(--paper)",
+        color: "var(--ink)",
+        fontFamily: "var(--font-body)",
         position: "relative",
       }}
     >
-      <BgBlobs />
-
-      {/* Sticky glassmorphic top nav */}
+      {/* Sticky top nav */}
       <header
         style={{
           position: "sticky",
           top: 0,
           zIndex: 40,
-          background: "rgba(255,255,255,0.65)",
-          backdropFilter: "blur(20px)",
-          WebkitBackdropFilter: "blur(20px)",
-          borderBottom: "1px solid rgba(255,255,255,0.7)",
-          boxShadow: "0 2px 16px rgba(15,23,42,0.04)",
+          background: "color-mix(in srgb, var(--paper) 82%, transparent)",
+          backdropFilter: "blur(12px)",
+          WebkitBackdropFilter: "blur(12px)",
+          borderBottom: "1px solid var(--line)",
         }}
       >
         <div
           style={{
             maxWidth: 1300,
             margin: "0 auto",
-            padding: "14px 52px",
+            padding: "12px 32px",
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
             gap: 16,
           }}
         >
-          <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
-            <div
-              style={{
-                width: 34,
-                height: 34,
-                borderRadius: 9,
-                background: "linear-gradient(145deg,#4f9cf9,#1649c9)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                border: "1.5px solid rgba(255,255,255,0.35)",
-              }}
-            >
-              <span style={{ color: "#fff", fontWeight: 800, fontSize: 14 }}>
-                X
-              </span>
-            </div>
-            <span
-              style={{
-                fontWeight: 800,
-                fontSize: 17,
-                color: "#0f172a",
-                letterSpacing: "-0.4px",
-              }}
-            >
-              InterXAI
-            </span>
-          </div>
+          <Logo size={19} />
 
           <SearchBar
             value={query}
@@ -180,13 +153,14 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
                 width: 36,
                 height: 36,
                 borderRadius: "50%",
-                background: "rgba(255,255,255,0.7)",
-                border: "1px solid rgba(255,255,255,0.95)",
+                background: "var(--surface)",
+                border: "1px solid var(--line-strong)",
                 cursor: "pointer",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
                 position: "relative",
+                color: "var(--muted)",
               }}
               aria-label="Notifications"
             >
@@ -199,8 +173,8 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
                   width: 7,
                   height: 7,
                   borderRadius: "50%",
-                  background: "#ef4444",
-                  border: "1.5px solid #fff",
+                  background: "var(--signal)",
+                  border: "1.5px solid var(--paper)",
                 }}
               />
             </button>
@@ -211,8 +185,8 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
                 alignItems: "center",
                 gap: 10,
                 padding: "4px 12px 4px 4px",
-                background: "rgba(255,255,255,0.7)",
-                border: "1px solid rgba(255,255,255,0.95)",
+                background: "var(--surface)",
+                border: "1px solid var(--line)",
                 borderRadius: 99,
               }}
             >
@@ -221,14 +195,14 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
                   width: 30,
                   height: 30,
                   borderRadius: "50%",
-                  background: "linear-gradient(145deg,#4f9cf9,#1649c9)",
-                  color: "#fff",
+                  background: "var(--ink)",
+                  color: "var(--paper)",
                   fontSize: 12,
-                  fontWeight: 800,
+                  fontWeight: 700,
+                  fontFamily: "var(--font-mono)",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
-                  boxShadow: "0 4px 10px rgba(59,130,246,0.35)",
                 }}
               >
                 {initials}
@@ -238,7 +212,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
                   style={{
                     fontSize: 12.5,
                     fontWeight: 700,
-                    color: "#0f172a",
+                    color: "var(--ink)",
                     lineHeight: 1.2,
                   }}
                 >
@@ -247,7 +221,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
                 <span
                   style={{
                     fontSize: 10.5,
-                    color: "#64748b",
+                    color: "var(--muted)",
                     lineHeight: 1.2,
                   }}
                 >
@@ -256,22 +230,14 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
               </div>
             </div>
 
-            <button
+            <Button
+              variant="ghost"
+              size="sm"
               onClick={onLogout}
               id="dashboard-logout"
-              style={{
-                fontSize: 12,
-                fontWeight: 600,
-                color: "#64748b",
-                background: "transparent",
-                border: "1px solid rgba(203,213,225,0.7)",
-                padding: "7px 14px",
-                borderRadius: 99,
-                cursor: "pointer",
-              }}
             >
               Sign out
-            </button>
+            </Button>
           </div>
         </div>
       </header>
@@ -283,7 +249,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
           zIndex: 10,
           maxWidth: 1300,
           margin: "0 auto",
-          padding: "32px 52px 60px",
+          padding: "32px 32px 60px",
           display: "grid",
           gridTemplateColumns: selectedInterview ? "1fr 380px" : "1fr",
           gap: 24,
@@ -302,44 +268,44 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
           >
             <div
               style={{
-                background:
-                  "linear-gradient(135deg, rgba(59,130,246,0.95), rgba(29,78,216,0.95))",
-                borderRadius: 22,
-                padding: "22px 24px",
-                color: "#fff",
-                boxShadow: "0 18px 40px -10px rgba(29,78,216,0.45)",
+                background: "var(--ink)",
+                color: "var(--paper)",
+                borderRadius: "var(--radius-lg)",
+                padding: "24px 26px",
+                boxShadow: "var(--shadow-md)",
                 position: "relative",
                 overflow: "hidden",
               }}
             >
-              <div
+              <span
                 style={{
-                  position: "absolute",
-                  top: -40,
-                  right: -40,
-                  width: 180,
-                  height: 180,
-                  borderRadius: "50%",
-                  background: "rgba(255,255,255,0.12)",
-                }}
-              />
-              <Pill text="Today's focus" light />
-              <div
-                style={{
-                  fontSize: 22,
-                  fontWeight: 800,
-                  letterSpacing: "-0.5px",
-                  marginTop: 12,
-                  marginBottom: 4,
+                  display: "inline-block",
+                  fontFamily: "var(--font-mono)",
+                  fontSize: 11.5,
+                  fontWeight: 700,
+                  letterSpacing: "0.1em",
+                  textTransform: "uppercase",
+                  color: "var(--signal)",
                 }}
               >
-                Welcome back, {displayName} 👋
+                Today's focus
+              </span>
+              <div
+                style={{
+                  fontFamily: "var(--font-display)",
+                  fontSize: 24,
+                  fontWeight: 600,
+                  letterSpacing: "-0.6px",
+                  margin: "12px 0 6px",
+                }}
+              >
+                Welcome back, {displayName}
               </div>
               <div
                 style={{
                   fontSize: 13.5,
-                  color: "rgba(255,255,255,0.85)",
-                  fontWeight: 500,
+                  color: "color-mix(in srgb, var(--paper) 72%, transparent)",
+                  lineHeight: 1.55,
                 }}
               >
                 You have {available.length} new interviews and{" "}
@@ -351,19 +317,19 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
             <MetricCard
               label="Available"
               value={available.length}
-              accent="#3b82f6"
+              accent="var(--signal-strong)"
               icon={<BriefcaseIcon />}
             />
             <MetricCard
               label="Applied"
               value={applied.length}
-              accent="#8b5cf6"
+              accent="var(--ink)"
               icon={<ClipboardIcon />}
             />
             <MetricCard
-              label="Avg. Score"
+              label="Avg. score"
               value="82%"
-              accent="#10b981"
+              accent="var(--positive)"
               icon={<TrendIcon />}
             />
           </div>
@@ -376,22 +342,20 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
                 alignItems: "center",
                 gap: 14,
                 padding: "14px 18px",
-                background: "rgba(255,255,255,0.7)",
-                backdropFilter: "blur(14px)",
-                WebkitBackdropFilter: "blur(14px)",
-                border: "1px solid rgba(147,197,253,0.6)",
-                borderRadius: 16,
+                background: "var(--surface)",
+                border: "1px solid var(--line)",
+                borderRadius: "var(--radius)",
                 marginBottom: 22,
-                boxShadow: "0 6px 18px rgba(59,130,246,0.08)",
+                boxShadow: "var(--shadow-sm)",
               }}
             >
               <div
                 style={{
                   width: 36,
                   height: 36,
-                  borderRadius: 10,
-                  background: "linear-gradient(145deg,#dbeafe,#bfdbfe)",
-                  color: "#1d4ed8",
+                  borderRadius: "var(--radius-sm)",
+                  background: "var(--signal-tint)",
+                  color: "var(--signal-strong)",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
@@ -405,30 +369,25 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
                   style={{
                     fontSize: 13.5,
                     fontWeight: 700,
-                    color: "#0f172a",
+                    color: "var(--ink)",
                   }}
                 >
                   Your profile is incomplete
                 </div>
-                <div style={{ fontSize: 12.5, color: "#64748b", marginTop: 2 }}>
-                  Add your bio and links so organisations can find you.
+                <div
+                  style={{
+                    fontSize: 12.5,
+                    color: "var(--muted)",
+                    marginTop: 2,
+                  }}
+                >
+                  Add your bio and links so organizations can find you.
                 </div>
               </div>
-              <button
-                style={{
-                  background: "linear-gradient(135deg,#3b82f6,#1d4ed8)",
-                  color: "#fff",
-                  border: "none",
-                  borderRadius: 99,
-                  padding: "8px 16px",
-                  fontSize: 12.5,
-                  fontWeight: 700,
-                  cursor: "pointer",
-                  boxShadow: "0 4px 12px rgba(59,130,246,0.35)",
-                }}
-              >
-                Complete profile →
-              </button>
+              <Button variant="primary" size="sm">
+                Complete profile
+                <ArrowIcon />
+              </Button>
             </div>
           )}
 
@@ -438,11 +397,10 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
             style={{
               display: "inline-flex",
               padding: 4,
-              background: "rgba(255,255,255,0.7)",
-              border: "1px solid rgba(255,255,255,0.95)",
+              background: "var(--surface-2)",
+              border: "1px solid var(--line)",
               borderRadius: 99,
-              marginBottom: 18,
-              boxShadow: "0 4px 14px rgba(15,23,42,0.04)",
+              marginBottom: 20,
             }}
           >
             {(["available", "applied"] as Tab[]).map((t) => (
@@ -456,18 +414,13 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
                   padding: "8px 18px",
                   borderRadius: 99,
                   fontSize: 13,
-                  fontWeight: 700,
+                  fontWeight: 600,
+                  fontFamily: "var(--font-body)",
                   border: "none",
                   cursor: "pointer",
-                  background:
-                    tab === t
-                      ? "linear-gradient(135deg,#3b82f6,#1d4ed8)"
-                      : "transparent",
-                  color: tab === t ? "#fff" : "#64748b",
-                  boxShadow:
-                    tab === t ? "0 6px 16px rgba(59,130,246,0.35)" : "none",
-                  transition: "all 0.2s",
-                  textTransform: "capitalize",
+                  background: tab === t ? "var(--ink)" : "transparent",
+                  color: tab === t ? "var(--paper)" : "var(--muted)",
+                  transition: "background 0.16s ease, color 0.16s ease",
                 }}
               >
                 {t === "available"
@@ -485,7 +438,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
                 style={{
                   marginTop: 8,
                   fontSize: 13,
-                  color: "#2563eb",
+                  color: "var(--signal-strong)",
                   background: "transparent",
                   border: "none",
                   cursor: "pointer",
@@ -498,13 +451,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
           )}
 
           {isLoading && (
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))",
-                gap: 16,
-              }}
-            >
+            <div style={CARD_GRID}>
               {[1, 2, 3, 4].map((i) => (
                 <SkeletonCard key={i} />
               ))}
@@ -529,14 +476,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
                     }
                   />
                 ) : (
-                  <div
-                    style={{
-                      display: "grid",
-                      gridTemplateColumns:
-                        "repeat(auto-fill, minmax(320px, 1fr))",
-                      gap: 16,
-                    }}
-                  >
+                  <div style={CARD_GRID}>
                     {filteredAvailable.map((iv) => (
                       <AvailableCard
                         key={iv.id}
@@ -567,14 +507,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
                     }
                   />
                 ) : (
-                  <div
-                    style={{
-                      display: "grid",
-                      gridTemplateColumns:
-                        "repeat(auto-fill, minmax(320px, 1fr))",
-                      gap: 16,
-                    }}
-                  >
+                  <div style={CARD_GRID}>
                     {filteredApplied.map((iv) => (
                       <AppliedCard
                         key={iv.id}
@@ -598,14 +531,11 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
             style={{
               position: "sticky",
               top: 88,
-              background: "rgba(255,255,255,0.78)",
-              backdropFilter: "blur(24px)",
-              WebkitBackdropFilter: "blur(24px)",
-              border: "1px solid rgba(255,255,255,0.95)",
-              borderRadius: 24,
+              background: "var(--surface)",
+              border: "1px solid var(--line)",
+              borderRadius: "var(--radius-lg)",
               padding: 24,
-              boxShadow:
-                "0 25px 50px -12px rgba(15,23,42,0.12), inset 0 1px 2px rgba(255,255,255,0.7)",
+              boxShadow: "var(--shadow-md)",
             }}
           >
             <div
@@ -617,16 +547,16 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
                 marginBottom: 14,
               }}
             >
-              <Pill text={`Interview · #${selectedInterview.id}`} />
+              <Tag text={`Interview · #${selectedInterview.id}`} />
               <button
                 onClick={() => setSelectedId(null)}
                 style={{
                   width: 28,
                   height: 28,
                   borderRadius: "50%",
-                  background: "rgba(241,245,249,0.8)",
-                  border: "none",
-                  color: "#64748b",
+                  background: "var(--surface-2)",
+                  border: "1px solid var(--line)",
+                  color: "var(--muted)",
                   cursor: "pointer",
                   display: "flex",
                   alignItems: "center",
@@ -646,11 +576,12 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
             </div>
             <h3
               style={{
-                fontSize: 20,
-                fontWeight: 800,
-                color: "#0f172a",
-                letterSpacing: "-0.5px",
-                marginBottom: 6,
+                fontFamily: "var(--font-display)",
+                fontSize: 21,
+                fontWeight: 600,
+                color: "var(--ink)",
+                letterSpacing: "-0.6px",
+                margin: "0 0 6px",
               }}
             >
               {selectedInterview.position}
@@ -658,9 +589,9 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
             <p
               style={{
                 fontSize: 12.5,
-                color: "#64748b",
+                color: "var(--muted)",
                 fontWeight: 500,
-                marginBottom: 18,
+                margin: "0 0 18px",
               }}
             >
               {selectedInterview.experience} experience
@@ -668,12 +599,12 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
             <div
               style={{
                 fontSize: 13,
-                color: "#475569",
+                color: "var(--ink-2)",
                 lineHeight: 1.65,
-                background: "rgba(248,250,252,0.6)",
+                background: "var(--surface-2)",
                 padding: 14,
-                borderRadius: 12,
-                border: "1px solid rgba(226,232,240,0.7)",
+                borderRadius: "var(--radius-sm)",
+                border: "1px solid var(--line)",
                 marginBottom: 18,
               }}
             >
@@ -706,74 +637,46 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
             {"status" in selectedInterview ? (
               // Applied interview — only show Attempt if approved by org
               (selectedInterview as AppliedInterview).status === "approved" ? (
-                <button
+                <Button
                   id="detail-attempt-btn"
+                  variant="signal"
+                  size="lg"
                   onClick={() => onAttemptInterview?.(selectedInterview.id)}
-                  style={{
-                    marginTop: 18,
-                    width: "100%",
-                    background: "linear-gradient(135deg,#3b82f6,#1d4ed8)",
-                    color: "#fff",
-                    border: "none",
-                    borderRadius: 99,
-                    padding: "12px 22px",
-                    fontSize: 14,
-                    fontWeight: 700,
-                    cursor: "pointer",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    gap: 8,
-                    boxShadow: "0 8px 22px rgba(59,130,246,0.4)",
-                  }}
+                  style={{ marginTop: 18, width: "100%" }}
                 >
-                  Attempt Interview
+                  Attempt interview
                   <ArrowIcon />
-                </button>
+                </Button>
               ) : (
                 <div
                   style={{
                     marginTop: 18,
                     width: "100%",
-                    background: "rgba(241,245,249,0.8)",
-                    border: "1px solid rgba(226,232,240,0.8)",
+                    background: "var(--surface-2)",
+                    border: "1px solid var(--line)",
                     borderRadius: 99,
                     padding: "12px 22px",
                     fontSize: 13.5,
                     fontWeight: 600,
-                    color: "#94a3b8",
+                    color: "var(--muted)",
                     textAlign: "center",
                   }}
                 >
-                  ⏳ Waiting for org approval
+                  Waiting for org approval
                 </div>
               )
             ) : (
-              // Available interview — show Apply Now
-              <button
+              // Available interview — show Apply
+              <Button
                 id="detail-apply-btn"
+                variant="primary"
+                size="lg"
                 onClick={() => setApplyingToId(selectedInterview.id)}
-                style={{
-                  marginTop: 18,
-                  width: "100%",
-                  background: "linear-gradient(135deg,#3b82f6,#1d4ed8)",
-                  color: "#fff",
-                  border: "none",
-                  borderRadius: 99,
-                  padding: "12px 22px",
-                  fontSize: 14,
-                  fontWeight: 700,
-                  cursor: "pointer",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  gap: 8,
-                  boxShadow: "0 8px 22px rgba(59,130,246,0.4)",
-                }}
+                style={{ marginTop: 18, width: "100%" }}
               >
-                Apply Now
+                Apply now
                 <ArrowIcon />
-              </button>
+              </Button>
             )}
           </aside>
         )}
@@ -870,7 +773,7 @@ const ApplyModal: React.FC<{
         style={{
           position: "fixed",
           inset: 0,
-          background: "rgba(15,23,42,0.35)",
+          background: "color-mix(in srgb, var(--ink) 42%, transparent)",
           backdropFilter: "blur(6px)",
           WebkitBackdropFilter: "blur(6px)",
           zIndex: 200,
@@ -886,31 +789,44 @@ const ApplyModal: React.FC<{
           transform: "translate(-50%,-50%)",
           zIndex: 201,
           width: "min(480px, 94vw)",
-          background: "rgba(255,255,255,0.97)",
-          backdropFilter: "blur(24px)",
-          WebkitBackdropFilter: "blur(24px)",
-          border: "1px solid rgba(255,255,255,0.95)",
-          borderRadius: 28,
+          background: "var(--surface)",
+          border: "1px solid var(--line)",
+          borderRadius: "var(--radius-lg)",
           padding: 32,
-          boxShadow:
-            "0 35px 80px -15px rgba(15,23,42,0.22), inset 0 1px 2px rgba(255,255,255,0.7)",
+          boxShadow: "var(--shadow-lg)",
         }}
       >
         {succeeded ? (
           <div style={{ textAlign: "center", padding: "16px 0" }}>
-            <div style={{ fontSize: 52, marginBottom: 14 }}>🎉</div>
             <div
               style={{
-                fontSize: 20,
-                fontWeight: 800,
-                color: "#0f172a",
+                width: 56,
+                height: 56,
+                borderRadius: "50%",
+                background: "var(--positive-tint)",
+                color: "var(--positive)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                margin: "0 auto 16px",
+              }}
+            >
+              <CheckIcon size={26} />
+            </div>
+            <div
+              style={{
+                fontFamily: "var(--font-display)",
+                fontSize: 21,
+                fontWeight: 600,
+                color: "var(--ink)",
+                letterSpacing: "-0.5px",
                 marginBottom: 6,
               }}
             >
-              Application submitted!
+              Application submitted
             </div>
-            <div style={{ fontSize: 13.5, color: "#64748b" }}>
-              You'll be notified once the organisation reviews your resume.
+            <div style={{ fontSize: 13.5, color: "var(--muted)" }}>
+              You'll be notified once the organization reviews your resume.
             </div>
           </div>
         ) : (
@@ -926,10 +842,11 @@ const ApplyModal: React.FC<{
               <div>
                 <div
                   style={{
+                    fontFamily: "var(--font-mono)",
                     fontSize: 11.5,
                     fontWeight: 700,
-                    color: "#3b82f6",
-                    letterSpacing: "0.04em",
+                    color: "var(--signal-strong)",
+                    letterSpacing: "0.08em",
                     textTransform: "uppercase",
                     marginBottom: 6,
                   }}
@@ -938,10 +855,12 @@ const ApplyModal: React.FC<{
                 </div>
                 <h2
                   style={{
-                    fontSize: 20,
-                    fontWeight: 800,
-                    color: "#0f172a",
-                    letterSpacing: "-0.4px",
+                    fontFamily: "var(--font-display)",
+                    fontSize: 21,
+                    fontWeight: 600,
+                    color: "var(--ink)",
+                    letterSpacing: "-0.5px",
+                    margin: 0,
                   }}
                 >
                   Upload your resume
@@ -953,9 +872,9 @@ const ApplyModal: React.FC<{
                   width: 30,
                   height: 30,
                   borderRadius: "50%",
-                  background: "rgba(241,245,249,0.8)",
-                  border: "1px solid rgba(226,232,240,0.7)",
-                  color: "#64748b",
+                  background: "var(--surface-2)",
+                  border: "1px solid var(--line)",
+                  color: "var(--muted)",
                   cursor: "pointer",
                   display: "flex",
                   alignItems: "center",
@@ -982,11 +901,11 @@ const ApplyModal: React.FC<{
                     alignItems: "center",
                     gap: 8,
                     padding: "10px 14px",
-                    background: "rgba(254,226,226,0.7)",
-                    border: "1px solid rgba(248,113,113,0.4)",
-                    borderRadius: 12,
+                    background: "var(--negative-tint)",
+                    border: "1px solid var(--negative)",
+                    borderRadius: "var(--radius-sm)",
                     fontSize: 13,
-                    color: "#b91c1c",
+                    color: "var(--negative)",
                     fontWeight: 500,
                     marginBottom: 16,
                   }}
@@ -1021,29 +940,47 @@ const ApplyModal: React.FC<{
                   justifyContent: "center",
                   gap: 10,
                   padding: "32px 20px",
-                  border: `2px dashed ${file ? "rgba(59,130,246,0.6)" : "rgba(203,213,225,0.8)"}`,
-                  borderRadius: 18,
-                  background: file
-                    ? "rgba(219,234,254,0.3)"
-                    : "rgba(248,250,252,0.6)",
+                  border: `2px dashed ${file ? "var(--signal)" : "var(--line-strong)"}`,
+                  borderRadius: "var(--radius)",
+                  background: file ? "var(--signal-tint)" : "var(--surface-2)",
                   cursor: "pointer",
-                  transition: "all 0.2s",
+                  transition: "border-color 0.18s ease, background 0.18s ease",
                   marginBottom: 20,
                 }}
               >
-                <div style={{ fontSize: 32 }}>{file ? "📄" : "☁️"}</div>
+                <div
+                  style={{
+                    width: 44,
+                    height: 44,
+                    borderRadius: "var(--radius-sm)",
+                    background: file ? "var(--surface)" : "var(--surface)",
+                    border: "1px solid var(--line)",
+                    color: file ? "var(--signal-strong)" : "var(--muted)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  {file ? <DocIcon /> : <UploadIcon />}
+                </div>
                 <div style={{ textAlign: "center" }}>
                   <div
                     style={{
                       fontSize: 14,
                       fontWeight: 700,
-                      color: "#0f172a",
+                      color: "var(--ink)",
                       marginBottom: 3,
                     }}
                   >
                     {file ? file.name : "Click to upload your resume"}
                   </div>
-                  <div style={{ fontSize: 12, color: "#94a3b8" }}>
+                  <div
+                    style={{
+                      fontSize: 12,
+                      color: "var(--muted-2)",
+                      fontFamily: "var(--font-mono)",
+                    }}
+                  >
                     {file
                       ? `${(file.size / 1024).toFixed(0)} KB · PDF`
                       : "PDF only · max 5 MB"}
@@ -1059,49 +996,25 @@ const ApplyModal: React.FC<{
               </label>
 
               <div style={{ display: "flex", gap: 10 }}>
-                <button
+                <Button
                   type="button"
+                  variant="ghost"
+                  size="md"
                   onClick={onClose}
-                  style={{
-                    flex: 1,
-                    padding: "12px",
-                    borderRadius: 99,
-                    border: "1px solid rgba(226,232,240,0.9)",
-                    background: "transparent",
-                    fontSize: 13.5,
-                    fontWeight: 600,
-                    color: "#64748b",
-                    cursor: "pointer",
-                  }}
+                  style={{ flex: 1 }}
                 >
                   Cancel
-                </button>
-                <button
+                </Button>
+                <Button
                   id="apply-submit-btn"
                   type="submit"
+                  variant="signal"
+                  size="md"
                   disabled={isSubmitting || !file}
-                  style={{
-                    flex: 2,
-                    padding: "12px",
-                    borderRadius: 99,
-                    border: "none",
-                    background:
-                      isSubmitting || !file
-                        ? "rgba(203,213,225,0.6)"
-                        : "linear-gradient(135deg,#3b82f6,#1d4ed8)",
-                    color: isSubmitting || !file ? "#94a3b8" : "#fff",
-                    fontSize: 13.5,
-                    fontWeight: 700,
-                    cursor: isSubmitting || !file ? "not-allowed" : "pointer",
-                    boxShadow:
-                      !file || isSubmitting
-                        ? "none"
-                        : "0 6px 18px rgba(59,130,246,0.35)",
-                    transition: "all 0.2s",
-                  }}
+                  style={{ flex: 2 }}
                 >
-                  {isSubmitting ? "Submitting…" : "Submit Application"}
-                </button>
+                  {isSubmitting ? "Submitting…" : "Submit application"}
+                </Button>
               </div>
             </form>
           </>
@@ -1113,6 +1026,29 @@ const ApplyModal: React.FC<{
 
 // ── Cards ─────────────────────────────────────────────────────────────────────
 
+const cardStyle = (selected: boolean): React.CSSProperties => ({
+  textAlign: "left",
+  background: "var(--surface)",
+  border: selected ? "1.5px solid var(--signal)" : "1px solid var(--line)",
+  borderRadius: "var(--radius)",
+  padding: 22,
+  cursor: "pointer",
+  transition:
+    "transform 0.16s ease, box-shadow 0.16s ease, border-color 0.16s ease",
+  boxShadow: selected ? "var(--shadow-md)" : "var(--shadow-sm)",
+  transform: selected ? "translateY(-2px)" : "translateY(0)",
+});
+
+const cardFooterMeta: React.CSSProperties = {
+  display: "flex",
+  alignItems: "center",
+  gap: 6,
+  fontSize: 11.5,
+  color: "var(--muted)",
+  fontWeight: 500,
+  fontFamily: "var(--font-mono)",
+};
+
 const AvailableCard: React.FC<{
   interview: InterviewBasic;
   selected: boolean;
@@ -1121,26 +1057,7 @@ const AvailableCard: React.FC<{
 }> = ({ interview, selected, onSelect, onApply }) => {
   const t = timeRemaining(interview.submission_deadline);
   return (
-    <div
-      onClick={onSelect}
-      style={{
-        textAlign: "left",
-        background: "rgba(255,255,255,0.78)",
-        backdropFilter: "blur(20px)",
-        WebkitBackdropFilter: "blur(20px)",
-        border: selected
-          ? "1.5px solid rgba(59,130,246,0.7)"
-          : "1px solid rgba(255,255,255,0.95)",
-        borderRadius: 22,
-        padding: 22,
-        cursor: "pointer",
-        transition: "all 0.2s",
-        boxShadow: selected
-          ? "0 18px 40px -10px rgba(59,130,246,0.25)"
-          : "0 8px 22px rgba(15,23,42,0.05)",
-        transform: selected ? "translateY(-2px)" : "translateY(0)",
-      }}
-    >
+    <div onClick={onSelect} style={cardStyle(selected)}>
       <div
         style={{
           display: "flex",
@@ -1153,17 +1070,18 @@ const AvailableCard: React.FC<{
         <div style={{ flex: 1 }}>
           <h3
             style={{
-              fontSize: 15.5,
-              fontWeight: 800,
-              color: "#0f172a",
-              letterSpacing: "-0.3px",
-              marginBottom: 4,
+              fontFamily: "var(--font-display)",
+              fontSize: 16,
+              fontWeight: 600,
+              color: "var(--ink)",
+              letterSpacing: "-0.4px",
+              margin: "0 0 4px",
               lineHeight: 1.3,
             }}
           >
             {interview.position}
           </h3>
-          <div style={{ fontSize: 12, color: "#64748b", fontWeight: 500 }}>
+          <div style={{ fontSize: 12, color: "var(--muted)", fontWeight: 500 }}>
             {interview.experience} experience
           </div>
         </div>
@@ -1171,13 +1089,10 @@ const AvailableCard: React.FC<{
           style={{
             fontSize: 11,
             fontWeight: 700,
-            color: t.urgent ? "#b45309" : "#1d4ed8",
-            background: t.urgent
-              ? "rgba(254,243,199,0.7)"
-              : "rgba(219,234,254,0.7)",
-            border: `1px solid ${
-              t.urgent ? "rgba(251,191,36,0.5)" : "rgba(96,165,250,0.4)"
-            }`,
+            fontFamily: "var(--font-mono)",
+            color: t.urgent ? "var(--signal-strong)" : "var(--muted)",
+            background: t.urgent ? "var(--signal-tint)" : "var(--surface-2)",
+            border: `1px solid ${t.urgent ? "var(--signal)" : "var(--line)"}`,
             borderRadius: 99,
             padding: "4px 10px",
             flexShrink: 0,
@@ -1189,9 +1104,9 @@ const AvailableCard: React.FC<{
       <p
         style={{
           fontSize: 13,
-          color: "#475569",
+          color: "var(--ink-2)",
           lineHeight: 1.55,
-          marginBottom: 16,
+          margin: "0 0 16px",
           display: "-webkit-box",
           WebkitLineClamp: 2,
           WebkitBoxOrient: "vertical",
@@ -1206,45 +1121,25 @@ const AvailableCard: React.FC<{
           alignItems: "center",
           justifyContent: "space-between",
           paddingTop: 14,
-          borderTop: "1px solid rgba(226,232,240,0.6)",
+          borderTop: "1px solid var(--line)",
         }}
       >
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 6,
-            fontSize: 11.5,
-            color: "#64748b",
-            fontWeight: 500,
-          }}
-        >
+        <div style={cardFooterMeta}>
           <CalendarIcon />
           {formatDate(interview.start_time)}
         </div>
-        <button
+        <Button
           id={`apply-btn-${interview.id}`}
+          variant="primary"
+          size="sm"
           onClick={(e) => {
             e.stopPropagation();
             onApply();
           }}
-          style={{
-            fontSize: 12,
-            fontWeight: 700,
-            color: "#fff",
-            background: "linear-gradient(135deg,#3b82f6,#1d4ed8)",
-            border: "none",
-            borderRadius: 99,
-            padding: "6px 14px",
-            cursor: "pointer",
-            display: "flex",
-            alignItems: "center",
-            gap: 5,
-            boxShadow: "0 4px 12px rgba(59,130,246,0.35)",
-          }}
         >
-          Apply →
-        </button>
+          Apply
+          <ArrowIcon />
+        </Button>
       </div>
     </div>
   );
@@ -1256,26 +1151,7 @@ const AppliedCard: React.FC<{
   onSelect: () => void;
   onAttempt: () => void;
 }> = ({ interview, selected, onSelect, onAttempt }) => (
-  <div
-    onClick={onSelect}
-    style={{
-      textAlign: "left",
-      background: "rgba(255,255,255,0.78)",
-      backdropFilter: "blur(20px)",
-      WebkitBackdropFilter: "blur(20px)",
-      border: selected
-        ? "1.5px solid rgba(59,130,246,0.7)"
-        : "1px solid rgba(255,255,255,0.95)",
-      borderRadius: 22,
-      padding: 22,
-      cursor: "pointer",
-      transition: "all 0.2s",
-      boxShadow: selected
-        ? "0 18px 40px -10px rgba(59,130,246,0.25)"
-        : "0 8px 22px rgba(15,23,42,0.05)",
-      transform: selected ? "translateY(-2px)" : "translateY(0)",
-    }}
-  >
+  <div onClick={onSelect} style={cardStyle(selected)}>
     <div
       style={{
         display: "flex",
@@ -1288,17 +1164,18 @@ const AppliedCard: React.FC<{
       <div style={{ flex: 1 }}>
         <h3
           style={{
-            fontSize: 15.5,
-            fontWeight: 800,
-            color: "#0f172a",
-            letterSpacing: "-0.3px",
-            marginBottom: 4,
+            fontFamily: "var(--font-display)",
+            fontSize: 16,
+            fontWeight: 600,
+            color: "var(--ink)",
+            letterSpacing: "-0.4px",
+            margin: "0 0 4px",
             lineHeight: 1.3,
           }}
         >
           {interview.position}
         </h3>
-        <div style={{ fontSize: 12, color: "#64748b", fontWeight: 500 }}>
+        <div style={{ fontSize: 12, color: "var(--muted)", fontWeight: 500 }}>
           {interview.experience} experience
         </div>
       </div>
@@ -1307,9 +1184,9 @@ const AppliedCard: React.FC<{
     <p
       style={{
         fontSize: 13,
-        color: "#475569",
+        color: "var(--ink-2)",
         lineHeight: 1.55,
-        marginBottom: 16,
+        margin: "0 0 16px",
         display: "-webkit-box",
         WebkitLineClamp: 2,
         WebkitBoxOrient: "vertical",
@@ -1324,42 +1201,25 @@ const AppliedCard: React.FC<{
         alignItems: "center",
         justifyContent: "space-between",
         paddingTop: 14,
-        borderTop: "1px solid rgba(226,232,240,0.6)",
+        borderTop: "1px solid var(--line)",
         gap: 10,
       }}
     >
-      <div
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 6,
-          fontSize: 11.5,
-          color: "#64748b",
-          fontWeight: 500,
-        }}
-      >
+      <div style={cardFooterMeta}>
         <ClockIcon /> Deadline: {formatDate(interview.submission_deadline)}
       </div>
       {interview.status === "approved" && (
-        <button
+        <Button
+          variant="signal"
+          size="sm"
           onClick={(e) => {
             e.stopPropagation();
             onAttempt();
           }}
-          style={{
-            fontSize: 12,
-            fontWeight: 700,
-            color: "#fff",
-            background: "linear-gradient(135deg,#3b82f6,#1d4ed8)",
-            border: "none",
-            borderRadius: 99,
-            padding: "6px 14px",
-            cursor: "pointer",
-            boxShadow: "0 4px 12px rgba(59,130,246,0.35)",
-          }}
         >
-          Attempt →
-        </button>
+          Attempt
+          <ArrowIcon />
+        </Button>
       )}
     </div>
   </div>
@@ -1367,10 +1227,9 @@ const AppliedCard: React.FC<{
 
 const StatusBadge: React.FC<{ status: string }> = ({ status }) => {
   const s = STATUS_STYLES[status] ?? {
-    bg: "rgba(241,245,249,0.7)",
-    border: "rgba(203,213,225,0.6)",
-    color: "#475569",
-    dot: "#94a3b8",
+    bg: "var(--surface-2)",
+    color: "var(--muted)",
+    dot: "var(--muted-2)",
   };
   return (
     <span
@@ -1382,7 +1241,7 @@ const StatusBadge: React.FC<{ status: string }> = ({ status }) => {
         fontWeight: 700,
         color: s.color,
         background: s.bg,
-        border: `1px solid ${s.border}`,
+        border: "1px solid var(--line)",
         borderRadius: 99,
         padding: "4px 10px",
         textTransform: "capitalize",
@@ -1395,7 +1254,6 @@ const StatusBadge: React.FC<{ status: string }> = ({ status }) => {
           height: 6,
           borderRadius: "50%",
           background: s.dot,
-          boxShadow: `0 0 6px ${s.dot}`,
         }}
       />
       {status}
@@ -1413,13 +1271,11 @@ const MetricCard: React.FC<{
 }> = ({ label, value, accent, icon }) => (
   <div
     style={{
-      background: "rgba(255,255,255,0.78)",
-      backdropFilter: "blur(20px)",
-      WebkitBackdropFilter: "blur(20px)",
-      border: "1px solid rgba(255,255,255,0.95)",
-      borderRadius: 22,
+      background: "var(--surface)",
+      border: "1px solid var(--line)",
+      borderRadius: "var(--radius)",
       padding: "20px 22px",
-      boxShadow: "0 8px 22px rgba(15,23,42,0.05)",
+      boxShadow: "var(--shadow-sm)",
       display: "flex",
       alignItems: "center",
       gap: 14,
@@ -1429,8 +1285,8 @@ const MetricCard: React.FC<{
       style={{
         width: 42,
         height: 42,
-        borderRadius: 12,
-        background: `${accent}22`,
+        borderRadius: "var(--radius-sm)",
+        background: `color-mix(in srgb, ${accent} 12%, transparent)`,
         color: accent,
         display: "flex",
         alignItems: "center",
@@ -1443,10 +1299,11 @@ const MetricCard: React.FC<{
     <div>
       <div
         style={{
+          fontFamily: "var(--font-mono)",
           fontSize: 24,
-          fontWeight: 800,
-          color: "#0f172a",
-          letterSpacing: "-0.6px",
+          fontWeight: 700,
+          color: "var(--ink)",
+          letterSpacing: "-1px",
           lineHeight: 1,
         }}
       >
@@ -1455,9 +1312,9 @@ const MetricCard: React.FC<{
       <div
         style={{
           fontSize: 11.5,
-          color: "#64748b",
+          color: "var(--muted)",
           fontWeight: 600,
-          marginTop: 4,
+          marginTop: 5,
         }}
       >
         {label}
@@ -1477,7 +1334,7 @@ const DetailRow: React.FC<{
       alignItems: "center",
       gap: 12,
       padding: "10px 0",
-      borderBottom: "1px solid rgba(226,232,240,0.5)",
+      borderBottom: "1px solid var(--line)",
     }}
   >
     <div
@@ -1485,8 +1342,9 @@ const DetailRow: React.FC<{
         width: 28,
         height: 28,
         borderRadius: 8,
-        background: "rgba(219,234,254,0.6)",
-        color: "#2563eb",
+        background: "var(--surface-2)",
+        color: "var(--muted)",
+        border: "1px solid var(--line)",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
@@ -1499,10 +1357,11 @@ const DetailRow: React.FC<{
       <div
         style={{
           fontSize: 10.5,
-          color: "#94a3b8",
+          color: "var(--muted-2)",
           fontWeight: 700,
           textTransform: "uppercase",
-          letterSpacing: "0.04em",
+          letterSpacing: "0.06em",
+          fontFamily: "var(--font-mono)",
         }}
       >
         {label}
@@ -1510,9 +1369,9 @@ const DetailRow: React.FC<{
       <div
         style={{
           fontSize: 13,
-          color: "#0f172a",
+          color: "var(--ink)",
           fontWeight: 600,
-          marginTop: 2,
+          marginTop: 3,
         }}
       >
         {value}
@@ -1534,10 +1393,9 @@ const SearchBar: React.FC<{
       alignItems: "center",
       gap: 10,
       padding: "9px 16px",
-      background: "rgba(255,255,255,0.8)",
-      border: "1px solid rgba(203,213,225,0.7)",
+      background: "var(--surface)",
+      border: "1px solid var(--line-strong)",
       borderRadius: 99,
-      boxShadow: "inset 0 1px 2px rgba(15,23,42,0.04)",
     }}
   >
     <SearchIcon />
@@ -1552,8 +1410,8 @@ const SearchBar: React.FC<{
         border: "none",
         outline: "none",
         fontSize: 13.5,
-        color: "#0f172a",
-        fontFamily: "inherit",
+        color: "var(--ink)",
+        fontFamily: "var(--font-body)",
       }}
     />
     {value && (
@@ -1562,7 +1420,7 @@ const SearchBar: React.FC<{
         style={{
           background: "transparent",
           border: "none",
-          color: "#94a3b8",
+          color: "var(--muted-2)",
           cursor: "pointer",
           padding: 0,
           display: "flex",
@@ -1582,40 +1440,24 @@ const SearchBar: React.FC<{
   </div>
 );
 
-const Pill: React.FC<{ text: string; light?: boolean }> = ({ text, light }) => (
-  <div
+const Tag: React.FC<{ text: string }> = ({ text }) => (
+  <span
     style={{
       display: "inline-flex",
       alignItems: "center",
-      gap: 7,
-      background: light ? "rgba(255,255,255,0.18)" : "rgba(255,255,255,0.72)",
-      backdropFilter: "blur(10px)",
-      border: `1px solid ${light ? "rgba(255,255,255,0.35)" : "rgba(147,197,253,0.55)"}`,
+      fontFamily: "var(--font-mono)",
+      fontSize: 11,
+      fontWeight: 700,
+      color: "var(--signal-strong)",
+      background: "var(--signal-tint)",
+      border: "1px solid color-mix(in srgb, var(--signal) 35%, transparent)",
       borderRadius: 99,
-      padding: "5px 12px",
-      boxShadow: light ? "none" : "0 2px 10px rgba(59,130,246,0.08)",
+      padding: "4px 12px",
+      letterSpacing: "0.02em",
     }}
   >
-    <svg
-      width="11"
-      height="11"
-      viewBox="0 0 12 12"
-      fill={light ? "#fff" : "#3b82f6"}
-    >
-      <path d="M6 0l1.3 3.7 3.7.3-2.7 2.6.8 3.6L6 8.3l-3.1 1.9.8-3.6L1 4.1l3.7-.4z" />
-    </svg>
-    <span
-      style={{
-        fontSize: 11,
-        fontWeight: 700,
-        color: light ? "#fff" : "#1d4ed8",
-        letterSpacing: "0.04em",
-        textTransform: "uppercase",
-      }}
-    >
-      {text}
-    </span>
-  </div>
+    {text}
+  </span>
 );
 
 const EmptyState: React.FC<{
@@ -1632,20 +1474,19 @@ const EmptyState: React.FC<{
       padding: "60px 20px",
       textAlign: "center",
       gap: 12,
-      background: "rgba(255,255,255,0.6)",
-      backdropFilter: "blur(14px)",
-      WebkitBackdropFilter: "blur(14px)",
-      border: "1px dashed rgba(147,197,253,0.6)",
-      borderRadius: 22,
+      background: "var(--surface)",
+      border: "1px dashed var(--line-strong)",
+      borderRadius: "var(--radius)",
     }}
   >
     <div
       style={{
         width: 56,
         height: 56,
-        borderRadius: 18,
-        background: "linear-gradient(145deg,#dbeafe,#bfdbfe)",
-        color: "#1d4ed8",
+        borderRadius: "var(--radius)",
+        background: "var(--surface-2)",
+        color: "var(--muted)",
+        border: "1px solid var(--line)",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
@@ -1655,15 +1496,19 @@ const EmptyState: React.FC<{
     </div>
     <h3
       style={{
-        fontSize: 16,
-        fontWeight: 800,
-        color: "#0f172a",
-        letterSpacing: "-0.3px",
+        fontFamily: "var(--font-display)",
+        fontSize: 17,
+        fontWeight: 600,
+        color: "var(--ink)",
+        letterSpacing: "-0.4px",
+        margin: 0,
       }}
     >
       {title}
     </h3>
-    <p style={{ fontSize: 13, color: "#64748b", maxWidth: 340 }}>
+    <p
+      style={{ fontSize: 13, color: "var(--muted)", maxWidth: 340, margin: 0 }}
+    >
       {description}
     </p>
   </div>
@@ -1672,10 +1517,11 @@ const EmptyState: React.FC<{
 const SkeletonCard = () => (
   <div
     style={{
-      background: "rgba(255,255,255,0.6)",
-      border: "1px solid rgba(255,255,255,0.95)",
-      borderRadius: 22,
+      background: "var(--surface)",
+      border: "1px solid var(--line)",
+      borderRadius: "var(--radius)",
       padding: 22,
+      boxShadow: "var(--shadow-sm)",
       animation: "skeleton-pulse 1.5s ease-in-out infinite",
     }}
   >
@@ -1688,7 +1534,7 @@ const SkeletonCard = () => (
     <div
       style={{
         height: 14,
-        background: "rgba(226,232,240,0.7)",
+        background: "var(--line)",
         borderRadius: 6,
         width: "70%",
         marginBottom: 10,
@@ -1697,7 +1543,7 @@ const SkeletonCard = () => (
     <div
       style={{
         height: 10,
-        background: "rgba(226,232,240,0.7)",
+        background: "var(--line)",
         borderRadius: 6,
         width: "45%",
         marginBottom: 18,
@@ -1706,7 +1552,7 @@ const SkeletonCard = () => (
     <div
       style={{
         height: 10,
-        background: "rgba(226,232,240,0.6)",
+        background: "var(--surface-2)",
         borderRadius: 6,
         width: "100%",
         marginBottom: 6,
@@ -1715,7 +1561,7 @@ const SkeletonCard = () => (
     <div
       style={{
         height: 10,
-        background: "rgba(226,232,240,0.6)",
+        background: "var(--surface-2)",
         borderRadius: 6,
         width: "82%",
       }}
@@ -1731,10 +1577,10 @@ const ErrorAlert: React.FC<{ message: string }> = ({ message }) => (
       alignItems: "flex-start",
       gap: 10,
       padding: "12px 16px",
-      borderRadius: 14,
-      background: "rgba(254,226,226,0.7)",
-      border: "1px solid rgba(248,113,113,0.5)",
-      color: "#b91c1c",
+      borderRadius: "var(--radius-sm)",
+      background: "var(--negative-tint)",
+      border: "1px solid var(--negative)",
+      color: "var(--negative)",
       fontSize: 13,
       fontWeight: 500,
     }}
@@ -1752,47 +1598,20 @@ const ErrorAlert: React.FC<{ message: string }> = ({ message }) => (
   </div>
 );
 
-const BgBlobs = () => (
-  <>
-    <div
-      style={{
-        position: "absolute",
-        top: 0,
-        right: 0,
-        width: 800,
-        height: 800,
-        background: "rgba(219,234,254,0.5)",
-        borderRadius: "50%",
-        filter: "blur(120px)",
-        zIndex: 0,
-        pointerEvents: "none",
-      }}
-    />
-    <div
-      style={{
-        position: "absolute",
-        bottom: 0,
-        left: "-20%",
-        width: 600,
-        height: 600,
-        background: "rgba(207,232,251,0.5)",
-        borderRadius: "50%",
-        filter: "blur(100px)",
-        zIndex: 0,
-        pointerEvents: "none",
-      }}
-    />
-  </>
-);
-
 // ── Icons ─────────────────────────────────────────────────────────────────────
 
 const SearchIcon = () => (
   <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-    <circle cx="6.5" cy="6.5" r="4.5" stroke="#94a3b8" strokeWidth="1.5" />
+    <circle
+      cx="6.5"
+      cy="6.5"
+      r="4.5"
+      stroke="var(--muted-2)"
+      strokeWidth="1.5"
+    />
     <path
       d="M10.5 10.5L14 14"
-      stroke="#94a3b8"
+      stroke="var(--muted-2)"
       strokeWidth="1.5"
       strokeLinecap="round"
     />
@@ -1835,7 +1654,7 @@ const BellIcon = () => (
   <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
     <path
       d="M3 6a5 5 0 0110 0v4l1.5 2H1.5L3 10V6zM6 14a2 2 0 004 0"
-      stroke="#475569"
+      stroke="currentColor"
       strokeWidth="1.4"
       strokeLinecap="round"
       strokeLinejoin="round"
@@ -1911,7 +1730,49 @@ const ArrowIcon = () => (
   <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
     <path
       d="M2 7h10M8 3l4 4-4 4"
-      stroke="white"
+      stroke="currentColor"
+      strokeWidth="1.7"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </svg>
+);
+
+const CheckIcon: React.FC<{ size?: number }> = ({ size = 12 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <path
+      d="M5 12.5l4.5 4.5L19 6.5"
+      stroke="currentColor"
+      strokeWidth="2.2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </svg>
+);
+
+const UploadIcon = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+    <path
+      d="M12 15V4m0 0L7.5 8.5M12 4l4.5 4.5M5 15v3a2 2 0 002 2h10a2 2 0 002-2v-3"
+      stroke="currentColor"
+      strokeWidth="1.7"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </svg>
+);
+
+const DocIcon = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+    <path
+      d="M6 3h8l4 4v14a1 1 0 01-1 1H6a1 1 0 01-1-1V4a1 1 0 011-1z"
+      stroke="currentColor"
+      strokeWidth="1.7"
+      strokeLinejoin="round"
+    />
+    <path
+      d="M13 3v5h5M8 13h8M8 16.5h5"
+      stroke="currentColor"
       strokeWidth="1.7"
       strokeLinecap="round"
       strokeLinejoin="round"

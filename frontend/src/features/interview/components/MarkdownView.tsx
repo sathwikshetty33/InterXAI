@@ -15,9 +15,10 @@ export default function MarkdownView({ source }: Props) {
   return (
     <div
       style={{
+        fontFamily: "var(--font-body)",
         fontSize: 14,
         lineHeight: 1.7,
-        color: "#334155",
+        color: "var(--ink-2)",
       }}
     >
       {blocks.map((b, i) => (
@@ -124,10 +125,11 @@ function Block({ block }: { block: Block }) {
       return (
         <div
           style={{
+            fontFamily: "var(--font-display)",
             fontSize: size,
-            fontWeight: 800,
-            color: "#0f172a",
-            letterSpacing: "-0.3px",
+            fontWeight: 600,
+            color: "var(--ink)",
+            letterSpacing: "-0.5px",
             marginTop: 18,
             marginBottom: 8,
           }}
@@ -146,23 +148,22 @@ function Block({ block }: { block: Block }) {
       return (
         <pre
           style={{
-            background: "rgba(15,23,42,0.92)",
-            color: "#e2e8f0",
-            borderRadius: 12,
+            background: "var(--ink)",
+            color: "var(--paper)",
+            borderRadius: "var(--radius-sm)",
             padding: "14px 16px",
             fontSize: 12.5,
             lineHeight: 1.55,
             overflow: "auto",
             marginBottom: 14,
-            fontFamily:
-              "ui-monospace, SFMono-Regular, 'SF Mono', Menlo, monospace",
+            fontFamily: "var(--font-mono)",
           }}
         >
           {block.lang && (
             <div
               style={{
                 fontSize: 10.5,
-                color: "#94a3b8",
+                color: "var(--muted-2)",
                 marginBottom: 6,
                 textTransform: "uppercase",
                 letterSpacing: "0.08em",
@@ -199,12 +200,13 @@ function Block({ block }: { block: Block }) {
       return (
         <blockquote
           style={{
-            borderLeft: "3px solid #93c5fd",
-            background: "rgba(219,234,254,0.4)",
+            borderLeft: "3px solid var(--signal)",
+            background: "var(--surface-2)",
             padding: "8px 14px",
-            borderRadius: 8,
+            borderRadius: "var(--radius-sm)",
             marginBottom: 12,
-            color: "#475569",
+            margin: "0 0 12px",
+            color: "var(--muted)",
           }}
         >
           <Inline text={block.text} />
@@ -227,13 +229,12 @@ function Inline({ text }: { text: string }) {
         <code
           key={key++}
           style={{
-            background: "rgba(15,23,42,0.07)",
-            color: "#1d4ed8",
+            background: "color-mix(in srgb, var(--ink) 7%, transparent)",
+            color: "var(--ink)",
             padding: "1.5px 6px",
             borderRadius: 5,
             fontSize: "0.92em",
-            fontFamily:
-              "ui-monospace, SFMono-Regular, 'SF Mono', Menlo, monospace",
+            fontFamily: "var(--font-mono)",
           }}
         >
           {tok.slice(1, -1)}
@@ -241,7 +242,7 @@ function Inline({ text }: { text: string }) {
       );
     } else if (tok.startsWith("**")) {
       parts.push(
-        <strong key={key++} style={{ fontWeight: 700, color: "#0f172a" }}>
+        <strong key={key++} style={{ fontWeight: 700, color: "var(--ink)" }}>
           {tok.slice(2, -2)}
         </strong>,
       );

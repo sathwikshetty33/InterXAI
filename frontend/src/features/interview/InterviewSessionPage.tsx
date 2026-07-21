@@ -2,6 +2,8 @@ import React from "react";
 import { useInterviewSession } from "./hooks/useInterviewSession";
 import TextQAPanel from "./components/TextQAPanel";
 import DsaPanel from "./components/DsaPanel";
+import Logo from "../../ui/Logo";
+import Button from "../../ui/Button";
 import type {
   InterviewStateResponse,
   Round,
@@ -37,14 +39,11 @@ const InterviewSessionPage: React.FC<InterviewSessionPageProps> = ({
       id="interview-session"
       style={{
         minHeight: "100vh",
-        background:
-          "linear-gradient(155deg, #bdd9f2 0%, #cfe8fb 12%, #dff0ff 28%, #ecf7ff 45%, #f4faff 62%, #e8f4fd 78%, #d2e9f8 100%)",
-        fontFamily:
-          "'Inter', system-ui, -apple-system, BlinkMacSystemFont, sans-serif",
+        background: "var(--paper)",
+        fontFamily: "var(--font-body)",
         position: "relative",
       }}
     >
-      <BgBlobs />
       <SessionHeader
         round={state?.round}
         sessionId={state?.session_id}
@@ -139,9 +138,9 @@ function renderRound({
 // ── Header ──────────────────────────────────────────────────────────────────
 
 const ROUND_META: Record<Round, { label: string; step: number }> = {
-  questions: { label: "Behavioural", step: 1 },
-  dsa: { label: "Coding", step: 2 },
-  resume: { label: "Resume", step: 3 },
+  questions: { label: "Questions", step: 1 },
+  dsa: { label: "DSA", step: 2 },
+  resume: { label: "Résumé", step: 3 },
 };
 
 const SessionHeader: React.FC<{
@@ -155,11 +154,10 @@ const SessionHeader: React.FC<{
       position: "sticky",
       top: 0,
       zIndex: 40,
-      background: "rgba(255,255,255,0.7)",
-      backdropFilter: "blur(20px)",
-      WebkitBackdropFilter: "blur(20px)",
-      borderBottom: "1px solid rgba(255,255,255,0.7)",
-      boxShadow: "0 2px 16px rgba(15,23,42,0.04)",
+      background: "color-mix(in srgb, var(--paper) 82%, transparent)",
+      backdropFilter: "blur(12px)",
+      WebkitBackdropFilter: "blur(12px)",
+      borderBottom: "1px solid var(--line)",
     }}
   >
     <div
@@ -173,44 +171,18 @@ const SessionHeader: React.FC<{
         gap: 16,
       }}
     >
-      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-        <div
-          style={{
-            width: 32,
-            height: 32,
-            borderRadius: 8,
-            background: "linear-gradient(145deg,#4f9cf9,#1649c9)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            border: "1.5px solid rgba(255,255,255,0.35)",
-          }}
-        >
-          <span style={{ color: "#fff", fontWeight: 800, fontSize: 13 }}>
-            X
-          </span>
-        </div>
-        <span
-          style={{
-            fontSize: 15.5,
-            fontWeight: 800,
-            color: "#0f172a",
-            letterSpacing: "-0.3px",
-          }}
-        >
-          InterXAI Interview
-        </span>
+      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+        <Logo size={18} />
         {sessionId !== undefined && (
           <span
             style={{
               fontSize: 11,
-              color: "#94a3b8",
+              color: "var(--muted-2)",
               fontWeight: 500,
-              fontFamily:
-                "ui-monospace, SFMono-Regular, 'SF Mono', Menlo, monospace",
+              fontFamily: "var(--font-mono)",
             }}
           >
-            · session #{sessionId}
+            session #{sessionId}
           </span>
         )}
       </div>
@@ -219,21 +191,9 @@ const SessionHeader: React.FC<{
 
       <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
         <LiveDot phase={phase} />
-        <button
-          onClick={onExit}
-          style={{
-            fontSize: 12,
-            fontWeight: 600,
-            color: "#64748b",
-            background: "transparent",
-            border: "1px solid rgba(203,213,225,0.7)",
-            padding: "7px 14px",
-            borderRadius: 99,
-            cursor: "pointer",
-          }}
-        >
+        <Button variant="ghost" size="sm" onClick={onExit}>
           Exit
-        </button>
+        </Button>
       </div>
     </div>
   </header>
@@ -248,7 +208,6 @@ const RoundStepper: React.FC<{ round: Round | undefined }> = ({ round }) => {
         const step = ROUND_META[r].step;
         const done = step < activeStep;
         const active = step === activeStep;
-        const color = done || active ? "#2563eb" : "#cbd5e1";
         return (
           <React.Fragment key={r}>
             <div
@@ -259,13 +218,15 @@ const RoundStepper: React.FC<{ round: Round | undefined }> = ({ round }) => {
                 padding: "5px 12px",
                 borderRadius: 99,
                 background: active
-                  ? "linear-gradient(135deg,rgba(59,130,246,0.15),rgba(29,78,216,0.15))"
+                  ? "var(--signal-tint)"
                   : done
-                    ? "rgba(219,234,254,0.6)"
-                    : "rgba(255,255,255,0.55)",
+                    ? "var(--surface)"
+                    : "transparent",
                 border: active
-                  ? "1px solid rgba(59,130,246,0.5)"
-                  : "1px solid rgba(255,255,255,0.95)",
+                  ? "1px solid color-mix(in srgb, var(--signal) 35%, transparent)"
+                  : done
+                    ? "1px solid var(--line)"
+                    : "1px solid var(--line)",
               }}
             >
               <div
@@ -273,11 +234,17 @@ const RoundStepper: React.FC<{ round: Round | undefined }> = ({ round }) => {
                   width: 18,
                   height: 18,
                   borderRadius: "50%",
-                  background: active || done ? color : "transparent",
-                  border: active || done ? "none" : `1.5px solid ${color}`,
-                  color: "#fff",
+                  background: active
+                    ? "var(--signal)"
+                    : done
+                      ? "var(--ink)"
+                      : "transparent",
+                  border:
+                    active || done ? "none" : "1.5px solid var(--line-strong)",
+                  color: active ? "var(--ink)" : "var(--paper)",
+                  fontFamily: "var(--font-mono)",
                   fontSize: 10,
-                  fontWeight: 800,
+                  fontWeight: 700,
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
@@ -288,8 +255,12 @@ const RoundStepper: React.FC<{ round: Round | undefined }> = ({ round }) => {
               <span
                 style={{
                   fontSize: 12,
-                  fontWeight: 700,
-                  color: active || done ? "#1e3a8a" : "#94a3b8",
+                  fontWeight: 600,
+                  color: active
+                    ? "var(--signal-strong)"
+                    : done
+                      ? "var(--ink)"
+                      : "var(--muted-2)",
                   letterSpacing: "0.02em",
                 }}
               >
@@ -301,7 +272,7 @@ const RoundStepper: React.FC<{ round: Round | undefined }> = ({ round }) => {
                 style={{
                   width: 14,
                   height: 2,
-                  background: done ? "#60a5fa" : "rgba(203,213,225,0.7)",
+                  background: done ? "var(--ink)" : "var(--line-strong)",
                   borderRadius: 1,
                 }}
               />
@@ -320,26 +291,33 @@ const LiveDot: React.FC<{ phase: string }> = ({ phase }) => {
       style={{
         display: "flex",
         alignItems: "center",
-        gap: 7,
+        gap: 8,
         padding: "5px 12px",
-        background: "rgba(220,252,231,0.7)",
-        border: "1px solid rgba(74,222,128,0.5)",
+        background: "var(--signal-tint)",
+        border: "1px solid color-mix(in srgb, var(--signal) 35%, transparent)",
         borderRadius: 99,
       }}
     >
       <span
+        className="ix-live-dot"
         style={{
           width: 8,
           height: 8,
           borderRadius: "50%",
-          background: "#22c55e",
-          boxShadow: "0 0 8px #22c55e",
-          animation: "live-pulse 1.6s ease-in-out infinite",
+          background: "var(--signal)",
+          display: "inline-block",
         }}
       />
-      <style>{`@keyframes live-pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }`}</style>
-      <span style={{ fontSize: 11.5, color: "#065f46", fontWeight: 700 }}>
-        Live
+      <span
+        style={{
+          fontFamily: "var(--font-mono)",
+          fontSize: 11,
+          color: "var(--signal-strong)",
+          fontWeight: 700,
+          letterSpacing: "0.08em",
+        }}
+      >
+        LIVE
       </span>
     </div>
   );
@@ -363,23 +341,24 @@ const LoadingScreen = () => (
         width: 48,
         height: 48,
         borderRadius: "50%",
-        border: "3px solid rgba(59,130,246,0.2)",
-        borderTopColor: "#2563eb",
+        border: "3px solid var(--line)",
+        borderTopColor: "var(--signal)",
         animation: "spin 0.9s linear infinite",
       }}
     />
     <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     <div
       style={{
-        fontSize: 15,
-        fontWeight: 700,
-        color: "#0f172a",
-        letterSpacing: "-0.3px",
+        fontFamily: "var(--font-display)",
+        fontSize: 17,
+        fontWeight: 600,
+        color: "var(--ink)",
+        letterSpacing: "-0.5px",
       }}
     >
       Starting your interview…
     </div>
-    <div style={{ fontSize: 13, color: "#64748b" }}>
+    <div style={{ fontSize: 13, color: "var(--muted)" }}>
       Setting up your questions and code workspace.
     </div>
   </div>
@@ -393,13 +372,11 @@ const ErrorScreen: React.FC<{ message: string; onExit: () => void }> = ({
     style={{
       maxWidth: 520,
       margin: "60px auto",
-      padding: "32px 32px",
-      background: "rgba(255,255,255,0.78)",
-      backdropFilter: "blur(24px)",
-      WebkitBackdropFilter: "blur(24px)",
-      border: "1px solid rgba(255,255,255,0.95)",
-      borderRadius: 28,
-      boxShadow: "0 25px 50px -12px rgba(15,23,42,0.18)",
+      padding: "36px 32px",
+      background: "var(--surface)",
+      border: "1px solid var(--line)",
+      borderRadius: "var(--radius-lg)",
+      boxShadow: "var(--shadow-md)",
       textAlign: "center",
     }}
   >
@@ -407,13 +384,13 @@ const ErrorScreen: React.FC<{ message: string; onExit: () => void }> = ({
       style={{
         width: 56,
         height: 56,
-        borderRadius: 16,
-        background: "linear-gradient(145deg,#fee2e2,#fecaca)",
-        color: "#b91c1c",
+        borderRadius: "var(--radius)",
+        background: "var(--negative-tint)",
+        color: "var(--negative)",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        margin: "0 auto 14px",
+        margin: "0 auto 16px",
       }}
     >
       <svg width="26" height="26" viewBox="0 0 24 24" fill="none">
@@ -428,10 +405,11 @@ const ErrorScreen: React.FC<{ message: string; onExit: () => void }> = ({
     </div>
     <h2
       style={{
-        fontSize: 22,
-        fontWeight: 800,
-        color: "#0f172a",
-        letterSpacing: "-0.5px",
+        fontFamily: "var(--font-display)",
+        fontSize: 24,
+        fontWeight: 600,
+        color: "var(--ink)",
+        letterSpacing: "-0.6px",
         marginBottom: 8,
       }}
     >
@@ -440,29 +418,16 @@ const ErrorScreen: React.FC<{ message: string; onExit: () => void }> = ({
     <p
       style={{
         fontSize: 14,
-        color: "#475569",
-        lineHeight: 1.55,
-        marginBottom: 22,
+        color: "var(--muted)",
+        lineHeight: 1.6,
+        marginBottom: 24,
       }}
     >
       {message}
     </p>
-    <button
-      onClick={onExit}
-      style={{
-        background: "linear-gradient(135deg,#3b82f6,#1d4ed8)",
-        color: "#fff",
-        border: "none",
-        borderRadius: 99,
-        padding: "11px 26px",
-        fontSize: 13.5,
-        fontWeight: 700,
-        cursor: "pointer",
-        boxShadow: "0 8px 22px rgba(59,130,246,0.4)",
-      }}
-    >
+    <Button variant="primary" size="md" onClick={onExit}>
       Back to dashboard
-    </button>
+    </Button>
   </div>
 );
 
@@ -471,13 +436,11 @@ const CompletedScreen: React.FC<{ onExit: () => void }> = ({ onExit }) => (
     style={{
       maxWidth: 560,
       margin: "60px auto",
-      padding: "44px 36px",
-      background: "rgba(255,255,255,0.82)",
-      backdropFilter: "blur(28px)",
-      WebkitBackdropFilter: "blur(28px)",
-      border: "1px solid rgba(255,255,255,0.95)",
-      borderRadius: 32,
-      boxShadow: "0 35px 60px -15px rgba(15,23,42,0.18)",
+      padding: "48px 40px",
+      background: "var(--surface)",
+      border: "1px solid var(--line)",
+      borderRadius: "var(--radius-lg)",
+      boxShadow: "var(--shadow-lg)",
       textAlign: "center",
     }}
   >
@@ -485,14 +448,13 @@ const CompletedScreen: React.FC<{ onExit: () => void }> = ({ onExit }) => (
       style={{
         width: 72,
         height: 72,
-        borderRadius: 22,
-        background: "linear-gradient(145deg,#d1fae5,#a7f3d0)",
-        color: "#047857",
+        borderRadius: "var(--radius-lg)",
+        background: "var(--positive-tint)",
+        color: "var(--positive)",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        margin: "0 auto 18px",
-        boxShadow: "0 12px 28px rgba(16,185,129,0.3)",
+        margin: "0 auto 20px",
       }}
     >
       <svg width="34" height="34" viewBox="0 0 24 24" fill="none">
@@ -507,21 +469,21 @@ const CompletedScreen: React.FC<{ onExit: () => void }> = ({ onExit }) => (
     </div>
     <h2
       style={{
-        fontSize: 28,
-        fontWeight: 900,
-        color: "#0f172a",
-        letterSpacing: "-0.8px",
-        marginBottom: 10,
+        fontFamily: "var(--font-display)",
+        fontSize: 30,
+        fontWeight: 600,
+        color: "var(--ink)",
+        letterSpacing: "-1px",
+        marginBottom: 12,
       }}
     >
-      Interview submitted 🎉
+      Interview submitted
     </h2>
     <p
       style={{
         fontSize: 15,
-        color: "#475569",
+        color: "var(--muted)",
         lineHeight: 1.6,
-        marginBottom: 28,
         maxWidth: 420,
         margin: "0 auto 28px",
       }}
@@ -529,22 +491,9 @@ const CompletedScreen: React.FC<{ onExit: () => void }> = ({ onExit }) => (
       Thanks for taking the time. Our team will review your responses and reach
       out shortly. You'll get a notification once the result is ready.
     </p>
-    <button
-      onClick={onExit}
-      style={{
-        background: "linear-gradient(135deg,#3b82f6,#1d4ed8)",
-        color: "#fff",
-        border: "none",
-        borderRadius: 99,
-        padding: "12px 28px",
-        fontSize: 14,
-        fontWeight: 700,
-        cursor: "pointer",
-        boxShadow: "0 8px 22px rgba(59,130,246,0.4)",
-      }}
-    >
+    <Button variant="primary" size="lg" onClick={onExit}>
       Back to dashboard
-    </button>
+    </Button>
   </div>
 );
 
@@ -577,23 +526,20 @@ const TerminalScreen: React.FC<{
     body: "Your session has ended.",
     tone: "warn" as const,
   };
-  const accent = copy.tone === "bad" ? "#b91c1c" : "#b45309";
-  const bg =
-    copy.tone === "bad"
-      ? "linear-gradient(145deg,#fee2e2,#fecaca)"
-      : "linear-gradient(145deg,#fef3c7,#fde68a)";
+  const accent =
+    copy.tone === "bad" ? "var(--negative)" : "var(--signal-strong)";
+  const iconBg =
+    copy.tone === "bad" ? "var(--negative-tint)" : "var(--signal-tint)";
   return (
     <div
       style={{
         maxWidth: 560,
         margin: "60px auto",
-        padding: "44px 36px",
-        background: "rgba(255,255,255,0.82)",
-        backdropFilter: "blur(28px)",
-        WebkitBackdropFilter: "blur(28px)",
-        border: "1px solid rgba(255,255,255,0.95)",
-        borderRadius: 32,
-        boxShadow: "0 35px 60px -15px rgba(15,23,42,0.18)",
+        padding: "48px 40px",
+        background: "var(--surface)",
+        border: "1px solid var(--line)",
+        borderRadius: "var(--radius-lg)",
+        boxShadow: "var(--shadow-lg)",
         textAlign: "center",
       }}
     >
@@ -601,13 +547,13 @@ const TerminalScreen: React.FC<{
         style={{
           width: 72,
           height: 72,
-          borderRadius: 22,
-          background: bg,
+          borderRadius: "var(--radius-lg)",
+          background: iconBg,
           color: accent,
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          margin: "0 auto 18px",
+          margin: "0 auto 20px",
         }}
       >
         <svg width="34" height="34" viewBox="0 0 24 24" fill="none">
@@ -622,10 +568,11 @@ const TerminalScreen: React.FC<{
       </div>
       <h2
         style={{
-          fontSize: 24,
-          fontWeight: 900,
-          color: "#0f172a",
-          letterSpacing: "-0.6px",
+          fontFamily: "var(--font-display)",
+          fontSize: 26,
+          fontWeight: 600,
+          color: "var(--ink)",
+          letterSpacing: "-0.8px",
           marginBottom: 10,
         }}
       >
@@ -634,64 +581,18 @@ const TerminalScreen: React.FC<{
       <p
         style={{
           fontSize: 14,
-          color: "#475569",
+          color: "var(--muted)",
           lineHeight: 1.6,
-          marginBottom: 26,
+          marginBottom: 28,
         }}
       >
         {copy.body}
       </p>
-      <button
-        onClick={onExit}
-        style={{
-          background: "linear-gradient(135deg,#3b82f6,#1d4ed8)",
-          color: "#fff",
-          border: "none",
-          borderRadius: 99,
-          padding: "12px 28px",
-          fontSize: 14,
-          fontWeight: 700,
-          cursor: "pointer",
-          boxShadow: "0 8px 22px rgba(59,130,246,0.4)",
-        }}
-      >
+      <Button variant="primary" size="lg" onClick={onExit}>
         Back to dashboard
-      </button>
+      </Button>
     </div>
   );
 };
-
-const BgBlobs = () => (
-  <>
-    <div
-      style={{
-        position: "absolute",
-        top: 0,
-        right: 0,
-        width: 700,
-        height: 700,
-        background: "rgba(219,234,254,0.45)",
-        borderRadius: "50%",
-        filter: "blur(120px)",
-        zIndex: 0,
-        pointerEvents: "none",
-      }}
-    />
-    <div
-      style={{
-        position: "absolute",
-        bottom: 0,
-        left: "-15%",
-        width: 600,
-        height: 600,
-        background: "rgba(207,232,251,0.45)",
-        borderRadius: "50%",
-        filter: "blur(100px)",
-        zIndex: 0,
-        pointerEvents: "none",
-      }}
-    />
-  </>
-);
 
 export default InterviewSessionPage;

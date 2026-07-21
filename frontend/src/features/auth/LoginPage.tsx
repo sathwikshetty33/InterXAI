@@ -1,59 +1,17 @@
 import React from "react";
-import Orb from "../../components/Orb";
+import Logo from "../../ui/Logo";
+import Button from "../../ui/Button";
+import ScoreMeter from "../../ui/ScoreMeter";
 import { useLogin } from "./hooks/useLogin";
 import { startGoogleOAuth } from "../../services/auth.service";
 import type { TokenResponse } from "../../services/auth.service";
+import "./auth.css";
 
 export interface LoginPageProps {
   onLoginSuccess?: (data: TokenResponse) => void;
   onSignupClick?: () => void;
   onBack?: () => void;
 }
-
-const STUDENT_HIGHLIGHTS = [
-  {
-    icon: (
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-        <path
-          d="M22 10v6M2 10l10-5 10 5-10 5z M6 12v5a6 3 0 0012 0v-5"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-      </svg>
-    ),
-    label: "Built for students",
-  },
-  {
-    icon: (
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-        <path
-          d="M12 8v4l3 2M22 12a10 10 0 11-20 0 10 10 0 0120 0z"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-      </svg>
-    ),
-    label: "15-min sessions",
-  },
-  {
-    icon: (
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-        <path
-          d="M12 2l2.4 7.6L22 10l-7.6 2.4L12 20l-2.4-7.6L2 10l7.6-2.4z"
-          stroke="currentColor"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-      </svg>
-    ),
-    label: "Free for learners",
-  },
-];
 
 const LoginPage: React.FC<LoginPageProps> = ({
   onLoginSuccess,
@@ -68,166 +26,52 @@ const LoginPage: React.FC<LoginPageProps> = ({
       id="login-page"
       style={{
         minHeight: "100vh",
-        background:
-          "linear-gradient(155deg, #bdd9f2 0%, #cfe8fb 12%, #dff0ff 28%, #ecf7ff 45%, #f4faff 62%, #e8f4fd 78%, #d2e9f8 100%)",
-        fontFamily:
-          "'Inter', system-ui, -apple-system, BlinkMacSystemFont, sans-serif",
-        overflow: "hidden",
-        position: "relative",
+        background: "var(--paper)",
+        color: "var(--ink)",
+        fontFamily: "var(--font-body)",
       }}
     >
-      <BgBlobs />
       <TopNav onBack={onBack} />
 
-      <section
-        style={{
-          position: "relative",
-          zIndex: 10,
-          display: "grid",
-          gridTemplateColumns: "1.05fr 1fr",
-          maxWidth: 1280,
-          margin: "0 auto",
-          padding: "16px 52px 40px",
-          alignItems: "center",
-          minHeight: "calc(100vh - 90px)",
-          gap: 48,
-        }}
-      >
-        {/* LEFT: student-focused welcome */}
-        <div style={{ position: "relative" }}>
-          <Pill text="Student Portal" />
-          <h1
-            style={{
-              fontSize: 56,
-              fontWeight: 900,
-              lineHeight: 1.05,
-              color: "#0f172a",
-              marginTop: 18,
-              marginBottom: 16,
-              letterSpacing: "-1.6px",
-            }}
-          >
-            Welcome back,
-            <br />
-            <span style={{ color: "#2563eb" }}>future star.</span>
-          </h1>
-          <p
-            style={{
-              fontSize: 16,
-              color: "#64748b",
-              lineHeight: 1.6,
-              marginBottom: 32,
-              maxWidth: 460,
-              fontWeight: 500,
-            }}
-          >
-            Sign in to continue your interview prep. Pick up where you left off
-            and keep your confidence streak alive.
-          </p>
+      <section className="auth-grid">
+        {/* LEFT: accent side panel echoing the landing hero */}
+        <AccentPanel />
 
+        {/* RIGHT: the sign-in card */}
+        <div className="auth-card-wrap">
           <div
+            className="ix-reveal"
             style={{
-              display: "flex",
-              gap: 10,
-              flexWrap: "wrap",
-              marginBottom: 36,
-            }}
-          >
-            {STUDENT_HIGHLIGHTS.map((h) => (
-              <div
-                key={h.label}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 8,
-                  padding: "8px 14px",
-                  background: "rgba(255,255,255,0.7)",
-                  backdropFilter: "blur(12px)",
-                  WebkitBackdropFilter: "blur(12px)",
-                  border: "1px solid rgba(255,255,255,0.95)",
-                  borderRadius: 99,
-                  boxShadow: "0 4px 14px rgba(15,23,42,0.04)",
-                  color: "#1d4ed8",
-                }}
-              >
-                {h.icon}
-                <span
-                  style={{
-                    fontSize: 12.5,
-                    fontWeight: 700,
-                    color: "#0f172a",
-                  }}
-                >
-                  {h.label}
-                </span>
-              </div>
-            ))}
-          </div>
-
-          <StreakCard />
-        </div>
-
-        {/* RIGHT: login card + decorative orb */}
-        <div
-          style={{
-            position: "relative",
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            justifyContent: "center",
-          }}
-        >
-          <div
-            style={{
-              position: "absolute",
-              top: -40,
-              right: -40,
-              width: 380,
-              height: 380,
-              pointerEvents: "none",
-              zIndex: 1,
-              opacity: 0.95,
-            }}
-          >
-            <Orb scale={0.55} showCards={false} showPodium={false} />
-          </div>
-
-          <div
-            style={{
-              position: "relative",
-              zIndex: 5,
               width: "100%",
-              maxWidth: 440,
-              background: "rgba(255,255,255,0.78)",
-              backdropFilter: "blur(24px)",
-              WebkitBackdropFilter: "blur(24px)",
-              border: "1px solid rgba(255,255,255,0.95)",
-              borderRadius: 28,
+              maxWidth: 420,
+              background: "var(--surface)",
+              border: "1px solid var(--line)",
+              borderRadius: "var(--radius-lg)",
               padding: 32,
-              boxShadow:
-                "0 35px 60px -15px rgba(15,23,42,0.18), inset 0 1px 2px rgba(255,255,255,0.7)",
+              boxShadow: "var(--shadow-md)",
             }}
           >
-            <h2
+            <h1
               style={{
-                fontSize: 24,
-                fontWeight: 800,
-                color: "#0f172a",
-                letterSpacing: "-0.6px",
-                marginBottom: 6,
+                fontFamily: "var(--font-display)",
+                fontWeight: 600,
+                fontSize: 26,
+                letterSpacing: "-0.8px",
+                color: "var(--ink)",
+                margin: 0,
               }}
             >
-              Sign in to your account
-            </h2>
+              Sign in
+            </h1>
             <p
               style={{
-                fontSize: 13.5,
-                color: "#64748b",
-                marginBottom: 22,
-                fontWeight: 500,
+                fontSize: 14.5,
+                lineHeight: 1.5,
+                color: "var(--muted)",
+                margin: "8px 0 24px",
               }}
             >
-              Good to see you again 👋
+              Welcome back. Pick up your interview prep where you left off.
             </p>
 
             <SocialAuthRow disabled={isLoading} />
@@ -237,7 +81,7 @@ const LoginPage: React.FC<LoginPageProps> = ({
             <form onSubmit={handleSubmit} noValidate>
               {error && <ErrorAlert message={error} />}
 
-              <LightInput
+              <Field
                 id="username"
                 name="username"
                 label="Username"
@@ -247,48 +91,18 @@ const LoginPage: React.FC<LoginPageProps> = ({
                 value={form.username}
                 onChange={handleChange}
                 disabled={isLoading}
-                icon={
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                    <path
-                      d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2M12 11a4 4 0 100-8 4 4 0 000 8z"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  </svg>
-                }
                 required
               />
-              <LightInput
+              <Field
                 id="password"
                 name="password"
                 label="Password"
                 type="password"
-                placeholder="••••••••"
+                placeholder="Your password"
                 autoComplete="current-password"
                 value={form.password}
                 onChange={handleChange}
                 disabled={isLoading}
-                icon={
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
-                    <rect
-                      x="3"
-                      y="11"
-                      width="18"
-                      height="11"
-                      rx="2"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                    />
-                    <path
-                      d="M7 11V7a5 5 0 0110 0v4"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                    />
-                  </svg>
-                }
                 required
               />
 
@@ -297,18 +111,16 @@ const LoginPage: React.FC<LoginPageProps> = ({
                   display: "flex",
                   justifyContent: "space-between",
                   alignItems: "center",
-                  marginTop: -4,
-                  marginBottom: 6,
+                  margin: "2px 0 20px",
                 }}
               >
                 <label
                   style={{
                     display: "flex",
                     alignItems: "center",
-                    gap: 6,
-                    fontSize: 12.5,
-                    color: "#475569",
-                    fontWeight: 500,
+                    gap: 8,
+                    fontSize: 13,
+                    color: "var(--muted)",
                     cursor: "pointer",
                   }}
                 >
@@ -317,7 +129,7 @@ const LoginPage: React.FC<LoginPageProps> = ({
                     style={{
                       width: 14,
                       height: 14,
-                      accentColor: "#2563eb",
+                      accentColor: "var(--signal)",
                       cursor: "pointer",
                     }}
                   />
@@ -326,8 +138,8 @@ const LoginPage: React.FC<LoginPageProps> = ({
                 <a
                   href="#forgot"
                   style={{
-                    fontSize: 12.5,
-                    color: "#2563eb",
+                    fontSize: 13,
+                    color: "var(--ink)",
                     textDecoration: "none",
                     fontWeight: 600,
                   }}
@@ -336,28 +148,34 @@ const LoginPage: React.FC<LoginPageProps> = ({
                 </a>
               </div>
 
-              <PrimaryButton disabled={isLoading} fullWidth>
+              <Button
+                type="submit"
+                variant="primary"
+                size="lg"
+                disabled={isLoading}
+                style={{ width: "100%", borderRadius: "var(--radius)" }}
+              >
                 {isLoading ? (
                   <>
                     <Spinner /> Signing in…
                   </>
                 ) : (
                   <>
-                    Sign In
-                    <ArrowIcon />
+                    Sign in
+                    <Arrow />
                   </>
                 )}
-              </PrimaryButton>
+              </Button>
             </form>
 
             <div
               style={{
-                marginTop: 22,
-                paddingTop: 18,
-                borderTop: "1px solid rgba(226,232,240,0.7)",
+                marginTop: 24,
+                paddingTop: 20,
+                borderTop: "1px solid var(--line)",
                 textAlign: "center",
                 fontSize: 14,
-                color: "#64748b",
+                color: "var(--muted)",
               }}
             >
               New to InterXAI?{" "}
@@ -365,12 +183,14 @@ const LoginPage: React.FC<LoginPageProps> = ({
                 type="button"
                 onClick={onSignupClick}
                 style={{
-                  color: "#2563eb",
+                  color: "var(--ink)",
                   background: "transparent",
                   border: "none",
                   fontWeight: 700,
                   cursor: "pointer",
                   padding: 0,
+                  fontFamily: "var(--font-body)",
+                  fontSize: 14,
                 }}
               >
                 Create an account
@@ -383,106 +203,146 @@ const LoginPage: React.FC<LoginPageProps> = ({
   );
 };
 
-const StreakCard = () => (
+// ── Accent side panel: a dark ink hero echoing the landing session motif ──────
+
+const AccentPanel = () => (
+  <div
+    className="auth-panel"
+    style={{
+      position: "relative",
+      background: "var(--ink)",
+      color: "var(--paper)",
+      borderRadius: "var(--radius-lg)",
+      padding: 40,
+      minHeight: 460,
+      display: "flex",
+      flexDirection: "column",
+      justifyContent: "space-between",
+      overflow: "hidden",
+      boxShadow: "var(--shadow-lg)",
+    }}
+  >
+    <div>
+      <span
+        style={{
+          display: "inline-block",
+          fontFamily: "var(--font-mono)",
+          fontSize: 12,
+          fontWeight: 700,
+          letterSpacing: "0.1em",
+          textTransform: "uppercase",
+          color: "var(--signal)",
+        }}
+      >
+        Candidate portal
+      </span>
+      <h2
+        style={{
+          fontFamily: "var(--font-display)",
+          fontWeight: 600,
+          fontSize: "clamp(30px, 3.4vw, 42px)",
+          letterSpacing: "-1.4px",
+          lineHeight: 1.05,
+          margin: "18px 0 0",
+        }}
+      >
+        Welcome back.
+      </h2>
+      <p
+        style={{
+          fontSize: 16,
+          lineHeight: 1.6,
+          color: "color-mix(in srgb, var(--paper) 72%, transparent)",
+          maxWidth: 360,
+          margin: "16px 0 0",
+        }}
+      >
+        Every answer measured on the same rubric — questions, live coding, and
+        résumé follow-ups, all scored 0–10.
+      </p>
+    </div>
+
+    <LastSessionCard />
+  </div>
+);
+
+// A compact "your last session" card reusing the score-meter motif.
+const LastSessionCard = () => (
   <div
     style={{
-      display: "flex",
-      alignItems: "center",
-      gap: 16,
-      padding: "16px 18px",
-      background:
-        "linear-gradient(135deg, rgba(255,255,255,0.85), rgba(219,234,254,0.5))",
-      backdropFilter: "blur(18px)",
-      WebkitBackdropFilter: "blur(18px)",
-      border: "1px solid rgba(255,255,255,0.95)",
-      borderRadius: 18,
-      boxShadow: "0 10px 30px rgba(15,23,42,0.06)",
-      maxWidth: 460,
+      background: "var(--surface)",
+      color: "var(--ink)",
+      border: "1px solid var(--line)",
+      borderRadius: "var(--radius)",
+      padding: 18,
+      boxShadow: "var(--shadow-md)",
     }}
   >
     <div
       style={{
-        width: 44,
-        height: 44,
-        borderRadius: 12,
-        background: "linear-gradient(145deg,#fbbf24,#f59e0b)",
         display: "flex",
         alignItems: "center",
-        justifyContent: "center",
-        boxShadow: "0 6px 16px rgba(245,158,11,0.35)",
-        fontSize: 22,
+        justifyContent: "space-between",
+        marginBottom: 14,
       }}
     >
-      🔥
-    </div>
-    <div style={{ flex: 1 }}>
-      <div
+      <span
         style={{
-          fontSize: 14,
-          fontWeight: 800,
-          color: "#0f172a",
-          marginBottom: 2,
+          fontFamily: "var(--font-display)",
+          fontWeight: 600,
+          fontSize: 14.5,
+          letterSpacing: "-0.3px",
         }}
       >
-        Keep your streak alive
-      </div>
-      <div
+        Your last session
+      </span>
+      <span
         style={{
-          fontSize: 12.5,
-          color: "#64748b",
-          fontWeight: 500,
+          fontFamily: "var(--font-mono)",
+          fontSize: 11.5,
+          color: "var(--muted-2)",
         }}
       >
-        Students who practise daily improve scores 2.4× faster.
-      </div>
+        3 rounds
+      </span>
     </div>
+    {[
+      { name: "Questions", score: 8.4 },
+      { name: "DSA", score: 7.2 },
+      { name: "Résumé", score: 9.1 },
+    ].map((r) => (
+      <div
+        key={r.name}
+        style={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          gap: 12,
+          padding: "8px 0",
+          borderTop: "1px solid var(--line)",
+        }}
+      >
+        <span style={{ fontSize: 13.5, fontWeight: 600, color: "var(--ink)" }}>
+          {r.name}
+        </span>
+        <ScoreMeter score={r.score} size="sm" animate={false} />
+      </div>
+    ))}
   </div>
 );
 
-const BgBlobs = () => (
-  <>
-    <div
-      style={{
-        position: "absolute",
-        top: 0,
-        right: 0,
-        width: 800,
-        height: 800,
-        background: "rgba(219,234,254,0.5)",
-        borderRadius: "50%",
-        filter: "blur(120px)",
-        zIndex: 0,
-        pointerEvents: "none",
-      }}
-    />
-    <div
-      style={{
-        position: "absolute",
-        bottom: 0,
-        left: "-20%",
-        width: 600,
-        height: 600,
-        background: "rgba(207,232,251,0.5)",
-        borderRadius: "50%",
-        filter: "blur(100px)",
-        zIndex: 0,
-        pointerEvents: "none",
-      }}
-    />
-  </>
-);
+// ── Nav ───────────────────────────────────────────────────────────────────────
 
 const TopNav: React.FC<{ onBack?: () => void }> = ({ onBack }) => (
   <nav
     style={{
-      position: "relative",
-      zIndex: 50,
       display: "flex",
       alignItems: "center",
       justifyContent: "space-between",
-      padding: "20px 52px",
-      maxWidth: 1300,
+      padding: "18px 24px",
+      maxWidth: 1120,
       margin: "0 auto",
+      borderBottom: "1px solid var(--line)",
     }}
   >
     <button
@@ -490,102 +350,27 @@ const TopNav: React.FC<{ onBack?: () => void }> = ({ onBack }) => (
       style={{
         display: "flex",
         alignItems: "center",
-        gap: 9,
         background: "transparent",
         border: "none",
-        cursor: "pointer",
+        cursor: onBack ? "pointer" : "default",
+        padding: 0,
       }}
     >
-      <div
-        style={{
-          width: 34,
-          height: 34,
-          borderRadius: 9,
-          background: "linear-gradient(145deg,#4f9cf9,#1649c9)",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          border: "1.5px solid rgba(255,255,255,0.35)",
-        }}
-      >
-        <span style={{ color: "#fff", fontWeight: 800, fontSize: 14 }}>X</span>
-      </div>
-      <span
-        style={{
-          fontWeight: 800,
-          fontSize: 17,
-          color: "#0f172a",
-          letterSpacing: "-0.4px",
-        }}
-      >
-        InterXAI
-      </span>
+      <Logo size={19} />
     </button>
     {onBack && (
-      <button
-        onClick={onBack}
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 6,
-          background: "rgba(255,255,255,0.6)",
-          border: "1px solid rgba(255,255,255,0.9)",
-          borderRadius: 99,
-          padding: "8px 16px",
-          color: "#475569",
-          fontSize: 13,
-          fontWeight: 600,
-          cursor: "pointer",
-          boxShadow: "0 2px 8px rgba(15,23,42,0.04)",
-        }}
-      >
-        <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-          <path
-            d="M9 3L5 7l4 4"
-            stroke="currentColor"
-            strokeWidth="1.6"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          />
-        </svg>
+      <Button variant="ghost" size="sm" onClick={onBack}>
+        <BackArrow />
         Back to home
-      </button>
+      </Button>
     )}
   </nav>
 );
 
-const Pill: React.FC<{ text: string }> = ({ text }) => (
-  <div
-    style={{
-      display: "inline-flex",
-      alignItems: "center",
-      gap: 7,
-      background: "rgba(255,255,255,0.72)",
-      backdropFilter: "blur(10px)",
-      border: "1px solid rgba(147,197,253,0.55)",
-      borderRadius: 99,
-      padding: "6px 14px",
-      boxShadow: "0 2px 10px rgba(59,130,246,0.08)",
-    }}
-  >
-    <svg width="12" height="12" viewBox="0 0 12 12" fill="#3b82f6">
-      <path d="M6 0l1.3 3.7 3.7.3-2.7 2.6.8 3.6L6 8.3l-3.1 1.9.8-3.6L1 4.1l3.7-.4z" />
-    </svg>
-    <span
-      style={{
-        fontSize: 12,
-        fontWeight: 600,
-        color: "#1d4ed8",
-        letterSpacing: "0.02em",
-      }}
-    >
-      {text}
-    </span>
-  </div>
-);
+// ── Social auth ────────────────────────────────────────────────────────────────
 
 const SocialAuthRow: React.FC<{ disabled?: boolean }> = ({ disabled }) => (
-  <div style={{ display: "flex", gap: 10, marginBottom: 18 }}>
+  <div style={{ display: "flex", gap: 10, marginBottom: 20 }}>
     <SocialBtn disabled={disabled} label="Google" onClick={startGoogleOAuth}>
       <GoogleIcon />
     </SocialBtn>
@@ -612,16 +397,15 @@ const SocialBtn: React.FC<{
       justifyContent: "center",
       gap: 8,
       padding: "10px 12px",
-      background: "rgba(255,255,255,0.85)",
-      border: "1px solid rgba(203,213,225,0.7)",
-      borderRadius: 12,
-      color: "#334155",
-      fontSize: 13,
+      background: "var(--surface)",
+      border: "1px solid var(--line-strong)",
+      borderRadius: "var(--radius-sm)",
+      color: "var(--ink)",
+      fontSize: 13.5,
       fontWeight: 600,
+      fontFamily: "var(--font-body)",
       cursor: disabled ? "not-allowed" : "pointer",
-      opacity: disabled ? 0.6 : 1,
-      transition: "all 0.2s",
-      boxShadow: "0 2px 6px rgba(15,23,42,0.04)",
+      opacity: disabled ? 0.55 : 1,
     }}
   >
     {children}
@@ -635,22 +419,23 @@ const Divider: React.FC<{ label: string }> = ({ label }) => (
       display: "flex",
       alignItems: "center",
       gap: 12,
-      marginBottom: 18,
+      marginBottom: 20,
     }}
   >
-    <span style={{ flex: 1, height: 1, background: "rgba(226,232,240,0.9)" }} />
+    <span style={{ flex: 1, height: 1, background: "var(--line)" }} />
     <span
       style={{
+        fontFamily: "var(--font-mono)",
         fontSize: 11,
-        fontWeight: 600,
-        color: "#94a3b8",
-        letterSpacing: "0.04em",
+        fontWeight: 700,
+        color: "var(--muted-2)",
+        letterSpacing: "0.06em",
         textTransform: "uppercase",
       }}
     >
       {label}
     </span>
-    <span style={{ flex: 1, height: 1, background: "rgba(226,232,240,0.9)" }} />
+    <span style={{ flex: 1, height: 1, background: "var(--line)" }} />
   </div>
 );
 
@@ -662,13 +447,13 @@ const ErrorAlert: React.FC<{ message: string }> = ({ message }) => (
       alignItems: "flex-start",
       gap: 10,
       padding: "10px 14px",
-      borderRadius: 12,
-      background: "rgba(254,226,226,0.7)",
-      border: "1px solid rgba(248,113,113,0.5)",
-      color: "#b91c1c",
+      borderRadius: "var(--radius-sm)",
+      background: "var(--negative-tint)",
+      border: "1px solid color-mix(in srgb, var(--negative) 35%, transparent)",
+      color: "var(--negative)",
       fontSize: 13,
       fontWeight: 500,
-      marginBottom: 14,
+      marginBottom: 16,
     }}
   >
     <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
@@ -684,17 +469,15 @@ const ErrorAlert: React.FC<{ message: string }> = ({ message }) => (
   </div>
 );
 
-interface LightInputProps extends React.InputHTMLAttributes<HTMLInputElement> {
+interface FieldProps extends React.InputHTMLAttributes<HTMLInputElement> {
   label: string;
   id: string;
-  icon?: React.ReactNode;
 }
 
-const LightInput: React.FC<LightInputProps> = ({
+const Field: React.FC<FieldProps> = ({
   label,
   id,
   type = "text",
-  icon,
   ...props
 }) => {
   const [revealed, setRevealed] = React.useState(false);
@@ -702,61 +485,34 @@ const LightInput: React.FC<LightInputProps> = ({
   const inputType = isPassword ? (revealed ? "text" : "password") : type;
 
   return (
-    <div style={{ marginBottom: 14 }}>
+    <div style={{ marginBottom: 16 }}>
       <label
         htmlFor={id}
         style={{
           display: "block",
           fontSize: 12.5,
           fontWeight: 600,
-          color: "#475569",
+          color: "var(--ink-2)",
           marginBottom: 6,
         }}
       >
         {label}
       </label>
       <div style={{ position: "relative" }}>
-        {icon && (
-          <div
-            style={{
-              position: "absolute",
-              left: 12,
-              top: "50%",
-              transform: "translateY(-50%)",
-              color: "#94a3b8",
-              display: "flex",
-              pointerEvents: "none",
-            }}
-          >
-            {icon}
-          </div>
-        )}
         <input
           id={id}
           type={inputType}
           style={{
             width: "100%",
-            background: "rgba(255,255,255,0.95)",
-            border: "1px solid rgba(203,213,225,0.7)",
-            borderRadius: 12,
+            background: "var(--surface)",
+            border: "1px solid var(--line)",
+            borderRadius: "var(--radius-sm)",
             padding: "11px 14px",
-            paddingLeft: icon ? 38 : 14,
             paddingRight: isPassword ? 40 : 14,
             fontSize: 14,
-            color: "#0f172a",
+            fontFamily: "var(--font-body)",
+            color: "var(--ink)",
             outline: "none",
-            transition: "all 0.2s",
-            boxShadow: "inset 0 1px 2px rgba(15,23,42,0.04)",
-          }}
-          onFocus={(e) => {
-            e.currentTarget.style.borderColor = "rgba(59,130,246,0.7)";
-            e.currentTarget.style.boxShadow =
-              "inset 0 1px 2px rgba(15,23,42,0.04), 0 0 0 3px rgba(59,130,246,0.15)";
-          }}
-          onBlur={(e) => {
-            e.currentTarget.style.borderColor = "rgba(203,213,225,0.7)";
-            e.currentTarget.style.boxShadow =
-              "inset 0 1px 2px rgba(15,23,42,0.04)";
           }}
           {...props}
         />
@@ -772,7 +528,7 @@ const LightInput: React.FC<LightInputProps> = ({
               transform: "translateY(-50%)",
               background: "transparent",
               border: "none",
-              color: "#94a3b8",
+              color: "var(--muted-2)",
               cursor: "pointer",
               padding: 0,
               display: "flex",
@@ -811,44 +567,26 @@ const LightInput: React.FC<LightInputProps> = ({
   );
 };
 
-const PrimaryButton: React.FC<{
-  disabled?: boolean;
-  fullWidth?: boolean;
-  children: React.ReactNode;
-}> = ({ disabled, fullWidth, children }) => (
-  <button
-    type="submit"
-    disabled={disabled}
-    style={{
-      width: fullWidth ? "100%" : undefined,
-      marginTop: 8,
-      background: "linear-gradient(135deg,#3b82f6,#1d4ed8)",
-      color: "#fff",
-      border: "none",
-      borderRadius: 99,
-      padding: "13px 28px",
-      fontSize: 14.5,
-      fontWeight: 700,
-      cursor: disabled ? "not-allowed" : "pointer",
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      gap: 10,
-      boxShadow: "0 8px 24px rgba(59,130,246,0.45)",
-      opacity: disabled ? 0.7 : 1,
-      transition: "all 0.2s",
-    }}
-  >
-    {children}
-  </button>
+// ── Icons ──────────────────────────────────────────────────────────────────────
+
+const Arrow = () => (
+  <svg width="14" height="14" viewBox="0 0 12 12" fill="none">
+    <path
+      d="M1 6h10M7 2l4 4-4 4"
+      stroke="currentColor"
+      strokeWidth="1.7"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </svg>
 );
 
-const ArrowIcon = () => (
+const BackArrow = () => (
   <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
     <path
-      d="M2 7h10M8 3l4 4-4 4"
-      stroke="white"
-      strokeWidth="1.7"
+      d="M9 3L5 7l4 4"
+      stroke="currentColor"
+      strokeWidth="1.6"
       strokeLinecap="round"
       strokeLinejoin="round"
     />

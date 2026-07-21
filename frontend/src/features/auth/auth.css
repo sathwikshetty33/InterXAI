@@ -1,0 +1,34 @@
+/* Layout helpers for the candidate auth screens (login / signup).
+   Media queries can't be expressed inline, so the two-column split and its
+   mobile collapse live here. Scoped to the auth feature only. */
+
+.auth-grid {
+  display: grid;
+  grid-template-columns: 1.02fr 0.98fr;
+  gap: 56px;
+  align-items: center;
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 8px 24px 56px;
+  min-height: calc(100vh - 73px);
+}
+
+.auth-card-wrap {
+  display: flex;
+  justify-content: center;
+}
+
+@media (max-width: 900px) {
+  .auth-grid {
+    grid-template-columns: 1fr;
+    gap: 0;
+    min-height: auto;
+    padding: 8px 24px 48px;
+  }
+  .auth-panel {
+    display: none;
+  }
+  .auth-card-wrap {
+    padding-top: 8px;
+  }
+}

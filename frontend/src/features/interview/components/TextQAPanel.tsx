@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import type { QuestionPayload } from "../../../services/interview.service";
+import Button from "../../../ui/Button";
 
 interface Props {
   question: Extract<QuestionPayload, { type: "custom" | "resume" }>;
@@ -52,14 +53,11 @@ export default function TextQAPanel({
     >
       <div
         style={{
-          background: "rgba(255,255,255,0.78)",
-          backdropFilter: "blur(24px)",
-          WebkitBackdropFilter: "blur(24px)",
-          border: "1px solid rgba(255,255,255,0.95)",
-          borderRadius: 28,
+          background: "var(--surface)",
+          border: "1px solid var(--line)",
+          borderRadius: "var(--radius-lg)",
           padding: 36,
-          boxShadow:
-            "0 25px 50px -12px rgba(15,23,42,0.12), inset 0 1px 2px rgba(255,255,255,0.7)",
+          boxShadow: "var(--shadow-md)",
         }}
       >
         <div
@@ -72,30 +70,33 @@ export default function TextQAPanel({
         >
           <span
             style={{
+              fontFamily: "var(--font-mono)",
               fontSize: 11,
               fontWeight: 700,
-              color: "#1d4ed8",
-              background: "rgba(219,234,254,0.7)",
-              border: "1px solid rgba(96,165,250,0.4)",
+              color: "var(--muted)",
+              background: "var(--surface-2)",
+              border: "1px solid var(--line)",
               borderRadius: 99,
               padding: "4px 11px",
-              letterSpacing: "0.05em",
+              letterSpacing: "0.08em",
               textTransform: "uppercase",
             }}
           >
-            {round === "resume" ? "Resume" : "Behavioural"}
+            {round === "resume" ? "Résumé" : "Questions"}
           </span>
           {followUpIndex > 0 && (
             <span
               style={{
+                fontFamily: "var(--font-mono)",
                 fontSize: 11,
                 fontWeight: 700,
-                color: "#b45309",
-                background: "rgba(254,243,199,0.7)",
-                border: "1px solid rgba(251,191,36,0.5)",
+                color: "var(--signal-strong)",
+                background: "var(--signal-tint)",
+                border:
+                  "1px solid color-mix(in srgb, var(--signal) 35%, transparent)",
                 borderRadius: 99,
                 padding: "4px 11px",
-                letterSpacing: "0.05em",
+                letterSpacing: "0.08em",
                 textTransform: "uppercase",
               }}
             >
@@ -106,9 +107,10 @@ export default function TextQAPanel({
 
         <h2
           style={{
+            fontFamily: "var(--font-display)",
             fontSize: 24,
-            fontWeight: 800,
-            color: "#0f172a",
+            fontWeight: 600,
+            color: "var(--ink)",
             letterSpacing: "-0.5px",
             lineHeight: 1.35,
             marginBottom: 22,
@@ -124,7 +126,7 @@ export default function TextQAPanel({
               display: "block",
               fontSize: 12.5,
               fontWeight: 600,
-              color: "#475569",
+              color: "var(--muted)",
               marginBottom: 6,
             }}
           >
@@ -141,28 +143,25 @@ export default function TextQAPanel({
             placeholder="Type your answer here. Be specific — examples and structure help."
             style={{
               width: "100%",
-              background: "rgba(255,255,255,0.95)",
-              border: "1px solid rgba(203,213,225,0.7)",
-              borderRadius: 14,
+              background: "var(--surface-2)",
+              border: "1px solid var(--line-strong)",
+              borderRadius: "var(--radius)",
               padding: "14px 16px",
               fontSize: 14.5,
               lineHeight: 1.6,
-              color: "#0f172a",
+              color: "var(--ink)",
               outline: "none",
-              transition: "all 0.2s",
-              boxShadow: "inset 0 1px 2px rgba(15,23,42,0.04)",
-              fontFamily: "inherit",
+              transition: "border-color 0.2s, box-shadow 0.2s",
+              fontFamily: "var(--font-body)",
               resize: "vertical",
             }}
             onFocus={(e) => {
-              e.currentTarget.style.borderColor = "rgba(59,130,246,0.7)";
-              e.currentTarget.style.boxShadow =
-                "inset 0 1px 2px rgba(15,23,42,0.04), 0 0 0 3px rgba(59,130,246,0.15)";
+              e.currentTarget.style.borderColor = "var(--signal)";
+              e.currentTarget.style.boxShadow = "0 0 0 3px var(--signal-tint)";
             }}
             onBlur={(e) => {
-              e.currentTarget.style.borderColor = "rgba(203,213,225,0.7)";
-              e.currentTarget.style.boxShadow =
-                "inset 0 1px 2px rgba(15,23,42,0.04)";
+              e.currentTarget.style.borderColor = "var(--line-strong)";
+              e.currentTarget.style.boxShadow = "none";
             }}
           />
 
@@ -172,10 +171,11 @@ export default function TextQAPanel({
               style={{
                 marginTop: 12,
                 padding: "10px 14px",
-                borderRadius: 12,
-                background: "rgba(254,226,226,0.7)",
-                border: "1px solid rgba(248,113,113,0.5)",
-                color: "#b91c1c",
+                borderRadius: "var(--radius-sm)",
+                background: "var(--negative-tint)",
+                border:
+                  "1px solid color-mix(in srgb, var(--negative) 40%, transparent)",
+                color: "var(--negative)",
                 fontSize: 13,
                 fontWeight: 500,
               }}
@@ -196,20 +196,20 @@ export default function TextQAPanel({
             <div
               style={{
                 fontSize: 12,
-                color: "#94a3b8",
+                color: "var(--muted-2)",
                 fontWeight: 500,
               }}
             >
               Press{" "}
               <kbd
                 style={{
-                  background: "rgba(241,245,249,0.9)",
-                  border: "1px solid rgba(203,213,225,0.8)",
+                  background: "var(--surface-2)",
+                  border: "1px solid var(--line-strong)",
                   borderRadius: 5,
                   padding: "1px 6px",
                   fontSize: 11,
                   fontWeight: 600,
-                  fontFamily: "inherit",
+                  fontFamily: "var(--font-mono)",
                 }}
               >
                 ⌘
@@ -217,41 +217,24 @@ export default function TextQAPanel({
               +{" "}
               <kbd
                 style={{
-                  background: "rgba(241,245,249,0.9)",
-                  border: "1px solid rgba(203,213,225,0.8)",
+                  background: "var(--surface-2)",
+                  border: "1px solid var(--line-strong)",
                   borderRadius: 5,
                   padding: "1px 6px",
                   fontSize: 11,
                   fontWeight: 600,
-                  fontFamily: "inherit",
+                  fontFamily: "var(--font-mono)",
                 }}
               >
                 Enter
               </kbd>{" "}
               to submit
             </div>
-            <button
+            <Button
               type="submit"
+              variant="primary"
+              size="md"
               disabled={!canSubmit}
-              style={{
-                background: canSubmit
-                  ? "linear-gradient(135deg,#3b82f6,#1d4ed8)"
-                  : "rgba(203,213,225,0.8)",
-                color: "#fff",
-                border: "none",
-                borderRadius: 99,
-                padding: "12px 26px",
-                fontSize: 14,
-                fontWeight: 700,
-                cursor: canSubmit ? "pointer" : "not-allowed",
-                display: "flex",
-                alignItems: "center",
-                gap: 9,
-                boxShadow: canSubmit
-                  ? "0 8px 22px rgba(59,130,246,0.4)"
-                  : "none",
-                transition: "all 0.2s",
-              }}
             >
               {isSubmitting ? (
                 <>
@@ -259,11 +242,11 @@ export default function TextQAPanel({
                 </>
               ) : (
                 <>
-                  Submit Answer
+                  Submit answer
                   <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
                     <path
                       d="M2 7h10M8 3l4 4-4 4"
-                      stroke="white"
+                      stroke="currentColor"
                       strokeWidth="1.7"
                       strokeLinecap="round"
                       strokeLinejoin="round"
@@ -271,7 +254,7 @@ export default function TextQAPanel({
                   </svg>
                 </>
               )}
-            </button>
+            </Button>
           </div>
         </form>
       </div>

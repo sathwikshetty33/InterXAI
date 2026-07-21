@@ -1,5 +1,6 @@
 import React, { useState } from "react";
-import Orb from "../../components/Orb";
+import Logo from "../../ui/Logo";
+import Button from "../../ui/Button";
 import { useOrgLogin } from "./hooks/useOrgLogin";
 import { useOrgSignup } from "./hooks/useOrgSignup";
 import type { OrgSignupResponse } from "../../services/organization.service";
@@ -74,60 +75,57 @@ const OrgAuthPage: React.FC<OrgAuthPageProps> = ({
       id="org-auth-page"
       style={{
         minHeight: "100vh",
-        background:
-          "linear-gradient(155deg, #bdd9f2 0%, #cfe8fb 12%, #dff0ff 28%, #ecf7ff 45%, #f4faff 62%, #e8f4fd 78%, #d2e9f8 100%)",
-        fontFamily:
-          "'Inter', system-ui, -apple-system, BlinkMacSystemFont, sans-serif",
-        overflow: "hidden",
+        background: "var(--paper)",
+        fontFamily: "var(--font-body)",
         position: "relative",
       }}
     >
-      <BgBlobs />
       <TopNav onBack={onBack} />
 
       <section
+        className="ix-container ix-hero-grid"
         style={{
-          position: "relative",
-          zIndex: 10,
-          display: "grid",
-          gridTemplateColumns: "1.05fr 1fr",
-          maxWidth: 1280,
-          margin: "0 auto",
-          padding: "16px 52px 40px",
+          padding: "24px 24px 56px",
           alignItems: "center",
-          minHeight: "calc(100vh - 90px)",
-          gap: 48,
+          minHeight: "calc(100vh - 88px)",
         }}
       >
         {/* LEFT: hiring-focused marketing */}
-        <div style={{ position: "relative" }}>
-          <Pill text="Admin Portal" />
+        <div>
+          <Eyebrow>Admin portal</Eyebrow>
           <h1
             style={{
-              fontSize: 56,
-              fontWeight: 900,
-              lineHeight: 1.05,
-              color: "#0f172a",
-              marginTop: 18,
-              marginBottom: 16,
+              fontFamily: "var(--font-display)",
+              fontSize: "clamp(38px, 5vw, 56px)",
+              fontWeight: 600,
+              lineHeight: 1.04,
+              color: "var(--ink)",
+              margin: "16px 0 16px",
               letterSpacing: "-1.6px",
             }}
           >
             Hire the best.
             <br />
-            <span style={{ color: "#2563eb" }}>Skip the noise.</span>
+            <span
+              style={{
+                color: "var(--signal-strong)",
+                fontStyle: "italic",
+                fontWeight: 500,
+              }}
+            >
+              Skip the noise.
+            </span>
           </h1>
           <p
             style={{
-              fontSize: 16,
-              color: "#64748b",
+              fontSize: 16.5,
+              color: "var(--muted)",
               lineHeight: 1.6,
               marginBottom: 32,
               maxWidth: 460,
-              fontWeight: 500,
             }}
           >
-            Sign in to manage interviews, review candidates, and view the
+            Sign in to build interviews, review candidates, and read the ranked
             leaderboard once sessions complete.
           </p>
 
@@ -135,8 +133,8 @@ const OrgAuthPage: React.FC<OrgAuthPageProps> = ({
             style={{
               display: "flex",
               flexDirection: "column",
-              gap: 14,
-              marginBottom: 36,
+              gap: 12,
+              marginBottom: 34,
               maxWidth: 460,
             }}
           >
@@ -148,12 +146,10 @@ const OrgAuthPage: React.FC<OrgAuthPageProps> = ({
                   alignItems: "flex-start",
                   gap: 14,
                   padding: "14px 16px",
-                  background: "rgba(255,255,255,0.55)",
-                  backdropFilter: "blur(14px)",
-                  WebkitBackdropFilter: "blur(14px)",
-                  border: "1px solid rgba(255,255,255,0.85)",
-                  borderRadius: 16,
-                  boxShadow: "0 8px 24px rgba(15,23,42,0.04)",
+                  background: "var(--surface)",
+                  border: "1px solid var(--line)",
+                  borderRadius: "var(--radius)",
+                  boxShadow: "var(--shadow-sm)",
                 }}
               >
                 <div
@@ -161,13 +157,13 @@ const OrgAuthPage: React.FC<OrgAuthPageProps> = ({
                     width: 32,
                     height: 32,
                     flexShrink: 0,
-                    borderRadius: 10,
-                    background: "linear-gradient(145deg,#dbeafe,#bfdbfe)",
-                    color: "#1d4ed8",
+                    borderRadius: "var(--radius-sm)",
+                    background: "var(--surface-2)",
+                    color: "var(--ink)",
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
-                    border: "1px solid rgba(147,197,253,0.5)",
+                    border: "1px solid var(--line)",
                   }}
                 >
                   {b.icon}
@@ -175,9 +171,9 @@ const OrgAuthPage: React.FC<OrgAuthPageProps> = ({
                 <div>
                   <div
                     style={{
-                      fontSize: 13.5,
+                      fontSize: 14,
                       fontWeight: 700,
-                      color: "#0f172a",
+                      color: "var(--ink)",
                       marginBottom: 2,
                     }}
                   >
@@ -185,8 +181,8 @@ const OrgAuthPage: React.FC<OrgAuthPageProps> = ({
                   </div>
                   <div
                     style={{
-                      fontSize: 12.5,
-                      color: "#64748b",
+                      fontSize: 13,
+                      color: "var(--muted)",
                       lineHeight: 1.5,
                     }}
                   >
@@ -200,10 +196,9 @@ const OrgAuthPage: React.FC<OrgAuthPageProps> = ({
           <TrustedRow />
         </div>
 
-        {/* RIGHT: auth card + decorative orb */}
+        {/* RIGHT: auth card */}
         <div
           style={{
-            position: "relative",
             display: "flex",
             flexDirection: "column",
             alignItems: "center",
@@ -212,33 +207,13 @@ const OrgAuthPage: React.FC<OrgAuthPageProps> = ({
         >
           <div
             style={{
-              position: "absolute",
-              top: -40,
-              right: -40,
-              width: 380,
-              height: 380,
-              pointerEvents: "none",
-              zIndex: 1,
-              opacity: 0.95,
-            }}
-          >
-            <Orb scale={0.55} showCards={false} showPodium={false} />
-          </div>
-
-          <div
-            style={{
-              position: "relative",
-              zIndex: 5,
               width: "100%",
               maxWidth: 460,
-              background: "rgba(255,255,255,0.78)",
-              backdropFilter: "blur(24px)",
-              WebkitBackdropFilter: "blur(24px)",
-              border: "1px solid rgba(255,255,255,0.95)",
-              borderRadius: 28,
+              background: "var(--surface)",
+              border: "1px solid var(--line)",
+              borderRadius: "var(--radius-lg)",
               padding: 32,
-              boxShadow:
-                "0 35px 60px -15px rgba(15,23,42,0.18), inset 0 1px 2px rgba(255,255,255,0.7)",
+              boxShadow: "var(--shadow-lg)",
             }}
           >
             <div
@@ -246,10 +221,11 @@ const OrgAuthPage: React.FC<OrgAuthPageProps> = ({
               aria-label="Auth mode"
               style={{
                 display: "flex",
+                gap: 4,
                 padding: 4,
-                background: "rgba(241,245,249,0.7)",
-                borderRadius: 99,
-                border: "1px solid rgba(226,232,240,0.7)",
+                background: "var(--surface-2)",
+                borderRadius: 999,
+                border: "1px solid var(--line)",
                 marginBottom: 22,
               }}
             >
@@ -263,32 +239,29 @@ const OrgAuthPage: React.FC<OrgAuthPageProps> = ({
                   style={{
                     flex: 1,
                     padding: "9px 12px",
-                    borderRadius: 99,
+                    borderRadius: 999,
                     fontSize: 13,
-                    fontWeight: 700,
+                    fontWeight: 600,
+                    fontFamily: "var(--font-body)",
                     border: "none",
                     cursor: "pointer",
-                    background:
-                      tab === t
-                        ? "linear-gradient(135deg,#3b82f6,#1d4ed8)"
-                        : "transparent",
-                    color: tab === t ? "#fff" : "#64748b",
-                    boxShadow:
-                      tab === t ? "0 6px 16px rgba(59,130,246,0.35)" : "none",
-                    transition: "all 0.2s",
+                    background: tab === t ? "var(--ink)" : "transparent",
+                    color: tab === t ? "var(--paper)" : "var(--muted)",
+                    transition: "all 0.18s ease",
                   }}
                 >
-                  {t === "signup" ? "Create Admin" : "Sign In"}
+                  {t === "signup" ? "Create admin" : "Sign in"}
                 </button>
               ))}
             </div>
 
             <h2
               style={{
-                fontSize: 22,
-                fontWeight: 800,
-                color: "#0f172a",
-                letterSpacing: "-0.5px",
+                fontFamily: "var(--font-display)",
+                fontSize: 23,
+                fontWeight: 600,
+                color: "var(--ink)",
+                letterSpacing: "-0.6px",
                 marginBottom: 4,
               }}
             >
@@ -297,9 +270,8 @@ const OrgAuthPage: React.FC<OrgAuthPageProps> = ({
             <p
               style={{
                 fontSize: 13.5,
-                color: "#64748b",
+                color: "var(--muted)",
                 marginBottom: 22,
-                fontWeight: 500,
               }}
             >
               {tab === "signup"
@@ -323,25 +295,19 @@ const OrgAuthPage: React.FC<OrgAuthPageProps> = ({
           <p
             style={{
               textAlign: "center",
-              fontSize: 11.5,
-              color: "#94a3b8",
+              fontSize: 12,
+              color: "var(--muted-2)",
               marginTop: 16,
               maxWidth: 380,
               lineHeight: 1.5,
             }}
           >
             By continuing you agree to our{" "}
-            <a
-              href="#terms"
-              style={{ color: "#2563eb", textDecoration: "none" }}
-            >
+            <a href="#terms" style={linkStyle}>
               Terms
             </a>{" "}
             and{" "}
-            <a
-              href="#privacy"
-              style={{ color: "#2563eb", textDecoration: "none" }}
-            >
+            <a href="#privacy" style={linkStyle}>
               Privacy Policy
             </a>
             .
@@ -367,7 +333,7 @@ const OrgSignupInline: React.FC<OrgSignupInlineProps> = ({
     <LightInput
       id="org-signup-username"
       name="username"
-      label="Admin Username"
+      label="Admin username"
       type="text"
       placeholder="acme_corp"
       autoComplete="username"
@@ -380,7 +346,7 @@ const OrgSignupInline: React.FC<OrgSignupInlineProps> = ({
     <LightInput
       id="org-signup-email"
       name="email"
-      label="Work Email"
+      label="Work email"
       type="email"
       placeholder="hr@acme.com"
       autoComplete="email"
@@ -406,7 +372,7 @@ const OrgSignupInline: React.FC<OrgSignupInlineProps> = ({
     <LightInput
       id="org-signup-confirm-password"
       name="confirmPassword"
-      label="Confirm Password"
+      label="Confirm password"
       type="password"
       placeholder="Re-enter password"
       autoComplete="new-password"
@@ -417,42 +383,33 @@ const OrgSignupInline: React.FC<OrgSignupInlineProps> = ({
       required
     />
 
-    <PrimaryButton disabled={hook.isLoading} fullWidth>
-      {hook.isLoading ? (
-        <>
-          <Spinner /> Creating account…
-        </>
-      ) : (
-        <>
-          Create Admin Account
-          <ArrowIcon />
-        </>
-      )}
-    </PrimaryButton>
+    <div style={{ marginTop: 8 }}>
+      <SubmitButton disabled={hook.isLoading}>
+        {hook.isLoading ? (
+          <>
+            <Spinner /> Creating account…
+          </>
+        ) : (
+          <>
+            Create admin account
+            <ArrowIcon />
+          </>
+        )}
+      </SubmitButton>
+    </div>
 
     <p
       style={{
         textAlign: "center",
-        fontSize: 14,
-        color: "#64748b",
+        fontSize: 13.5,
+        color: "var(--muted)",
         marginTop: 18,
         paddingTop: 18,
-        borderTop: "1px solid rgba(226,232,240,0.7)",
+        borderTop: "1px solid var(--line)",
       }}
     >
       Already have an account?{" "}
-      <button
-        type="button"
-        onClick={onLoginClick}
-        style={{
-          color: "#2563eb",
-          background: "transparent",
-          border: "none",
-          fontWeight: 700,
-          cursor: "pointer",
-          padding: 0,
-        }}
-      >
+      <button type="button" onClick={onLoginClick} style={inlineLinkBtn}>
         Sign in
       </button>
     </p>
@@ -506,161 +463,67 @@ const OrgLoginInline: React.FC<OrgLoginInlineProps> = ({
         marginTop: -6,
       }}
     >
-      <a
-        href="#forgot"
-        style={{
-          fontSize: 12,
-          color: "#2563eb",
-          textDecoration: "none",
-          fontWeight: 600,
-        }}
-      >
+      <a href="#forgot" style={{ ...linkStyle, fontSize: 12, fontWeight: 600 }}>
         Forgot password?
       </a>
     </div>
 
-    <PrimaryButton disabled={hook.isLoading} fullWidth>
+    <SubmitButton disabled={hook.isLoading}>
       {hook.isLoading ? (
         <>
           <Spinner /> Signing in…
         </>
       ) : (
         <>
-          Sign In
+          Sign in
           <ArrowIcon />
         </>
       )}
-    </PrimaryButton>
+    </SubmitButton>
 
     <p
       style={{
         textAlign: "center",
-        fontSize: 14,
-        color: "#64748b",
+        fontSize: 13.5,
+        color: "var(--muted)",
         marginTop: 18,
         paddingTop: 18,
-        borderTop: "1px solid rgba(226,232,240,0.7)",
+        borderTop: "1px solid var(--line)",
       }}
     >
       Don't have an account?{" "}
-      <button
-        type="button"
-        onClick={onSignupClick}
-        style={{
-          color: "#2563eb",
-          background: "transparent",
-          border: "none",
-          fontWeight: 700,
-          cursor: "pointer",
-          padding: 0,
-        }}
-      >
+      <button type="button" onClick={onSignupClick} style={inlineLinkBtn}>
         Register an admin account
       </button>
     </p>
   </form>
 );
 
-const BgBlobs = () => (
-  <>
-    <div
-      style={{
-        position: "absolute",
-        top: 0,
-        right: 0,
-        width: 800,
-        height: 800,
-        background: "rgba(219,234,254,0.5)",
-        borderRadius: "50%",
-        filter: "blur(120px)",
-        zIndex: 0,
-        pointerEvents: "none",
-      }}
-    />
-    <div
-      style={{
-        position: "absolute",
-        bottom: 0,
-        left: "-20%",
-        width: 600,
-        height: 600,
-        background: "rgba(207,232,251,0.5)",
-        borderRadius: "50%",
-        filter: "blur(100px)",
-        zIndex: 0,
-        pointerEvents: "none",
-      }}
-    />
-  </>
-);
-
 const TopNav: React.FC<{ onBack?: () => void }> = ({ onBack }) => (
   <nav
+    className="ix-container"
     style={{
-      position: "relative",
-      zIndex: 50,
       display: "flex",
       alignItems: "center",
       justifyContent: "space-between",
-      padding: "20px 52px",
-      maxWidth: 1300,
-      margin: "0 auto",
+      height: 64,
     }}
   >
     <button
       onClick={onBack}
       style={{
-        display: "flex",
-        alignItems: "center",
-        gap: 9,
         background: "transparent",
         border: "none",
         cursor: "pointer",
+        padding: 0,
+        display: "flex",
+        alignItems: "center",
       }}
     >
-      <div
-        style={{
-          width: 34,
-          height: 34,
-          borderRadius: 9,
-          background: "linear-gradient(145deg,#4f9cf9,#1649c9)",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          border: "1.5px solid rgba(255,255,255,0.35)",
-        }}
-      >
-        <span style={{ color: "#fff", fontWeight: 800, fontSize: 14 }}>X</span>
-      </div>
-      <span
-        style={{
-          fontWeight: 800,
-          fontSize: 17,
-          color: "#0f172a",
-          letterSpacing: "-0.4px",
-        }}
-      >
-        InterXAI
-      </span>
+      <Logo size={19} />
     </button>
     {onBack && (
-      <button
-        onClick={onBack}
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: 6,
-          background: "rgba(255,255,255,0.6)",
-          border: "1px solid rgba(255,255,255,0.9)",
-          borderRadius: 99,
-          padding: "8px 16px",
-          color: "#475569",
-          fontSize: 13,
-          fontWeight: 600,
-          cursor: "pointer",
-          boxShadow: "0 2px 8px rgba(15,23,42,0.04)",
-        }}
-      >
+      <Button variant="ghost" size="sm" onClick={onBack}>
         <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
           <path
             d="M9 3L5 7l4 4"
@@ -671,49 +534,36 @@ const TopNav: React.FC<{ onBack?: () => void }> = ({ onBack }) => (
           />
         </svg>
         Back to home
-      </button>
+      </Button>
     )}
   </nav>
 );
 
-const Pill: React.FC<{ text: string }> = ({ text }) => (
-  <div
+const Eyebrow: React.FC<{ children: string }> = ({ children }) => (
+  <span
     style={{
-      display: "inline-flex",
-      alignItems: "center",
-      gap: 7,
-      background: "rgba(255,255,255,0.72)",
-      backdropFilter: "blur(10px)",
-      border: "1px solid rgba(147,197,253,0.55)",
-      borderRadius: 99,
-      padding: "6px 14px",
-      boxShadow: "0 2px 10px rgba(59,130,246,0.08)",
+      display: "inline-block",
+      fontFamily: "var(--font-mono)",
+      fontSize: 12,
+      fontWeight: 700,
+      letterSpacing: "0.1em",
+      textTransform: "uppercase",
+      color: "var(--signal-strong)",
     }}
   >
-    <svg width="12" height="12" viewBox="0 0 12 12" fill="#3b82f6">
-      <path d="M6 0l1.3 3.7 3.7.3-2.7 2.6.8 3.6L6 8.3l-3.1 1.9.8-3.6L1 4.1l3.7-.4z" />
-    </svg>
-    <span
-      style={{
-        fontSize: 12,
-        fontWeight: 600,
-        color: "#1d4ed8",
-        letterSpacing: "0.02em",
-      }}
-    >
-      {text}
-    </span>
-  </div>
+    {children}
+  </span>
 );
 
 const TrustedRow = () => (
   <div>
     <div
       style={{
+        fontFamily: "var(--font-mono)",
         fontSize: 11,
         fontWeight: 700,
-        color: "#94a3b8",
-        letterSpacing: "0.18em",
+        color: "var(--muted-2)",
+        letterSpacing: "0.16em",
         textTransform: "uppercase",
         marginBottom: 12,
       }}
@@ -725,12 +575,12 @@ const TrustedRow = () => (
         display: "flex",
         alignItems: "center",
         gap: 24,
-        opacity: 0.6,
+        opacity: 0.7,
         flexWrap: "wrap",
-        color: "#475569",
+        color: "var(--muted)",
       }}
     >
-      <span style={{ fontSize: 18, fontWeight: 800, letterSpacing: "-0.5px" }}>
+      <span style={{ fontSize: 18, fontWeight: 700, letterSpacing: "-0.5px" }}>
         Google
       </span>
       <span style={{ fontSize: 16, fontWeight: 700 }}>Microsoft</span>
@@ -751,10 +601,10 @@ const ErrorAlert: React.FC<{ message: string }> = ({ message }) => (
       alignItems: "flex-start",
       gap: 10,
       padding: "10px 14px",
-      borderRadius: 12,
-      background: "rgba(254,226,226,0.7)",
-      border: "1px solid rgba(248,113,113,0.5)",
-      color: "#b91c1c",
+      borderRadius: "var(--radius-sm)",
+      background: "var(--negative-tint)",
+      border: "1px solid var(--negative)",
+      color: "var(--negative)",
       fontSize: 13,
       fontWeight: 500,
       marginBottom: 14,
@@ -798,7 +648,7 @@ const LightInput: React.FC<LightInputProps> = ({
           display: "block",
           fontSize: 12.5,
           fontWeight: 600,
-          color: "#475569",
+          color: "var(--muted)",
           marginBottom: 6,
         }}
       >
@@ -812,7 +662,7 @@ const LightInput: React.FC<LightInputProps> = ({
               left: 12,
               top: "50%",
               transform: "translateY(-50%)",
-              color: "#94a3b8",
+              color: "var(--muted-2)",
               display: "flex",
               pointerEvents: "none",
             }}
@@ -825,27 +675,25 @@ const LightInput: React.FC<LightInputProps> = ({
           type={inputType}
           style={{
             width: "100%",
-            background: "rgba(255,255,255,0.95)",
-            border: "1px solid rgba(203,213,225,0.7)",
-            borderRadius: 12,
+            background: "var(--surface)",
+            border: "1px solid var(--line-strong)",
+            borderRadius: "var(--radius-sm)",
             padding: "11px 14px",
             paddingLeft: icon ? 38 : 14,
             paddingRight: isPassword ? 40 : 14,
             fontSize: 14,
-            color: "#0f172a",
+            color: "var(--ink)",
             outline: "none",
-            transition: "all 0.2s",
-            boxShadow: "inset 0 1px 2px rgba(15,23,42,0.04)",
+            fontFamily: "var(--font-body)",
+            transition: "border-color 0.18s ease, box-shadow 0.18s ease",
           }}
           onFocus={(e) => {
-            e.currentTarget.style.borderColor = "rgba(59,130,246,0.7)";
-            e.currentTarget.style.boxShadow =
-              "inset 0 1px 2px rgba(15,23,42,0.04), 0 0 0 3px rgba(59,130,246,0.15)";
+            e.currentTarget.style.borderColor = "var(--signal)";
+            e.currentTarget.style.boxShadow = "0 0 0 3px var(--signal-tint)";
           }}
           onBlur={(e) => {
-            e.currentTarget.style.borderColor = "rgba(203,213,225,0.7)";
-            e.currentTarget.style.boxShadow =
-              "inset 0 1px 2px rgba(15,23,42,0.04)";
+            e.currentTarget.style.borderColor = "var(--line-strong)";
+            e.currentTarget.style.boxShadow = "none";
           }}
           {...props}
         />
@@ -861,7 +709,7 @@ const LightInput: React.FC<LightInputProps> = ({
               transform: "translateY(-50%)",
               background: "transparent",
               border: "none",
-              color: "#94a3b8",
+              color: "var(--muted-2)",
               cursor: "pointer",
               padding: 0,
               display: "flex",
@@ -900,43 +748,26 @@ const LightInput: React.FC<LightInputProps> = ({
   );
 };
 
-const PrimaryButton: React.FC<{
+const SubmitButton: React.FC<{
   disabled?: boolean;
-  fullWidth?: boolean;
   children: React.ReactNode;
-}> = ({ disabled, fullWidth, children }) => (
-  <button
+}> = ({ disabled, children }) => (
+  <Button
     type="submit"
+    variant="primary"
+    size="lg"
     disabled={disabled}
-    style={{
-      width: fullWidth ? "100%" : undefined,
-      marginTop: 8,
-      background: "linear-gradient(135deg,#3b82f6,#1d4ed8)",
-      color: "#fff",
-      border: "none",
-      borderRadius: 99,
-      padding: "13px 28px",
-      fontSize: 14.5,
-      fontWeight: 700,
-      cursor: disabled ? "not-allowed" : "pointer",
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      gap: 10,
-      boxShadow: "0 8px 24px rgba(59,130,246,0.45)",
-      opacity: disabled ? 0.7 : 1,
-      transition: "all 0.2s",
-    }}
+    style={{ width: "100%", marginTop: 8 }}
   >
     {children}
-  </button>
+  </Button>
 );
 
 const ArrowIcon = () => (
   <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
     <path
       d="M2 7h10M8 3l4 4-4 4"
-      stroke="white"
+      stroke="currentColor"
       strokeWidth="1.7"
       strokeLinecap="round"
       strokeLinejoin="round"
@@ -1013,5 +844,22 @@ const LockIcon = () => (
     />
   </svg>
 );
+
+const linkStyle: React.CSSProperties = {
+  color: "var(--signal-strong)",
+  textDecoration: "none",
+  fontWeight: 600,
+};
+
+const inlineLinkBtn: React.CSSProperties = {
+  color: "var(--signal-strong)",
+  background: "transparent",
+  border: "none",
+  fontWeight: 700,
+  cursor: "pointer",
+  padding: 0,
+  fontFamily: "var(--font-body)",
+  fontSize: "inherit",
+};
 
 export default OrgAuthPage;

@@ -1,5 +1,7 @@
 import React, { useState } from "react";
 import MarkdownView from "./MarkdownView";
+import Button from "../../../ui/Button";
+import ScoreMeter from "../../../ui/ScoreMeter";
 import {
   dsaRun,
   dsaTest,
@@ -275,10 +277,11 @@ export default function DsaPanel({
           style={{
             margin: "10px 0 0",
             padding: "10px 16px",
-            background: "rgba(254,226,226,0.8)",
-            border: "1px solid rgba(252,165,165,0.7)",
-            borderRadius: 12,
-            color: "#b91c1c",
+            background: "var(--negative-tint)",
+            border:
+              "1px solid color-mix(in srgb, var(--negative) 40%, transparent)",
+            borderRadius: "var(--radius-sm)",
+            color: "var(--negative)",
             fontSize: 13,
             fontWeight: 600,
           }}
@@ -299,13 +302,11 @@ export default function DsaPanel({
         {/* LEFT: problem statement */}
         <section
           style={{
-            background: "rgba(255,255,255,0.78)",
-            backdropFilter: "blur(24px)",
-            WebkitBackdropFilter: "blur(24px)",
-            border: "1px solid rgba(255,255,255,0.95)",
-            borderRadius: 22,
+            background: "var(--surface)",
+            border: "1px solid var(--line)",
+            borderRadius: "var(--radius-lg)",
             padding: 28,
-            boxShadow: "0 18px 40px -12px rgba(15,23,42,0.1)",
+            boxShadow: "var(--shadow-sm)",
             overflow: "auto",
             maxHeight: "calc(100vh - 190px)",
           }}
@@ -320,27 +321,30 @@ export default function DsaPanel({
           >
             <span
               style={{
+                fontFamily: "var(--font-mono)",
                 fontSize: 11,
                 fontWeight: 700,
-                color: "#1d4ed8",
-                background: "rgba(219,234,254,0.7)",
-                border: "1px solid rgba(96,165,250,0.4)",
+                color: "var(--muted)",
+                background: "var(--surface-2)",
+                border: "1px solid var(--line)",
                 borderRadius: 99,
                 padding: "4px 11px",
-                letterSpacing: "0.05em",
+                letterSpacing: "0.08em",
                 textTransform: "uppercase",
               }}
             >
-              Coding round
+              DSA round
             </span>
             {selected.attempts > 0 && (
               <span
                 style={{
+                  fontFamily: "var(--font-mono)",
                   fontSize: 11,
                   fontWeight: 700,
-                  color: "#047857",
-                  background: "rgba(209,250,229,0.7)",
-                  border: "1px solid rgba(110,231,183,0.5)",
+                  color: "var(--positive)",
+                  background: "var(--positive-tint)",
+                  border:
+                    "1px solid color-mix(in srgb, var(--positive) 30%, transparent)",
                   borderRadius: 99,
                   padding: "4px 11px",
                 }}
@@ -355,11 +359,12 @@ export default function DsaPanel({
           </div>
           <h2
             style={{
+              fontFamily: "var(--font-display)",
               fontSize: 24,
-              fontWeight: 800,
-              color: "#0f172a",
+              fontWeight: 600,
+              color: "var(--ink)",
               letterSpacing: "-0.5px",
-              marginTop: 12,
+              marginTop: 14,
               marginBottom: 14,
             }}
           >
@@ -367,8 +372,9 @@ export default function DsaPanel({
           </h2>
           <div
             style={{
+              fontFamily: "var(--font-mono)",
               fontSize: 11.5,
-              color: "#64748b",
+              color: "var(--muted)",
               fontWeight: 600,
               marginBottom: 18,
               display: "flex",
@@ -392,8 +398,8 @@ export default function DsaPanel({
                 <div
                   style={{
                     fontSize: 12,
-                    fontWeight: 800,
-                    color: "#0f172a",
+                    fontWeight: 700,
+                    color: "var(--ink)",
                     textTransform: "uppercase",
                     letterSpacing: "0.08em",
                     marginBottom: 12,
@@ -406,9 +412,9 @@ export default function DsaPanel({
                     key={i}
                     style={{
                       marginBottom: 14,
-                      background: "rgba(248,250,252,0.6)",
-                      border: "1px solid rgba(226,232,240,0.7)",
-                      borderRadius: 12,
+                      background: "var(--surface-2)",
+                      border: "1px solid var(--line)",
+                      borderRadius: "var(--radius-sm)",
                       padding: 12,
                     }}
                   >
@@ -422,9 +428,10 @@ export default function DsaPanel({
                     >
                       <span
                         style={{
+                          fontFamily: "var(--font-mono)",
                           fontSize: 11,
                           fontWeight: 700,
-                          color: "#475569",
+                          color: "var(--muted)",
                           textTransform: "uppercase",
                           letterSpacing: "0.06em",
                         }}
@@ -436,9 +443,10 @@ export default function DsaPanel({
                         style={{
                           fontSize: 11,
                           fontWeight: 700,
-                          color: "#2563eb",
-                          background: "rgba(219,234,254,0.6)",
-                          border: "1px solid rgba(147,197,253,0.5)",
+                          fontFamily: "var(--font-body)",
+                          color: "var(--ink)",
+                          background: "var(--surface)",
+                          border: "1px solid var(--line-strong)",
                           borderRadius: 99,
                           padding: "3px 10px",
                           cursor: "pointer",
@@ -466,13 +474,11 @@ export default function DsaPanel({
         >
           <div
             style={{
-              background: "rgba(255,255,255,0.78)",
-              backdropFilter: "blur(24px)",
-              WebkitBackdropFilter: "blur(24px)",
-              border: "1px solid rgba(255,255,255,0.95)",
-              borderRadius: 22,
+              background: "var(--surface)",
+              border: "1px solid var(--line)",
+              borderRadius: "var(--radius-lg)",
               padding: 18,
-              boxShadow: "0 18px 40px -12px rgba(15,23,42,0.1)",
+              boxShadow: "var(--shadow-sm)",
               display: "flex",
               flexDirection: "column",
               gap: 12,
@@ -486,6 +492,7 @@ export default function DsaPanel({
                 alignItems: "center",
                 justifyContent: "space-between",
                 gap: 12,
+                flexWrap: "wrap",
               }}
             >
               <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
@@ -493,7 +500,7 @@ export default function DsaPanel({
                   style={{
                     fontSize: 11,
                     fontWeight: 700,
-                    color: "#64748b",
+                    color: "var(--muted)",
                     textTransform: "uppercase",
                     letterSpacing: "0.08em",
                   }}
@@ -507,14 +514,14 @@ export default function DsaPanel({
                   }
                   disabled={isBusy}
                   style={{
-                    background: "rgba(255,255,255,0.95)",
-                    border: "1px solid rgba(203,213,225,0.7)",
-                    borderRadius: 8,
-                    padding: "5px 10px",
+                    background: "var(--surface-2)",
+                    border: "1px solid var(--line-strong)",
+                    borderRadius: "var(--radius-sm)",
+                    padding: "6px 10px",
                     fontSize: 12.5,
                     fontWeight: 600,
-                    color: "#0f172a",
-                    fontFamily: "inherit",
+                    color: "var(--ink)",
+                    fontFamily: "var(--font-mono)",
                     cursor: "pointer",
                   }}
                 >
@@ -525,20 +532,31 @@ export default function DsaPanel({
                   ))}
                 </select>
               </div>
-              <div style={{ display: "flex", gap: 8 }}>
-                <EditorBtn onClick={handleRun} disabled={isBusy} kind="ghost">
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleRun}
+                  disabled={isBusy}
+                >
                   <PlayIcon /> Run
-                </EditorBtn>
-                <EditorBtn onClick={handleTest} disabled={isBusy} kind="ghost">
-                  <BeakerIcon /> Test Hidden
-                </EditorBtn>
-                <EditorBtn
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleTest}
+                  disabled={isBusy}
+                >
+                  <BeakerIcon /> Test hidden
+                </Button>
+                <Button
+                  variant="primary"
+                  size="sm"
                   onClick={handleSubmit}
                   disabled={isBusy}
-                  kind="primary"
                 >
                   <CheckIcon /> {selected.attempts > 0 ? "Resubmit" : "Submit"}
-                </EditorBtn>
+                </Button>
               </div>
             </div>
 
@@ -549,13 +567,12 @@ export default function DsaPanel({
               style={{
                 flex: 1,
                 minHeight: 320,
-                background: "#0f172a",
-                color: "#e2e8f0",
-                border: "1px solid rgba(15,23,42,0.6)",
-                borderRadius: 14,
+                background: "var(--ink)",
+                color: "var(--paper)",
+                border: "1px solid var(--ink-2)",
+                borderRadius: "var(--radius)",
                 padding: "14px 16px",
-                fontFamily:
-                  "ui-monospace, SFMono-Regular, 'SF Mono', Menlo, monospace",
+                fontFamily: "var(--font-mono)",
                 fontSize: 13,
                 lineHeight: 1.6,
                 outline: "none",
@@ -589,11 +606,12 @@ export default function DsaPanel({
                 onClick={() => patchEditor({ showStdin: !editor.showStdin })}
                 style={{
                   fontSize: 12,
-                  color: "#2563eb",
+                  color: "var(--ink)",
                   background: "transparent",
                   border: "none",
                   cursor: "pointer",
                   fontWeight: 600,
+                  fontFamily: "var(--font-body)",
                   display: "flex",
                   alignItems: "center",
                   gap: 6,
@@ -604,7 +622,7 @@ export default function DsaPanel({
               <span
                 style={{
                   fontSize: 11,
-                  color: "#94a3b8",
+                  color: "var(--muted-2)",
                   fontWeight: 500,
                 }}
               >
@@ -619,14 +637,13 @@ export default function DsaPanel({
                 placeholder="Enter custom stdin for the Run button…"
                 rows={3}
                 style={{
-                  background: "rgba(15,23,42,0.05)",
-                  border: "1px solid rgba(203,213,225,0.7)",
-                  borderRadius: 10,
+                  background: "var(--surface-2)",
+                  border: "1px solid var(--line-strong)",
+                  borderRadius: "var(--radius-sm)",
                   padding: "10px 12px",
-                  fontFamily:
-                    "ui-monospace, SFMono-Regular, 'SF Mono', Menlo, monospace",
+                  fontFamily: "var(--font-mono)",
                   fontSize: 12.5,
-                  color: "#0f172a",
+                  color: "var(--ink)",
                   outline: "none",
                   resize: "vertical",
                 }}
@@ -693,24 +710,23 @@ const QuestionTabs: React.FC<{
               alignItems: "center",
               gap: 8,
               padding: "8px 14px",
-              borderRadius: 12,
+              borderRadius: "var(--radius-sm)",
               fontSize: 12.5,
-              fontWeight: 700,
+              fontWeight: 600,
+              fontFamily: "var(--font-body)",
               cursor: "pointer",
-              border: active
-                ? "1px solid rgba(59,130,246,0.6)"
-                : "1px solid rgba(255,255,255,0.95)",
-              background: active
-                ? "linear-gradient(135deg,rgba(59,130,246,0.16),rgba(29,78,216,0.16))"
-                : "rgba(255,255,255,0.7)",
-              color: active ? "#1e3a8a" : "#475569",
-              boxShadow: active ? "0 6px 18px rgba(59,130,246,0.18)" : "none",
+              border: active ? "1px solid var(--ink)" : "1px solid var(--line)",
+              background: active ? "var(--ink)" : "var(--surface)",
+              color: active ? "var(--paper)" : "var(--muted)",
+              boxShadow: active ? "var(--shadow-sm)" : "none",
             }}
           >
-            <span>Q{i + 1}</span>
+            <span style={{ fontFamily: "var(--font-mono)", fontWeight: 700 }}>
+              Q{i + 1}
+            </span>
             <span
               style={{
-                fontWeight: 600,
+                fontWeight: 500,
                 maxWidth: 160,
                 overflow: "hidden",
                 textOverflow: "ellipsis",
@@ -722,11 +738,16 @@ const QuestionTabs: React.FC<{
             {done && (
               <span
                 style={{
+                  fontFamily: "var(--font-mono)",
                   fontSize: 10.5,
-                  fontWeight: 800,
-                  color: "#047857",
-                  background: "rgba(209,250,229,0.85)",
-                  border: "1px solid rgba(110,231,183,0.5)",
+                  fontWeight: 700,
+                  color: active ? "var(--paper)" : "var(--positive)",
+                  background: active
+                    ? "color-mix(in srgb, var(--paper) 16%, transparent)"
+                    : "var(--positive-tint)",
+                  border: active
+                    ? "1px solid color-mix(in srgb, var(--paper) 30%, transparent)"
+                    : "1px solid color-mix(in srgb, var(--positive) 30%, transparent)",
                   borderRadius: 99,
                   padding: "2px 8px",
                 }}
@@ -738,29 +759,16 @@ const QuestionTabs: React.FC<{
         );
       })}
     </div>
-    <button
+    <Button
+      variant="primary"
+      size="sm"
       onClick={onFinishClick}
       disabled={isFinishing}
-      style={{
-        display: "flex",
-        alignItems: "center",
-        gap: 7,
-        background: "linear-gradient(135deg,#059669,#047857)",
-        color: "#fff",
-        border: "none",
-        borderRadius: 99,
-        padding: "9px 20px",
-        fontSize: 13,
-        fontWeight: 700,
-        cursor: isFinishing ? "not-allowed" : "pointer",
-        opacity: isFinishing ? 0.6 : 1,
-        boxShadow: "0 8px 22px rgba(5,150,105,0.35)",
-      }}
     >
       {isFinishing
         ? "Finishing…"
         : `Finish round (${submittedCount}/${questions.length} submitted)`}
-    </button>
+    </Button>
   </div>
 );
 
@@ -780,23 +788,24 @@ const PreparingScreen = () => (
         width: 48,
         height: 48,
         borderRadius: "50%",
-        border: "3px solid rgba(59,130,246,0.2)",
-        borderTopColor: "#2563eb",
+        border: "3px solid var(--line)",
+        borderTopColor: "var(--signal)",
         animation: "spin 0.9s linear infinite",
       }}
     />
     <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     <div
       style={{
-        fontSize: 15,
-        fontWeight: 700,
-        color: "#0f172a",
-        letterSpacing: "-0.3px",
+        fontFamily: "var(--font-display)",
+        fontSize: 17,
+        fontWeight: 600,
+        color: "var(--ink)",
+        letterSpacing: "-0.5px",
       }}
     >
       Preparing your coding problems…
     </div>
-    <div style={{ fontSize: 13, color: "#64748b" }}>
+    <div style={{ fontSize: 13, color: "var(--muted)" }}>
       This usually takes a few seconds. The round will start automatically.
     </div>
   </div>
@@ -812,20 +821,19 @@ const EmptyRoundScreen: React.FC<{
       maxWidth: 520,
       margin: "60px auto",
       padding: "36px 32px",
-      background: "rgba(255,255,255,0.8)",
-      backdropFilter: "blur(24px)",
-      WebkitBackdropFilter: "blur(24px)",
-      border: "1px solid rgba(255,255,255,0.95)",
-      borderRadius: 28,
-      boxShadow: "0 25px 50px -12px rgba(15,23,42,0.18)",
+      background: "var(--surface)",
+      border: "1px solid var(--line)",
+      borderRadius: "var(--radius-lg)",
+      boxShadow: "var(--shadow-md)",
       textAlign: "center",
     }}
   >
     <h2
       style={{
-        fontSize: 21,
-        fontWeight: 800,
-        color: "#0f172a",
+        fontFamily: "var(--font-display)",
+        fontSize: 22,
+        fontWeight: 600,
+        color: "var(--ink)",
         letterSpacing: "-0.5px",
         marginBottom: 8,
       }}
@@ -835,8 +843,8 @@ const EmptyRoundScreen: React.FC<{
     <p
       style={{
         fontSize: 14,
-        color: "#475569",
-        lineHeight: 1.55,
+        color: "var(--muted)",
+        lineHeight: 1.6,
         marginBottom: 22,
       }}
     >
@@ -844,28 +852,18 @@ const EmptyRoundScreen: React.FC<{
       round — this won't count against you.
     </p>
     {error && (
-      <p style={{ fontSize: 13, color: "#b91c1c", marginBottom: 14 }}>
+      <p style={{ fontSize: 13, color: "var(--negative)", marginBottom: 14 }}>
         {error}
       </p>
     )}
-    <button
+    <Button
+      variant="primary"
+      size="md"
       onClick={() => void onFinish()}
       disabled={isFinishing}
-      style={{
-        background: "linear-gradient(135deg,#3b82f6,#1d4ed8)",
-        color: "#fff",
-        border: "none",
-        borderRadius: 99,
-        padding: "11px 26px",
-        fontSize: 13.5,
-        fontWeight: 700,
-        cursor: isFinishing ? "not-allowed" : "pointer",
-        opacity: isFinishing ? 0.6 : 1,
-        boxShadow: "0 8px 22px rgba(59,130,246,0.4)",
-      }}
     >
       {isFinishing ? "Continuing…" : "Continue to next round"}
-    </button>
+    </Button>
   </div>
 );
 
@@ -874,13 +872,13 @@ const EmptyRoundScreen: React.FC<{
 const Console: React.FC<{ state: ConsoleState }> = ({ state }) => (
   <div
     style={{
-      background: "rgba(15,23,42,0.92)",
-      color: "#e2e8f0",
-      borderRadius: 18,
+      background: "var(--ink)",
+      color: "var(--paper)",
+      borderRadius: "var(--radius)",
       padding: 18,
       minHeight: 160,
-      boxShadow: "0 18px 40px -12px rgba(15,23,42,0.25)",
-      fontFamily: "ui-monospace, SFMono-Regular, 'SF Mono', Menlo, monospace",
+      boxShadow: "var(--shadow-md)",
+      fontFamily: "var(--font-mono)",
       fontSize: 12.5,
       maxHeight: 280,
       overflow: "auto",
@@ -889,7 +887,7 @@ const Console: React.FC<{ state: ConsoleState }> = ({ state }) => (
     <div
       style={{
         fontSize: 11,
-        color: "#94a3b8",
+        color: "var(--muted-2)",
         textTransform: "uppercase",
         letterSpacing: "0.08em",
         fontWeight: 700,
@@ -905,7 +903,7 @@ const Console: React.FC<{ state: ConsoleState }> = ({ state }) => (
 const ConsoleBody: React.FC<{ state: ConsoleState }> = ({ state }) => {
   if (state.kind === "idle") {
     return (
-      <div style={{ color: "#64748b", fontStyle: "italic" }}>
+      <div style={{ color: "var(--muted-2)", fontStyle: "italic" }}>
         Output will appear here after you run, test, or submit your code.
       </div>
     );
@@ -917,7 +915,7 @@ const ConsoleBody: React.FC<{ state: ConsoleState }> = ({ state }) => {
           display: "flex",
           alignItems: "center",
           gap: 10,
-          color: "#bfdbfe",
+          color: "var(--signal)",
         }}
       >
         <Spinner />
@@ -926,7 +924,9 @@ const ConsoleBody: React.FC<{ state: ConsoleState }> = ({ state }) => {
     );
   }
   if (state.kind === "error") {
-    return <div style={{ color: "#fca5a5" }}>✘ {state.message}</div>;
+    return (
+      <div style={{ color: "var(--negative-tint)" }}>✘ {state.message}</div>
+    );
   }
   if (state.kind === "run-result") {
     const r = state.result;
@@ -941,9 +941,10 @@ const ConsoleBody: React.FC<{ state: ConsoleState }> = ({ state }) => {
           <div style={{ marginTop: 8 }}>
             <div
               style={{
-                color: "#94a3b8",
+                color: "var(--muted-2)",
                 fontSize: 10.5,
                 textTransform: "uppercase",
+                letterSpacing: "0.06em",
                 marginBottom: 4,
               }}
             >
@@ -952,8 +953,8 @@ const ConsoleBody: React.FC<{ state: ConsoleState }> = ({ state }) => {
             <pre
               style={{
                 whiteSpace: "pre-wrap",
-                color: "#e2e8f0",
-                background: "rgba(255,255,255,0.04)",
+                color: "var(--paper)",
+                background: "color-mix(in srgb, var(--paper) 6%, transparent)",
                 padding: 8,
                 borderRadius: 8,
               }}
@@ -966,9 +967,10 @@ const ConsoleBody: React.FC<{ state: ConsoleState }> = ({ state }) => {
           <div style={{ marginTop: 8 }}>
             <div
               style={{
-                color: "#fca5a5",
+                color: "var(--negative-tint)",
                 fontSize: 10.5,
                 textTransform: "uppercase",
+                letterSpacing: "0.06em",
                 marginBottom: 4,
               }}
             >
@@ -977,8 +979,9 @@ const ConsoleBody: React.FC<{ state: ConsoleState }> = ({ state }) => {
             <pre
               style={{
                 whiteSpace: "pre-wrap",
-                color: "#fecaca",
-                background: "rgba(248,113,113,0.08)",
+                color: "var(--negative-tint)",
+                background:
+                  "color-mix(in srgb, var(--negative) 20%, transparent)",
                 padding: 8,
                 borderRadius: 8,
               }}
@@ -993,8 +996,10 @@ const ConsoleBody: React.FC<{ state: ConsoleState }> = ({ state }) => {
   if (state.kind === "test-result") {
     return (
       <div>
-        <div style={{ marginBottom: 10, color: "#cbd5e1" }}>
-          <strong style={{ color: "#fff" }}>
+        <div style={{ marginBottom: 10, color: "var(--muted-2)" }}>
+          <strong
+            style={{ color: "var(--paper)", fontFamily: "var(--font-mono)" }}
+          >
             {state.result.passed} / {state.result.total}
           </strong>{" "}
           hidden cases passed
@@ -1011,23 +1016,66 @@ const ConsoleBody: React.FC<{ state: ConsoleState }> = ({ state }) => {
     const r = state.result;
     return (
       <div>
-        <div style={{ marginBottom: 10, color: "#cbd5e1" }}>
-          <strong style={{ color: "#fff" }}>
-            {r.passed} / {r.total}
-          </strong>{" "}
-          cases passed · score{" "}
-          <strong style={{ color: "#a7f3d0" }}>{r.score.toFixed(1)}</strong> ·
-          attempt <strong style={{ color: "#fff" }}>{r.attempts}</strong>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 14,
+            flexWrap: "wrap",
+            marginBottom: 12,
+          }}
+        >
+          <span style={{ color: "var(--muted-2)" }}>
+            <strong
+              style={{ color: "var(--paper)", fontFamily: "var(--font-mono)" }}
+            >
+              {r.passed} / {r.total}
+            </strong>{" "}
+            cases passed · attempt{" "}
+            <strong
+              style={{ color: "var(--paper)", fontFamily: "var(--font-mono)" }}
+            >
+              {r.attempts}
+            </strong>
+          </span>
+          <span
+            style={{ display: "inline-flex", alignItems: "center", gap: 8 }}
+          >
+            <span
+              style={{
+                fontSize: 10.5,
+                textTransform: "uppercase",
+                letterSpacing: "0.06em",
+                color: "var(--muted-2)",
+              }}
+            >
+              Score
+            </span>
+            <ScoreMeter score={r.score} size="sm" showValue={false} />
+            <span
+              style={{
+                fontFamily: "var(--font-mono)",
+                fontWeight: 700,
+                color: "var(--paper)",
+              }}
+            >
+              {r.score.toFixed(1)}
+              <span style={{ color: "var(--muted-2)", fontWeight: 400 }}>
+                /10
+              </span>
+            </span>
+          </span>
         </div>
         {!r.recorded && (
           <div
             style={{
               marginBottom: 10,
               padding: "8px 10px",
-              background: "rgba(251,191,36,0.12)",
-              border: "1px solid rgba(251,191,36,0.4)",
+              background: "color-mix(in srgb, var(--signal) 18%, transparent)",
+              border:
+                "1px solid color-mix(in srgb, var(--signal) 45%, transparent)",
               borderRadius: 8,
-              color: "#fde68a",
+              color: "var(--signal-tint)",
             }}
           >
             ⚠ This result was not recorded — the round ended or a newer
@@ -1046,7 +1094,7 @@ const ConsoleBody: React.FC<{ state: ConsoleState }> = ({ state }) => {
             <CaseDot key={c.case} idx={c.case} status={c.status} />
           ))}
         </div>
-        <div style={{ color: "#94a3b8", fontSize: 11.5 }}>
+        <div style={{ color: "var(--muted-2)", fontSize: 11.5 }}>
           You can resubmit until you finish the round — your last submission
           counts.
         </div>
@@ -1062,10 +1110,10 @@ const CaseDot: React.FC<{
 }> = ({ idx, status }) => {
   const color =
     status === "passed"
-      ? "#10b981"
+      ? "var(--positive)"
       : status === "failed"
-        ? "#f59e0b"
-        : "#ef4444";
+        ? "var(--signal)"
+        : "var(--negative)";
   const label = status === "passed" ? "✓" : status === "failed" ? "✗" : "⚠";
   return (
     <div
@@ -1074,16 +1122,17 @@ const CaseDot: React.FC<{
         display: "flex",
         alignItems: "center",
         gap: 6,
-        background: `${color}22`,
-        color,
-        border: `1px solid ${color}55`,
+        background: `color-mix(in srgb, ${color} 22%, transparent)`,
+        color: "var(--paper)",
+        border: `1px solid color-mix(in srgb, ${color} 55%, transparent)`,
         borderRadius: 99,
         padding: "4px 10px",
+        fontFamily: "var(--font-mono)",
         fontSize: 11.5,
         fontWeight: 700,
       }}
     >
-      <span>{label}</span>
+      <span style={{ color }}>{label}</span>
       Case {idx}
     </div>
   );
@@ -1097,7 +1146,7 @@ const Line: React.FC<{
   <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
     <span
       style={{
-        color: "#94a3b8",
+        color: "var(--muted-2)",
         fontSize: 11,
         textTransform: "uppercase",
         letterSpacing: "0.06em",
@@ -1107,7 +1156,8 @@ const Line: React.FC<{
     </span>
     <span
       style={{
-        color: tone === "ok" ? "#a7f3d0" : "#fecaca",
+        color: tone === "ok" ? "var(--positive-tint)" : "var(--negative-tint)",
+        fontFamily: "var(--font-mono)",
         fontWeight: 700,
       }}
     >
@@ -1123,8 +1173,9 @@ const CodeBlock: React.FC<{ label: string; body: string }> = ({
   <div>
     <div
       style={{
+        fontFamily: "var(--font-mono)",
         fontSize: 10.5,
-        color: "#64748b",
+        color: "var(--muted)",
         textTransform: "uppercase",
         letterSpacing: "0.06em",
         fontWeight: 700,
@@ -1136,52 +1187,18 @@ const CodeBlock: React.FC<{ label: string; body: string }> = ({
     <pre
       style={{
         whiteSpace: "pre-wrap",
-        background: "rgba(15,23,42,0.92)",
-        color: "#e2e8f0",
+        background: "var(--ink)",
+        color: "var(--paper)",
         padding: "8px 10px",
         borderRadius: 8,
         fontSize: 11.5,
-        fontFamily: "ui-monospace, SFMono-Regular, 'SF Mono', Menlo, monospace",
+        fontFamily: "var(--font-mono)",
         margin: 0,
       }}
     >
       {body}
     </pre>
   </div>
-);
-
-const EditorBtn: React.FC<{
-  onClick: () => void;
-  disabled?: boolean;
-  kind: "primary" | "ghost";
-  children: React.ReactNode;
-}> = ({ onClick, disabled, kind, children }) => (
-  <button
-    onClick={onClick}
-    disabled={disabled}
-    style={{
-      display: "flex",
-      alignItems: "center",
-      gap: 6,
-      padding: "8px 14px",
-      borderRadius: 10,
-      fontSize: 12.5,
-      fontWeight: 700,
-      cursor: disabled ? "not-allowed" : "pointer",
-      opacity: disabled ? 0.6 : 1,
-      border: kind === "primary" ? "none" : "1px solid rgba(203,213,225,0.8)",
-      background:
-        kind === "primary"
-          ? "linear-gradient(135deg,#3b82f6,#1d4ed8)"
-          : "rgba(255,255,255,0.85)",
-      color: kind === "primary" ? "#fff" : "#475569",
-      boxShadow:
-        kind === "primary" ? "0 6px 18px rgba(59,130,246,0.4)" : "none",
-      transition: "all 0.15s",
-    }}
-  >
-    {children}
-  </button>
 );
 
 const FinishConfirmModal: React.FC<{
@@ -1197,7 +1214,7 @@ const FinishConfirmModal: React.FC<{
     style={{
       position: "fixed",
       inset: 0,
-      background: "rgba(15,23,42,0.55)",
+      background: "color-mix(in srgb, var(--ink) 55%, transparent)",
       backdropFilter: "blur(6px)",
       WebkitBackdropFilter: "blur(6px)",
       display: "flex",
@@ -1208,28 +1225,26 @@ const FinishConfirmModal: React.FC<{
   >
     <div
       style={{
-        background: "rgba(255,255,255,0.95)",
-        backdropFilter: "blur(24px)",
-        WebkitBackdropFilter: "blur(24px)",
-        border: "1px solid rgba(255,255,255,0.95)",
-        borderRadius: 22,
+        background: "var(--surface)",
+        border: "1px solid var(--line)",
+        borderRadius: "var(--radius-lg)",
         padding: 28,
         maxWidth: 440,
         width: "92%",
-        boxShadow: "0 35px 60px -15px rgba(15,23,42,0.3)",
+        boxShadow: "var(--shadow-lg)",
       }}
     >
       <div
         style={{
           width: 44,
           height: 44,
-          borderRadius: 12,
-          background: "linear-gradient(145deg,#fef3c7,#fde68a)",
-          color: "#b45309",
+          borderRadius: "var(--radius-sm)",
+          background: "var(--signal-tint)",
+          color: "var(--signal-strong)",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          marginBottom: 12,
+          marginBottom: 14,
         }}
       >
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
@@ -1244,10 +1259,11 @@ const FinishConfirmModal: React.FC<{
       </div>
       <h3
         style={{
-          fontSize: 19,
-          fontWeight: 800,
-          color: "#0f172a",
-          letterSpacing: "-0.4px",
+          fontFamily: "var(--font-display)",
+          fontSize: 20,
+          fontWeight: 600,
+          color: "var(--ink)",
+          letterSpacing: "-0.5px",
           marginBottom: 6,
         }}
       >
@@ -1256,8 +1272,8 @@ const FinishConfirmModal: React.FC<{
       <p
         style={{
           fontSize: 13.5,
-          color: "#64748b",
-          lineHeight: 1.55,
+          color: "var(--muted)",
+          lineHeight: 1.6,
           marginBottom: 22,
         }}
       >
@@ -1268,39 +1284,17 @@ const FinishConfirmModal: React.FC<{
           " Unsubmitted problems will score zero."}
       </p>
       <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
-        <button
-          onClick={onCancel}
-          style={{
-            background: "rgba(241,245,249,0.9)",
-            border: "1px solid rgba(203,213,225,0.7)",
-            borderRadius: 99,
-            padding: "10px 20px",
-            fontSize: 13,
-            fontWeight: 600,
-            color: "#475569",
-            cursor: "pointer",
-          }}
-        >
+        <Button variant="ghost" size="md" onClick={onCancel}>
           Keep working
-        </button>
-        <button
+        </Button>
+        <Button
+          variant="primary"
+          size="md"
           onClick={onConfirm}
           disabled={isFinishing}
-          style={{
-            background: "linear-gradient(135deg,#059669,#047857)",
-            color: "#fff",
-            border: "none",
-            borderRadius: 99,
-            padding: "10px 22px",
-            fontSize: 13,
-            fontWeight: 700,
-            cursor: isFinishing ? "not-allowed" : "pointer",
-            opacity: isFinishing ? 0.6 : 1,
-            boxShadow: "0 6px 18px rgba(5,150,105,0.35)",
-          }}
         >
           Finish round
-        </button>
+        </Button>
       </div>
     </div>
   </div>
