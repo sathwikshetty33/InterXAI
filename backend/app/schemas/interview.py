@@ -34,8 +34,9 @@ class CustomInterviewCreate(BaseModel):
         tz = self.start_time.tzinfo
         now = datetime.now(tz)
 
-        if self.start_time <= now:
-            raise ValueError("start_time must be in the future")
+        # start_time is allowed in the past — an interview may open its window
+        # immediately (or backdated for testing). The window must still not have
+        # already closed, and the application deadline must still be reachable.
         if self.end_time <= now:
             raise ValueError("end_time must be in the future")
         if self.submission_deadline <= now:
