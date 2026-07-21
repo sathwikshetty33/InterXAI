@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 import {
   createOrgInterview,
   getInterviewApplications,
@@ -21,24 +22,35 @@ import MarkdownView from "../interview/components/MarkdownView";
 export interface OrgDashboardPageProps {
   token: string;
   orgName?: string;
+  /** Which view the current route maps to; interview id / tab come from the URL. */
+  mode: View;
   onLogout: () => void;
 }
 
 type View = "list" | "detail" | "create";
 type DetailTab = "overview" | "applications" | "leaderboard";
+const DETAIL_TABS: DetailTab[] = ["overview", "applications", "leaderboard"];
 
 const OrgDashboardPage: React.FC<OrgDashboardPageProps> = ({
   token,
   orgName,
+  mode,
   onLogout,
 }) => {
-  const [view, setView] = useState<View>("list");
+  const navigate = useNavigate();
+  const params = useParams();
+  // The route is the source of truth for the view, the open interview, and the
+  // detail tab — so a refresh or a shared link restores exactly this state.
+  const view = mode;
+  const activeInterviewId = params.interviewId
+    ? Number(params.interviewId)
+    : null;
+  const detailTab: DetailTab = DETAIL_TABS.includes(params.tab as DetailTab)
+    ? (params.tab as DetailTab)
+    : "overview";
   const [interviews, setInterviews] = useState<OrgInterview[]>([]);
   const [isLoadingList, setIsLoadingList] = useState(true);
   const [listError, setListError] = useState<string | null>(null);
-  const [activeInterviewId, setActiveInterviewId] = useState<number | null>(
-    null,
-  );
   const [isSeedingTest, setIsSeedingTest] = useState(false);
   const [seedError, setSeedError] = useState<string | null>(null);
 
@@ -91,21 +103,15 @@ const OrgDashboardPage: React.FC<OrgDashboardPageProps> = ({
     (i) => !isLive(i) && !isUpcoming(i),
   ).length;
 
-  const openDetail = (id: number) => {
-    setActiveInterviewId(id);
-    setView("detail");
-  };
-
-  const openCreate = () => setView("create");
-  const goList = () => {
-    setActiveInterviewId(null);
-    setView("list");
-  };
+  const openDetail = (id: number) => navigate(`/admin/interview/${id}`);
+  const openCreate = () => navigate("/admin/new");
+  const goList = () => navigate("/admin/dashboard");
+  const openTab = (id: number, tab: DetailTab) =>
+    navigate(`/admin/interview/${id}/${tab}`);
 
   const handleCreated = async (created: OrgInterviewDetail) => {
     await fetchInterviews();
-    setActiveInterviewId(created.id);
-    setView("detail");
+    navigate(`/admin/interview/${created.id}`);
   };
 
   const handleSeedTest = async () => {
@@ -114,8 +120,8 @@ const OrgDashboardPage: React.FC<OrgDashboardPageProps> = ({
     try {
       const created = await seedTestInterview(token);
       await fetchInterviews();
-      setActiveInterviewId(created.id);
-      setView("detail");
+      navigate(`/admin/interview/${created.id}`);
+      return;
     } catch (err) {
       setSeedError(
         err instanceof LeaderboardServiceError
@@ -187,6 +193,8 @@ const OrgDashboardPage: React.FC<OrgDashboardPageProps> = ({
             key={activeInterviewId}
             interviewId={activeInterviewId}
             token={token}
+            tab={detailTab}
+            onTabChange={(t) => openTab(activeInterviewId, t)}
             onBack={goList}
           />
         )}
@@ -601,9 +609,10 @@ const InterviewCard: React.FC<{
 const InterviewDetailView: React.FC<{
   interviewId: number;
   token: string;
+  tab: DetailTab;
+  onTabChange: (tab: DetailTab) => void;
   onBack: () => void;
-}> = ({ interviewId, token, onBack }) => {
-  const [tab, setTab] = useState<DetailTab>("overview");
+}> = ({ interviewId, token, tab, onTabChange, onBack }) => {
   const [detail, setDetail] = useState<OrgInterviewDetail | null>(null);
   const [detailError, setDetailError] = useState<string | null>(null);
 
@@ -747,7 +756,7 @@ const InterviewDetailView: React.FC<{
                   key={t}
                   role="tab"
                   aria-selected={tab === t}
-                  onClick={() => setTab(t)}
+                  onClick={() => onTabChange(t)}
                   style={{
                     padding: "8px 18px",
                     borderRadius: 99,
