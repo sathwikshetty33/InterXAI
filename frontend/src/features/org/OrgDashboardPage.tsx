@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import {
   createOrgInterview,
+  getDsaTopicCatalog,
   getInterviewApplications,
   getLeaderboard,
   getOrgInterview,
@@ -11,6 +12,7 @@ import {
   LeaderboardServiceError,
   type ApplicationResponse,
   type CreateInterviewPayload,
+  type DsaTopicCatalogEntry,
   type LeaderboardEntry,
   type LeaderboardResponse,
   type OrgInterview,
@@ -1766,7 +1768,7 @@ const STEP_META: Record<
   3: {
     title: "Coding round",
     subtitle:
-      "Pick the topics and difficulty — the AI generates a fresh problem per candidate during the interview.",
+      "Pick topics and difficulty from our validated question bank — each candidate is assigned one problem per topic.",
     pill: "Step 3 of 3",
   },
 };
@@ -1790,10 +1792,56 @@ const CreateInterviewView: React.FC<{
     resume_shortlist_score: 0,
     ask_questions_on_resume: false,
     questions: [{ question: "", expected_answer: "" }],
-    dsa_topics: [{ topic: "", difficulty: "easy" }],
+    dsa_topics: [{ topic: "", difficulty: "" }],
   });
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+
+  // Offer only real bank topics, so a topic can't be typed that resolves to
+  // zero questions (see getDsaTopicCatalog).
+  const [catalog, setCatalog] = useState<DsaTopicCatalogEntry[]>([]);
+  const [catalogError, setCatalogError] = useState<string | null>(null);
+  const [catalogLoading, setCatalogLoading] = useState(true);
+
+  const fetchCatalog = useCallback(() => {
+    return getDsaTopicCatalog(token)
+      .then((entries) => {
+        setCatalog(entries);
+        if (entries.length === 0) return;
+        // Fill in any still-blank topic row (the initial row, before the
+        // catalog loaded) with the first available topic/difficulty.
+        setForm((f) => ({
+          ...f,
+          dsa_topics: f.dsa_topics.map((t) =>
+            t.topic === ""
+              ? {
+                  topic: entries[0].topic,
+                  difficulty: entries[0].difficulties[0],
+                }
+              : t,
+          ),
+        }));
+      })
+      .catch((err) => {
+        setCatalogError(
+          err instanceof LeaderboardServiceError
+            ? err.message
+            : "Failed to load DSA topics.",
+        );
+      })
+      .finally(() => setCatalogLoading(false));
+  }, [token]);
+
+  useEffect(() => {
+    void fetchCatalog();
+  }, [fetchCatalog]);
+
+  // Retry button handler: resets loading/error state, then re-fetches.
+  const retryCatalog = () => {
+    setCatalogLoading(true);
+    setCatalogError(null);
+    void fetchCatalog();
+  };
 
   const set = <K extends keyof CreateFormState>(k: K, v: CreateFormState[K]) =>
     setForm((f) => ({ ...f, [k]: v }));
@@ -1826,7 +1874,12 @@ const CreateInterviewView: React.FC<{
   const addT = () =>
     setForm((f) => ({
       ...f,
-      dsa_topics: [...f.dsa_topics, { topic: "", difficulty: "easy" }],
+      dsa_topics: [
+        ...f.dsa_topics,
+        catalog[0]
+          ? { topic: catalog[0].topic, difficulty: catalog[0].difficulties[0] }
+          : { topic: "", difficulty: "" },
+      ],
     }));
   const rmT = (i: number) =>
     setForm((f) => ({
@@ -2005,6 +2058,10 @@ const CreateInterviewView: React.FC<{
               setT={setT}
               addT={addT}
               rmT={rmT}
+              catalog={catalog}
+              catalogLoading={catalogLoading}
+              catalogError={catalogError}
+              onRetryCatalog={retryCatalog}
             />
           )}
 
@@ -2350,39 +2407,136 @@ const Step3Topics: React.FC<{
   setT: (i: number, patch: Partial<CreateFormState["dsa_topics"][0]>) => void;
   addT: () => void;
   rmT: (i: number) => void;
-}> = ({ topics, setT, addT, rmT }) => (
-  <>
-    <AiGeneratesPanel topicCount={topics.length} />
-    {topics.map((t, i) => (
-      <div
-        key={i}
-        style={{
-          background: "var(--surface-2)",
-          border: "1px solid var(--line)",
-          borderRadius: "var(--radius)",
-          padding: 14,
-          marginBottom: 10,
-          display: "grid",
-          gridTemplateColumns: "1fr 200px 40px",
-          gap: 10,
-          alignItems: "end",
-        }}
-      >
-        <Field
-          label={`Topic ${i + 1}`}
-          value={t.topic}
-          onChange={(v) => setT(i, { topic: v })}
-          placeholder="Two Pointers, Trees, DP…"
-        />
-        <DifficultyPicker
-          value={t.difficulty}
-          onChange={(v) => setT(i, { difficulty: v })}
-        />
-        {topics.length > 1 ? <RemoveBtn onClick={() => rmT(i)} /> : <div />}
-      </div>
-    ))}
-    <AddBtn onClick={addT}>+ Add another topic</AddBtn>
-  </>
+  catalog: DsaTopicCatalogEntry[];
+  catalogLoading: boolean;
+  catalogError: string | null;
+  onRetryCatalog: () => void;
+}> = ({
+  topics,
+  setT,
+  addT,
+  rmT,
+  catalog,
+  catalogLoading,
+  catalogError,
+  onRetryCatalog,
+}) => {
+  if (catalogLoading) {
+    return (
+      <>
+        <AiGeneratesPanel topicCount={topics.length} />
+        <Muted>Loading available topics…</Muted>
+      </>
+    );
+  }
+
+  if (catalogError) {
+    return (
+      <>
+        <AiGeneratesPanel topicCount={topics.length} />
+        <ErrorAlert message={catalogError} onRetry={onRetryCatalog} />
+      </>
+    );
+  }
+
+  if (catalog.length === 0) {
+    return (
+      <>
+        <AiGeneratesPanel topicCount={topics.length} />
+        <Muted>
+          No topics are available in the question bank yet. Add questions to the
+          bank before configuring a coding round.
+        </Muted>
+      </>
+    );
+  }
+
+  return (
+    <>
+      <AiGeneratesPanel topicCount={topics.length} />
+      {topics.map((t, i) => {
+        const entry = catalog.find((c) => c.topic === t.topic);
+        return (
+          <div
+            key={i}
+            style={{
+              background: "var(--surface-2)",
+              border: "1px solid var(--line)",
+              borderRadius: "var(--radius)",
+              padding: 14,
+              marginBottom: 10,
+              display: "grid",
+              gridTemplateColumns: "1fr 200px 40px",
+              gap: 10,
+              alignItems: "end",
+            }}
+          >
+            <TopicPicker
+              label={`Topic ${i + 1}`}
+              value={t.topic}
+              options={catalog.map((c) => c.topic)}
+              onChange={(topic) => {
+                const next = catalog.find((c) => c.topic === topic);
+                setT(i, {
+                  topic,
+                  difficulty: next?.difficulties[0] ?? t.difficulty,
+                });
+              }}
+            />
+            <DifficultyPicker
+              value={t.difficulty}
+              onChange={(v) => setT(i, { difficulty: v })}
+              available={entry?.difficulties}
+            />
+            {topics.length > 1 ? <RemoveBtn onClick={() => rmT(i)} /> : <div />}
+          </div>
+        );
+      })}
+      <AddBtn onClick={addT}>+ Add another topic</AddBtn>
+    </>
+  );
+};
+
+const TopicPicker: React.FC<{
+  label: string;
+  value: string;
+  options: string[];
+  onChange: (v: string) => void;
+}> = ({ label, value, options, onChange }) => (
+  <label style={{ display: "block" }}>
+    <span
+      style={{
+        display: "block",
+        fontSize: 12,
+        fontWeight: 600,
+        color: "var(--muted)",
+        marginBottom: 5,
+      }}
+    >
+      {label}
+    </span>
+    <select
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      style={{
+        width: "100%",
+        padding: "10px 12px",
+        fontSize: 14,
+        fontFamily: "var(--font-body)",
+        color: "var(--ink)",
+        background: "var(--surface)",
+        border: "1px solid var(--line)",
+        borderRadius: "var(--radius-sm)",
+        cursor: "pointer",
+      }}
+    >
+      {options.map((o) => (
+        <option key={o} value={o}>
+          {o}
+        </option>
+      ))}
+    </select>
+  </label>
 );
 
 // ── Step 1 helpers ──────────────────────────────────────────────────────────
@@ -2608,7 +2762,7 @@ const AiGeneratesPanel: React.FC<{ topicCount: number }> = ({ topicCount }) => (
             marginBottom: 4,
           }}
         >
-          Questions are AI-generated per candidate
+          Questions come from a validated bank
         </div>
         <div
           style={{
@@ -2617,9 +2771,10 @@ const AiGeneratesPanel: React.FC<{ topicCount: number }> = ({ topicCount }) => (
             lineHeight: 1.55,
           }}
         >
-          Just pick the <strong>topics</strong> and <strong>difficulty</strong>.
-          When a candidate starts the coding round, the AI generates a unique
-          problem from your pool — so no two candidates see the same question.
+          Pick <strong>topics</strong> and <strong>difficulty</strong> below.
+          Every problem in the bank has passed its own hidden test cases before
+          being served, and we assign the least-used match per topic so problems
+          rotate fairly across candidates.
         </div>
       </div>
       <div
@@ -2646,7 +2801,11 @@ const AiGeneratesPanel: React.FC<{ topicCount: number }> = ({ topicCount }) => (
 const DifficultyPicker: React.FC<{
   value: string;
   onChange: (v: string) => void;
-}> = ({ value, onChange }) => {
+  /** When set, only these difficulties have a bank question for the chosen
+   * topic — the rest render disabled instead of silently accepting a
+   * selection that would resolve to zero questions. */
+  available?: string[];
+}> = ({ value, onChange, available }) => {
   const opts: { value: string; label: string; color: string }[] = [
     { value: "easy", label: "Easy", color: "var(--positive)" },
     { value: "medium", label: "Medium", color: "var(--signal-strong)" },
@@ -2676,11 +2835,18 @@ const DifficultyPicker: React.FC<{
       >
         {opts.map((o) => {
           const active = o.value === value;
+          const disabled = available ? !available.includes(o.value) : false;
           return (
             <button
               key={o.value}
               type="button"
+              disabled={disabled}
               onClick={() => onChange(o.value)}
+              title={
+                disabled
+                  ? "No question available at this difficulty"
+                  : undefined
+              }
               style={{
                 flex: 1,
                 padding: "6px 10px",
@@ -2688,10 +2854,11 @@ const DifficultyPicker: React.FC<{
                 fontSize: 12,
                 fontWeight: 700,
                 fontFamily: "var(--font-body)",
-                cursor: "pointer",
+                cursor: disabled ? "not-allowed" : "pointer",
                 border: "none",
                 background: active ? o.color : "transparent",
                 color: active ? "var(--paper)" : "var(--muted)",
+                opacity: disabled ? 0.35 : 1,
                 transition: "all 0.15s ease",
               }}
             >

@@ -222,6 +222,27 @@ export async function createOrgInterview(
   return handle<OrgInterviewDetail>(res);
 }
 
+export interface DsaTopicCatalogEntry {
+  topic: string;
+  difficulties: string[];
+}
+
+/**
+ * GET /interviews/dsa-topics — the DSA question bank's real topics, grouped
+ * with the difficulties each has a question for. Topic matching at assignment
+ * time is exact-string, so free text that doesn't match the bank (e.g. "DP"
+ * vs "Dynamic Programming") silently produces an empty coding round — this
+ * backs a dropdown so that can't happen.
+ */
+export async function getDsaTopicCatalog(
+  token: string,
+): Promise<DsaTopicCatalogEntry[]> {
+  const res = await fetch(`${BASE_URL}/interviews/dsa-topics`, {
+    headers: authHeaders(token),
+  });
+  return handle<DsaTopicCatalogEntry[]>(res);
+}
+
 /** POST /interviews/seed-test — create a pre-filled test interview. */
 export async function seedTestInterview(
   token: string,
