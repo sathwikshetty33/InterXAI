@@ -24,10 +24,15 @@ if db_url.startswith("postgresql://"):
 separator = "&" if "?" in db_url else "?"
 db_url = f"{db_url}{separator}prepared_statement_cache_size=0"
 
+# Neon drops idle connections; without pre_ping SQLAlchemy hands out a dead one
+# and the first query fails with "connection is closed". pre_ping checks/replaces
+# it first; pool_recycle retires connections before Neon's idle timeout hits.
 engine = create_async_engine(
     db_url,
     echo=settings.DEBUG,
     future=True,
+    pool_pre_ping=True,
+    pool_recycle=180,
     connect_args={
         "ssl": "require",
         "statement_cache_size": 0,
