@@ -69,6 +69,8 @@ export interface CreateInterviewPayload {
 export interface ApplicationResponse {
   id: number;
   user_id: number;
+  username: string | null;
+  email: string | null;
   interview_id: number;
   resume: string | null;
   extracted_resume: string | null;

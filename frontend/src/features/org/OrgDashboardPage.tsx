@@ -16,6 +16,7 @@ import {
   type OrgInterviewDetail,
   type SessionResult,
 } from "../../services/leaderboard.service";
+import MarkdownView from "../interview/components/MarkdownView";
 
 export interface OrgDashboardPageProps {
   token: string;
@@ -1035,7 +1036,7 @@ const ApplicationRow: React.FC<{
         </div>
         <div>
           <div style={{ fontSize: 13, fontWeight: 700, color: "#0f172a" }}>
-            User #{application.user_id}
+            {application.username ?? `User #${application.user_id}`}
           </div>
           <div
             style={{
@@ -1156,15 +1157,11 @@ const ApplicationRow: React.FC<{
               </div>
               <div
                 style={{
-                  fontSize: 12.5,
-                  color: "#334155",
-                  whiteSpace: "pre-wrap",
                   maxHeight: 320,
                   overflowY: "auto",
-                  lineHeight: 1.5,
                 }}
               >
-                {application.extracted_resume}
+                <MarkdownView source={application.extracted_resume} />
               </div>
             </div>
           )}
