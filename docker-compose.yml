@@ -16,8 +16,10 @@ services:
     volumes:
       - ./backend:/app
     depends_on:
-      - redis
-      - piston
+      redis:
+        condition: service_started
+      piston_bootstrap:
+        condition: service_completed_successfully
 
   taskiq_worker:
     build:
@@ -31,9 +33,12 @@ services:
     volumes:
       - ./backend:/app
     depends_on:
-      - redis
-      - api
-      - piston
+      redis:
+        condition: service_started
+      api:
+        condition: service_started
+      piston_bootstrap:
+        condition: service_completed_successfully
 
   redis:
     image: redis:7-alpine
@@ -67,6 +72,18 @@ services:
     volumes:
       - piston_data:/piston
     restart: always
+
+  # One-shot: installs the DSA languages into piston_data (Piston ships with
+  # none), then exits. Skips already-installed ones, so reruns are a no-op.
+  piston_bootstrap:
+    image: python:3.12-alpine
+    depends_on:
+      - piston
+    environment:
+      PISTON_URL: http://piston:2000
+    volumes:
+      - ./tools/piston_bootstrap.py:/piston_bootstrap.py:ro
+    command: ["python", "/piston_bootstrap.py"]
 
 volumes:
   redis_data:
