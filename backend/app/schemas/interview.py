@@ -13,6 +13,16 @@ class DsaTopicCreate(BaseModel):
     difficulty: str
 
 
+class DsaTopicCatalogEntry(BaseModel):
+    """One topic from the DSA question bank, with the difficulties it has
+    at least one question for. Lets the interview-creation UI offer a
+    dropdown of topics that will actually resolve to a question at assignment
+    time, instead of free text that must match the bank exactly."""
+
+    topic: str
+    difficulties: list[str]
+
+
 class CustomInterviewCreate(BaseModel):
     description: str
     position: str

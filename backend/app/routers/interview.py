@@ -14,6 +14,7 @@ from app.models.application import (
     InterviewSession,
     InterviewStatus,
 )
+from app.models.dsa_question import DsaQuestion
 from app.models.interaction import FollowUpQuestion, Interaction
 from app.models.interview import CustomInterview, CustomQuestion, DsaTopic
 from app.models.organization import Organization
@@ -23,6 +24,7 @@ from app.schemas.interview import (
     CustomInterviewBasicResponse,
     CustomInterviewCreate,
     CustomInterviewResponse,
+    DsaTopicCatalogEntry,
 )
 from app.schemas.session import CustomQuestionPayload, InterviewStateResponse
 from app.utils.authorization import get_current_user, is_organization
@@ -139,6 +141,40 @@ async def get_applied_interviews(
         applied_interviews.append(AppliedInterviewResponse(**data))
 
     return applied_interviews
+
+
+# DSA-topic-canonical-order for the catalog response — matches the order the
+# create-interview wizard's difficulty picker already presents.
+_DIFFICULTY_ORDER = {"easy": 0, "medium": 1, "hard": 2}
+
+
+@router.get("/dsa-topics", response_model=list[DsaTopicCatalogEntry])
+async def get_dsa_topic_catalog(
+    db: AsyncSession = Depends(get_db),
+    org: Organization = Depends(is_organization),
+) -> list[DsaTopicCatalogEntry]:
+    """
+    Distinct (topic, difficulty) pairs available in the DSA question bank,
+    grouped by topic. Backs the create-interview wizard's topic dropdown —
+    DsaTopic.topic must match DsaQuestion.topic EXACTLY for assignment to find
+    a question, so free text (e.g. "DP" vs "Dynamic Programming") silently
+    yields zero questions for that round. Offering only real bank topics
+    here rules that out by construction.
+    """
+    logger.info("Get DSA topic catalog request for org: %d", org.id)
+    result = await db.execute(select(DsaQuestion.topic, DsaQuestion.difficulty).distinct())
+
+    by_topic: dict[str, set[str]] = {}
+    for topic, difficulty in result:
+        by_topic.setdefault(topic, set()).add(difficulty)
+
+    return [
+        DsaTopicCatalogEntry(
+            topic=topic,
+            difficulties=sorted(difficulties, key=lambda d: _DIFFICULTY_ORDER.get(d, 99)),
+        )
+        for topic, difficulties in sorted(by_topic.items())
+    ]
 
 
 @router.post(
