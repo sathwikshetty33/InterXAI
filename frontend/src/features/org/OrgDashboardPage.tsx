@@ -1376,15 +1376,16 @@ const LeaderboardRow: React.FC<{
       <ScoreMeter score={entry.resume_score} size="sm" animate={false} />
     </div>
     <div style={{ textAlign: "center" }}>
-      {entry.shortlisting_decision ? (
-        <BadgePill
-          color="var(--positive)"
-          bg="var(--positive-tint)"
-          label="Listed"
-        />
-      ) : (
-        <BadgePill color="var(--muted)" bg="var(--surface-2)" label="Pending" />
-      )}
+      <StatusPill
+        status={
+          // The interview/session status — the actual candidate's progress —
+          // not the shortlisting decision (that's implied: a session can't
+          // exist without it). Most recent session if there is one; if not,
+          // fall back to whether they're even approved to start yet.
+          entry.sessions[entry.sessions.length - 1]?.status ??
+          (entry.shortlisting_decision ? "not_started" : "pending_review")
+        }
+      />
     </div>
     <div
       style={{
@@ -3306,6 +3307,14 @@ const BadgePill: React.FC<{
   </span>
 );
 
+// Human-readable labels for statuses that aren't already a clean word on
+// their own (the InterviewStatus values — ongoing/completed/cheated/etc. —
+// read fine verbatim, so they're left out and fall back to `status` as-is).
+const STATUS_LABELS: Record<string, string> = {
+  not_started: "Not started",
+  pending_review: "Pending review",
+};
+
 const StatusPill: React.FC<{ status: string }> = ({ status }) => {
   const map: Record<string, { c: string; bg: string }> = {
     ongoing: { c: "var(--signal-strong)", bg: "var(--signal-tint)" },
@@ -3317,9 +3326,13 @@ const StatusPill: React.FC<{ status: string }> = ({ status }) => {
     applied: { c: "var(--ink-2)", bg: "var(--surface-2)" },
     approved: { c: "var(--positive)", bg: "var(--positive-tint)" },
     rejected: { c: "var(--negative)", bg: "var(--negative-tint)" },
+    not_started: { c: "var(--muted)", bg: "var(--surface-2)" },
+    pending_review: { c: "var(--signal-strong)", bg: "var(--signal-tint)" },
   };
   const t = map[status] ?? { c: "var(--muted)", bg: "var(--surface-2)" };
-  return <BadgePill color={t.c} bg={t.bg} label={status} />;
+  return (
+    <BadgePill color={t.c} bg={t.bg} label={STATUS_LABELS[status] ?? status} />
+  );
 };
 
 const DifficultyChip: React.FC<{ difficulty: string; inline?: boolean }> = ({
