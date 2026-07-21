@@ -1128,7 +1128,7 @@ const ApplicationRow: React.FC<{
 
 // ── Leaderboard tab ─────────────────────────────────────────────────────────
 
-const LEADERBOARD_GRID = "56px minmax(150px,1fr) 190px 190px 120px 32px";
+const LEADERBOARD_GRID = "56px minmax(150px,1fr) 170px 170px 110px 150px 32px";
 
 const LeaderboardTab: React.FC<{ interviewId: number; token: string }> = ({
   interviewId,
@@ -1201,7 +1201,7 @@ const LeaderboardTab: React.FC<{ interviewId: number; token: string }> = ({
           marginTop: data.entries.length >= 3 ? 20 : 0,
         }}
       >
-        <div style={{ minWidth: 760 }}>
+        <div style={{ minWidth: 860 }}>
           <div
             style={{
               display: "grid",
@@ -1222,6 +1222,7 @@ const LeaderboardTab: React.FC<{ interviewId: number; token: string }> = ({
             <div style={{ textAlign: "center" }}>Interview</div>
             <div style={{ textAlign: "center" }}>Resume</div>
             <div style={{ textAlign: "center" }}>Status</div>
+            <div style={{ textAlign: "center" }}>Recommendation</div>
             <div />
           </div>
 
@@ -1345,60 +1346,67 @@ const LeaderboardRow: React.FC<{
   entry: LeaderboardEntry;
   expanded: boolean;
   onToggle: () => void;
-}> = ({ entry, expanded, onToggle }) => (
-  <div
-    onClick={onToggle}
-    style={{
-      display: "grid",
-      gridTemplateColumns: LEADERBOARD_GRID,
-      gap: 10,
-      padding: "14px 18px",
-      alignItems: "center",
-      borderBottom: "1px solid var(--line)",
-      cursor: "pointer",
-      background: expanded ? "var(--surface-2)" : "transparent",
-      transition: "background 0.15s ease",
-    }}
-  >
-    <RankBadge rank={entry.rank} />
-    <div>
-      <div style={{ fontSize: 13.5, fontWeight: 700, color: "var(--ink)" }}>
-        {entry.username}
-      </div>
-      <div style={{ fontSize: 11.5, color: "var(--muted-2)" }}>
-        {entry.email}
-      </div>
-    </div>
-    <div style={{ display: "flex", justifyContent: "center" }}>
-      <ScoreMeter score={entry.interview_score} size="sm" animate={false} />
-    </div>
-    <div style={{ display: "flex", justifyContent: "center" }}>
-      <ScoreMeter score={entry.resume_score} size="sm" animate={false} />
-    </div>
-    <div style={{ textAlign: "center" }}>
-      <StatusPill
-        status={
-          // The interview/session status — the actual candidate's progress —
-          // not the shortlisting decision (that's implied: a session can't
-          // exist without it). Most recent session if there is one; if not,
-          // fall back to whether they're even approved to start yet.
-          entry.sessions[entry.sessions.length - 1]?.status ??
-          (entry.shortlisting_decision ? "not_started" : "pending_review")
-        }
-      />
-    </div>
+}> = ({ entry, expanded, onToggle }) => {
+  // Row status and recommendation both come from the latest session, so they
+  // agree with the expanded detail below.
+  const latestSession = entry.sessions[entry.sessions.length - 1];
+
+  return (
     <div
+      onClick={onToggle}
       style={{
-        color: "var(--muted-2)",
-        fontSize: 14,
-        transform: expanded ? "rotate(90deg)" : "rotate(0deg)",
-        transition: "transform 0.15s ease",
+        display: "grid",
+        gridTemplateColumns: LEADERBOARD_GRID,
+        gap: 10,
+        padding: "14px 18px",
+        alignItems: "center",
+        borderBottom: "1px solid var(--line)",
+        cursor: "pointer",
+        background: expanded ? "var(--surface-2)" : "transparent",
+        transition: "background 0.15s ease",
       }}
     >
-      ▸
+      <RankBadge rank={entry.rank} />
+      <div>
+        <div style={{ fontSize: 13.5, fontWeight: 700, color: "var(--ink)" }}>
+          {entry.username}
+        </div>
+        <div style={{ fontSize: 11.5, color: "var(--muted-2)" }}>
+          {entry.email}
+        </div>
+      </div>
+      <div style={{ display: "flex", justifyContent: "center" }}>
+        <ScoreMeter score={entry.interview_score} size="sm" animate={false} />
+      </div>
+      <div style={{ display: "flex", justifyContent: "center" }}>
+        <ScoreMeter score={entry.resume_score} size="sm" animate={false} />
+      </div>
+      <div style={{ textAlign: "center" }}>
+        <StatusPill
+          status={
+            // Session progress, not the shortlisting decision; falls back to
+            // approval state when there's no session yet.
+            latestSession?.status ??
+            (entry.shortlisting_decision ? "not_started" : "pending_review")
+          }
+        />
+      </div>
+      <div style={{ textAlign: "center" }}>
+        <RecommendationCell recommendation={latestSession?.recommendation} />
+      </div>
+      <div
+        style={{
+          color: "var(--muted-2)",
+          fontSize: 14,
+          transform: expanded ? "rotate(90deg)" : "rotate(0deg)",
+          transition: "transform 0.15s ease",
+        }}
+      >
+        ▸
+      </div>
     </div>
-  </div>
-);
+  );
+};
 
 const ExpandedEntry: React.FC<{ entry: LeaderboardEntry }> = ({ entry }) => (
   <div
@@ -1430,6 +1438,7 @@ const SessionDetail: React.FC<{ session: SessionResult; index: number }> = ({
       background: "var(--surface)",
       border: "1px solid var(--line)",
       borderRadius: "var(--radius)",
+      boxShadow: "var(--shadow-sm)",
       padding: 18,
       marginTop: 10,
     }}
@@ -1475,10 +1484,18 @@ const SessionDetail: React.FC<{ session: SessionResult; index: number }> = ({
     </div>
 
     {session.recommendation && (
-      <NoteBox label="Recommendation" body={session.recommendation} />
+      <NoteBox
+        label="Recommendation"
+        body={recommendationTone(session.recommendation).label}
+        accent={recommendationTone(session.recommendation).color}
+      />
     )}
     {session.strengths && (
-      <NoteBox label="Strengths" body={session.strengths} />
+      <NoteBox
+        label="Strengths"
+        body={session.strengths}
+        accent="var(--positive)"
+      />
     )}
     {session.feedback && (
       <NoteBox label="Overall feedback" body={session.feedback} />
@@ -1496,7 +1513,7 @@ const SessionDetail: React.FC<{ session: SessionResult; index: number }> = ({
               padding: 12,
               borderRadius: "var(--radius-sm)",
               border: "1px solid var(--line)",
-              background: "var(--surface)",
+              background: "var(--surface-2)",
             }}
           >
             <div
@@ -1597,7 +1614,7 @@ const SessionDetail: React.FC<{ session: SessionResult; index: number }> = ({
               padding: 12,
               borderRadius: "var(--radius-sm)",
               border: "1px solid var(--line)",
-              background: "var(--surface)",
+              background: "var(--surface-2)",
             }}
           >
             <div
@@ -1671,7 +1688,7 @@ const SessionDetail: React.FC<{ session: SessionResult; index: number }> = ({
               padding: 12,
               borderRadius: "var(--radius-sm)",
               border: "1px solid var(--line)",
-              background: "var(--surface)",
+              background: "var(--surface-2)",
             }}
           >
             <div
@@ -3045,6 +3062,40 @@ function statusTone(i: OrgInterview): {
     };
   return { label: "Closed", color: "var(--muted)", bg: "var(--surface-2)" };
 }
+
+/** Shared HIRE / REJECT / FURTHER_EVALUATION -> label+color, used by the
+ * leaderboard row's recommendation badge and the per-session detail note. */
+function recommendationTone(recommendation: string): {
+  label: string;
+  color: string;
+  bg: string;
+} {
+  const map: Record<string, { label: string; color: string; bg: string }> = {
+    HIRE: {
+      label: "Hire",
+      color: "var(--positive)",
+      bg: "var(--positive-tint)",
+    },
+    REJECT: {
+      label: "Reject",
+      color: "var(--negative)",
+      bg: "var(--negative-tint)",
+    },
+    FURTHER_EVALUATION: {
+      label: "Further review",
+      color: "var(--signal-strong)",
+      bg: "var(--signal-tint)",
+    },
+  };
+  return (
+    map[recommendation] ?? {
+      label: recommendation,
+      color: "var(--muted)",
+      bg: "var(--surface-2)",
+    }
+  );
+}
+
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString("en-IN", {
     day: "numeric",
@@ -3335,6 +3386,16 @@ const StatusPill: React.FC<{ status: string }> = ({ status }) => {
   );
 };
 
+const RecommendationCell: React.FC<{
+  recommendation: string | null | undefined;
+}> = ({ recommendation }) => {
+  if (!recommendation) {
+    return <span style={{ fontSize: 12, color: "var(--muted-2)" }}>—</span>;
+  }
+  const tone = recommendationTone(recommendation);
+  return <BadgePill color={tone.color} bg={tone.bg} label={tone.label} />;
+};
+
 const DifficultyChip: React.FC<{ difficulty: string; inline?: boolean }> = ({
   difficulty,
   inline,
@@ -3419,17 +3480,19 @@ const RoundBlock: React.FC<{
   </div>
 );
 
-const NoteBox: React.FC<{ label: string; body: string }> = ({
+const NoteBox: React.FC<{ label: string; body: string; accent?: string }> = ({
   label,
   body,
+  accent = "var(--muted-2)",
 }) => (
   <div
     style={{
-      background: "var(--surface-2)",
-      border: "1px solid var(--line)",
+      background: "var(--surface)",
+      borderLeft: `3px solid ${accent}`,
       borderRadius: "var(--radius-sm)",
       padding: "10px 14px",
       marginBottom: 10,
+      boxShadow: "var(--shadow-sm)",
     }}
   >
     <div
