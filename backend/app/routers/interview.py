@@ -334,11 +334,15 @@ async def start_interview(
 
     first_question = sorted(interview.questions, key=lambda q: q.id)[0]
 
+    # Personal time limit, but never past the interview's own closing time.
+    deadline = min(now + timedelta(minutes=interview.duration), interview.end_time)
+
     session = InterviewSession(
         application_id=application.id,
         current_round=CurrentRound.QUESTIONS.value,
         current_question_index=1,
         status=InterviewStatus.ONGOING.value,
+        deadline=deadline,
     )
     db.add(session)
     await db.flush()
@@ -380,4 +384,5 @@ async def start_interview(
             interaction_id=interaction.id,
             question=first_question.question,
         ),
+        deadline=session.deadline,
     )

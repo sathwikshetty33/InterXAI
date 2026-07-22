@@ -64,6 +64,9 @@ class InterviewSession(BaseTable):
     last_heartbeat_at: Mapped[datetime] = mapped_column(
         DateTime, default=datetime.utcnow, server_default=func.now()
     )
+    # start_time + interview.duration, capped at interview.end_time; set at
+    # /start. Nullable only for sessions that predate this column.
+    deadline: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     current_round: Mapped[str] = mapped_column(String(20), default=CurrentRound.QUESTIONS.value)
     current_question_index: Mapped[int] = mapped_column(Integer, default=1)
     # Set by run_assign_dsa_questions when it finishes (even with zero matches),

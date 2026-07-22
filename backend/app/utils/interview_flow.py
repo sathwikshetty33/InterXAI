@@ -158,6 +158,7 @@ async def mark_session_completed(
         round=session.current_round,
         completed=True,
         question=None,
+        deadline=session.deadline,
     )
 
 
@@ -235,6 +236,7 @@ async def transition_to_resume(
             question_id=first_rq.id,
             question=first_rq.question,
         ),
+        deadline=session.deadline,
     )
 
 
@@ -271,6 +273,7 @@ async def transition_to_dsa(session: InterviewSession, db: AsyncSession) -> Inte
         round=session.current_round,
         completed=False,
         question=None,
+        deadline=session.deadline,
     )
 
 

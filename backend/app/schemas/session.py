@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import Annotated, Literal
 
 from pydantic import BaseModel, Field
@@ -5,6 +6,9 @@ from pydantic import BaseModel, Field
 
 class HeartbeatResponse(BaseModel):
     status: str
+    # The client resyncs its countdown from this each heartbeat instead of
+    # trusting local clock drift.
+    deadline: datetime | None = None
 
 
 class AnswerRequest(BaseModel):
@@ -82,6 +86,7 @@ class InterviewStateResponse(BaseModel):
     round: str
     completed: bool
     question: QuestionPayload | None
+    deadline: datetime | None = None
 
 
 class DsaSubmitResponse(BaseModel):

@@ -56,6 +56,7 @@ from app.utils.piston_client import PistonClient
 from app.utils.session_lifecycle import (
     TERMINAL_STATUSES,
     assert_session_alive,
+    complete_if_time_exceeded,
     disqualify_if_stale,
 )
 
@@ -96,14 +97,17 @@ async def heartbeat(
     session = await _load_owned_session(session_id, user, db)
 
     if session.status in TERMINAL_STATUSES:
-        return HeartbeatResponse(status=session.status)
+        return HeartbeatResponse(status=session.status, deadline=session.deadline)
+
+    if await complete_if_time_exceeded(session, db):
+        return HeartbeatResponse(status=session.status, deadline=session.deadline)
 
     if await disqualify_if_stale(session, db):
-        return HeartbeatResponse(status=session.status)
+        return HeartbeatResponse(status=session.status, deadline=session.deadline)
 
     session.last_heartbeat_at = datetime.utcnow()
     await db.commit()
-    return HeartbeatResponse(status=session.status)
+    return HeartbeatResponse(status=session.status, deadline=session.deadline)
 
 
 async def _handle_questions_answer(
@@ -158,6 +162,7 @@ async def _handle_questions_answer(
                     interaction_id=interaction.id,
                     question=decision.followup_question,
                 ),
+                deadline=session.deadline,
             )
 
     # No follow-up needed (or cap hit). The conversation around this Interaction
@@ -192,6 +197,7 @@ async def _handle_questions_answer(
                 interaction_id=new_interaction.id,
                 question=upcoming.question,
             ),
+            deadline=session.deadline,
         )
 
     # Custom questions exhausted -> hand off to the DSA round.
@@ -255,6 +261,7 @@ async def _handle_resume_answer(
             question_id=upcoming.id,
             question=upcoming.question,
         ),
+        deadline=session.deadline,
     )
 
 
@@ -481,6 +488,7 @@ async def dsa_finish(
             round=session.current_round,
             completed=True,
             question=None,
+            deadline=session.deadline,
         )
 
     await assert_session_alive(session, db)
@@ -498,6 +506,7 @@ async def dsa_finish(
                 question_id=current.id,
                 question=current.question,
             ),
+            deadline=session.deadline,
         )
 
     if session.current_round != CurrentRound.DSA.value:
