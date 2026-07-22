@@ -33,10 +33,16 @@ export interface InterviewStateResponse {
   round: Round;
   completed: boolean;
   question: QuestionPayload | null;
+  // Naive-UTC ISO timestamp the interview must finish by (null for sessions
+  // created before the feature).
+  deadline: string | null;
 }
 
 export interface HeartbeatResponse {
   status: SessionStatus;
+  // Naive-UTC ISO timestamp the interview must finish by, or null for sessions
+  // that predate the feature. Resent on every heartbeat so the client resyncs.
+  deadline: string | null;
 }
 
 export interface DsaCaseStatus {

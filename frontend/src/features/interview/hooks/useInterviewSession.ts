@@ -28,6 +28,9 @@ export interface UseInterviewSessionReturn {
   isSubmitting: boolean;
   followUpIndex: number;
   dsaRound: DsaRoundResponse | null;
+  /** Milliseconds until the interview's time limit, or null if none is set.
+   *  Ticks down once a second while the interview is active. */
+  remainingMs: number | null;
   answer: (text: string) => Promise<void>;
   refreshDsaRound: () => Promise<void>;
   finishDsa: () => Promise<void>;
@@ -38,6 +41,17 @@ const HEARTBEAT_MS = 5000;
 // Poll cadence while the DSA round reports status="preparing" — each poll
 // also makes the backend re-dispatch the assignment task, so this self-heals.
 const DSA_PREPARING_POLL_MS = 2500;
+
+/**
+ * Parse a server timestamp. The backend serialises naive UTC datetimes (no
+ * offset), which JS would otherwise read as LOCAL time — append "Z" so it's
+ * interpreted as UTC and compares correctly against Date.now().
+ */
+function parseServerDate(iso: string | null): Date | null {
+  if (!iso) return null;
+  const hasTz = /[zZ]|[+-]\d\d:?\d\d$/.test(iso);
+  return new Date(hasTz ? iso : `${iso}Z`);
+}
 
 export function useInterviewSession(
   interviewId: number,
@@ -52,9 +66,14 @@ export function useInterviewSession(
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [followUpIndex, setFollowUpIndex] = useState(0);
   const [dsaRound, setDsaRound] = useState<DsaRoundResponse | null>(null);
+  const [deadline, setDeadline] = useState<Date | null>(null);
+  const [remainingMs, setRemainingMs] = useState<number | null>(null);
 
   const heartbeatRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const stoppedRef = useRef(false);
+  // Latest sessionId, read inside the countdown's expiry check without making
+  // the countdown effect depend on it.
+  const sessionIdRef = useRef<number | null>(null);
 
   const stopHeartbeat = useCallback(() => {
     if (heartbeatRef.current) {
@@ -80,6 +99,8 @@ export function useInterviewSession(
         if (stoppedRef.current) return;
         try {
           const res = await sendHeartbeat(sessionId, token);
+          // Resync the deadline from the server each beat, in case it changed.
+          setDeadline(parseServerDate(res.deadline));
           if (res.status !== "ongoing") {
             goTerminal(res.status);
           }
@@ -93,6 +114,7 @@ export function useInterviewSession(
 
   const applyState = useCallback(
     (next: InterviewStateResponse) => {
+      setDeadline(parseServerDate(next.deadline));
       setState((prev) => {
         // Follow-up tracking: same custom interaction_id ⇒ follow-up (+1).
         // Different id or different round ⇒ reset to 0.
@@ -132,6 +154,8 @@ export function useInterviewSession(
         const initial = await startInterview(interviewId, token);
         if (cancelled) return;
         setState(initial);
+        setDeadline(parseServerDate(initial.deadline));
+        sessionIdRef.current = initial.session_id;
         if (initial.completed) {
           setPhase("completed");
         } else {
@@ -204,6 +228,41 @@ export function useInterviewSession(
     };
   }, [inDsaRound, sessionId, token, goTerminal]);
 
+  // Ticks every second; on hitting zero, fires one immediate heartbeat so the
+  // authoritative server finalises promptly rather than waiting for the next
+  // 5s beat. deadlineMs (a number) keeps the effect from restarting on each
+  // resync that yields a fresh Date for the same instant.
+  const deadlineMs = deadline ? deadline.getTime() : null;
+  useEffect(() => {
+    if (phase !== "active" || deadlineMs === null) return;
+    let expired = false;
+    let interval = 0;
+    const tick = () => {
+      const remaining = deadlineMs - Date.now();
+      setRemainingMs(Math.max(0, remaining));
+      if (remaining <= 0 && !expired) {
+        expired = true;
+        window.clearInterval(interval);
+        const sid = sessionIdRef.current;
+        if (sid != null) {
+          sendHeartbeat(sid, token)
+            .then((res) => {
+              if (res.status !== "ongoing") goTerminal(res.status);
+            })
+            .catch(() => {
+              // A failed expiry beat is fine — the regular heartbeat retries.
+            });
+        }
+      }
+    };
+    const primer = window.setTimeout(tick, 0);
+    interval = window.setInterval(tick, 1000);
+    return () => {
+      window.clearTimeout(primer);
+      window.clearInterval(interval);
+    };
+  }, [phase, deadlineMs, token, goTerminal]);
+
   const answer = useCallback(
     async (text: string) => {
       if (!state || isSubmitting) return;
@@ -260,6 +319,7 @@ export function useInterviewSession(
     isSubmitting,
     followUpIndex,
     dsaRound,
+    remainingMs,
     answer,
     refreshDsaRound,
     finishDsa,

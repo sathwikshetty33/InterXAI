@@ -29,6 +29,7 @@ const InterviewSessionPage: React.FC<InterviewSessionPageProps> = ({
     isSubmitting,
     followUpIndex,
     dsaRound,
+    remainingMs,
     answer,
     refreshDsaRound,
     finishDsa,
@@ -48,6 +49,7 @@ const InterviewSessionPage: React.FC<InterviewSessionPageProps> = ({
         round={state?.round}
         sessionId={state?.session_id}
         phase={phase}
+        remainingMs={remainingMs}
         onExit={onExit}
       />
 
@@ -147,8 +149,9 @@ const SessionHeader: React.FC<{
   round: Round | undefined;
   sessionId: number | undefined;
   phase: string;
+  remainingMs: number | null;
   onExit: () => void;
-}> = ({ round, sessionId, phase, onExit }) => (
+}> = ({ round, sessionId, phase, remainingMs, onExit }) => (
   <header
     style={{
       position: "sticky",
@@ -190,6 +193,9 @@ const SessionHeader: React.FC<{
       <RoundStepper round={round} />
 
       <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+        {phase === "active" && remainingMs !== null && (
+          <CountdownChip remainingMs={remainingMs} />
+        )}
         <LiveDot phase={phase} />
         <Button variant="ghost" size="sm" onClick={onExit}>
           Exit
@@ -283,6 +289,61 @@ const RoundStepper: React.FC<{ round: Round | undefined }> = ({ round }) => {
     </div>
   );
 };
+
+const CountdownChip: React.FC<{ remainingMs: number }> = ({ remainingMs }) => {
+  const totalSec = Math.max(0, Math.floor(remainingMs / 1000));
+  const mm = String(Math.floor(totalSec / 60)).padStart(2, "0");
+  const ss = String(totalSec % 60).padStart(2, "0");
+  // Turn urgent under two minutes; the last thirty seconds pulse.
+  const urgent = remainingMs <= 2 * 60 * 1000;
+  const critical = remainingMs <= 30 * 1000;
+  const color = urgent ? "var(--negative)" : "var(--ink)";
+  const bg = urgent ? "var(--negative-tint)" : "var(--surface-2)";
+  const border = urgent
+    ? "color-mix(in srgb, var(--negative) 35%, transparent)"
+    : "var(--line)";
+  return (
+    <div
+      title="Time remaining"
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: 7,
+        padding: "5px 12px",
+        background: bg,
+        border: `1px solid ${border}`,
+        borderRadius: 99,
+      }}
+    >
+      <ClockGlyph color={color} />
+      <span
+        className={critical ? "ix-live-dot" : undefined}
+        style={{
+          fontFamily: "var(--font-mono)",
+          fontSize: 13,
+          fontWeight: 700,
+          color,
+          letterSpacing: "0.02em",
+        }}
+      >
+        {mm}:{ss}
+      </span>
+    </div>
+  );
+};
+
+const ClockGlyph: React.FC<{ color: string }> = ({ color }) => (
+  <svg width="13" height="13" viewBox="0 0 14 14" fill="none">
+    <circle cx="7" cy="7" r="5.6" stroke={color} strokeWidth="1.4" />
+    <path
+      d="M7 4v3.2l2.2 1.3"
+      stroke={color}
+      strokeWidth="1.4"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </svg>
+);
 
 const LiveDot: React.FC<{ phase: string }> = ({ phase }) => {
   if (phase !== "active") return null;
