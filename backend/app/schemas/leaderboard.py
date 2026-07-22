@@ -12,9 +12,16 @@ class FollowUpTurn(BaseModel):
 
 
 class QuestionInteractionResult(BaseModel):
-    """One main custom question, its follow-up conversation, score and feedback."""
+    """One main custom question, its follow-up conversation, score and feedback.
 
-    id: int
+    Every question CONFIGURED on the interview appears here, including ones the
+    candidate never reached (the session ran out of time) — those have id=None,
+    attempted=False and no score. They count as 0 in the final score, but are
+    surfaced as unattempted rather than as a genuine zero."""
+
+    id: int | None
+    question_id: int
+    attempted: bool
     question: str | None
     expected_answer: str | None
     score: float | None
@@ -44,6 +51,7 @@ class ResumeQuestionResult(BaseModel):
     id: int
     question: str
     expected_answer: str | None
+    # None (not "") when never reached, so the UI can show "unattempted".
     answer: str | None
 
 

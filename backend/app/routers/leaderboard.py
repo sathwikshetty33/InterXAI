@@ -8,7 +8,7 @@ from app.exceptions.common import ForbiddenError, NotFoundError
 from app.logger import get_logger
 from app.models.application import Application, InterviewSession
 from app.models.interaction import DsaInteraction, Interaction, ResumeQuestion
-from app.models.interview import CustomInterview
+from app.models.interview import CustomInterview, CustomQuestion
 from app.models.organization import Organization
 from app.schemas.leaderboard import (
     DsaInteractionResult,
@@ -36,20 +36,28 @@ def _best_session_score(application: Application) -> float | None:
 def _build_session(
     session: InterviewSession,
     resume_questions: dict[int, list[ResumeQuestion]],
+    configured_questions: list[CustomQuestion],
 ) -> SessionResult:
+    # Walk the CONFIGURED questions, not the interactions: never-reached
+    # questions have no Interaction row and must still show as unattempted.
+    by_question = {i.custom_question_id: i for i in session.interactions}
     questions_round: list[QuestionInteractionResult] = []
-    for interaction in sorted(session.interactions, key=lambda i: i.id):
-        custom_question = interaction.custom_question
+    for custom_question in sorted(configured_questions, key=lambda q: q.id):
+        interaction = by_question.get(custom_question.id)
+        turns = sorted(interaction.follow_up_questions, key=lambda t: t.id) if interaction else []
+        attempted = any(turn.answer for turn in turns)
         questions_round.append(
             QuestionInteractionResult(
-                id=interaction.id,
-                question=custom_question.question if custom_question else None,
-                expected_answer=custom_question.expected_answer if custom_question else None,
-                score=interaction.score,
-                feedback=interaction.feedback,
+                id=interaction.id if interaction else None,
+                question_id=custom_question.id,
+                attempted=attempted,
+                question=custom_question.question,
+                expected_answer=custom_question.expected_answer,
+                score=interaction.score if interaction else None,
+                feedback=interaction.feedback if interaction else None,
                 follow_ups=[
                     FollowUpTurn(id=turn.id, question=turn.question, answer=turn.answer)
-                    for turn in sorted(interaction.follow_up_questions, key=lambda t: t.id)
+                    for turn in turns
                 ],
             )
         )
@@ -133,6 +141,14 @@ async def get_interview_leaderboard(
     if interview.org_id != org.id:
         raise ForbiddenError("You cannot access this resource")
 
+    # Configured questions drive the rows, so unattempted ones still appear.
+    configured_questions_result = await db.execute(
+        select(CustomQuestion)
+        .where(CustomQuestion.interview_id == interview_id)
+        .order_by(CustomQuestion.id.asc())
+    )
+    configured_questions = list(configured_questions_result.scalars().all())
+
     # Eager-load the whole graph in a handful of IN queries (no N+1, no cartesian
     # blow-up from joins on the one-to-many relationships).
     applications_result = await db.execute(
@@ -203,7 +219,7 @@ async def get_interview_leaderboard(
                 application_feedback=application.feedback,
                 interview_score=interview_score,
                 sessions=[
-                    _build_session(session, resume_questions)
+                    _build_session(session, resume_questions, configured_questions)
                     for session in sorted(application.sessions, key=lambda s: s.id)
                 ],
             )
