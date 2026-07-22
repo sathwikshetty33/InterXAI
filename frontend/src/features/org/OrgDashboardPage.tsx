@@ -19,10 +19,11 @@ import {
   type OrgInterviewDetail,
   type SessionResult,
 } from "../../services/leaderboard.service";
-import MarkdownView from "../interview/components/MarkdownView";
 import Logo from "../../ui/Logo";
 import Button from "../../ui/Button";
 import ScoreMeter from "../../ui/ScoreMeter";
+import CandidateResultPage from "./CandidateResultPage";
+import ApplicationDetailPage from "./ApplicationDetailPage";
 
 export interface OrgDashboardPageProps {
   token: string;
@@ -53,6 +54,9 @@ const OrgDashboardPage: React.FC<OrgDashboardPageProps> = ({
   const detailTab: DetailTab = DETAIL_TABS.includes(params.tab as DetailTab)
     ? (params.tab as DetailTab)
     : "overview";
+  // Present only on .../leaderboard/:detailId or .../applications/:detailId —
+  // selects one candidate's full result page instead of the tab's list.
+  const detailId = params.detailId ? Number(params.detailId) : null;
   const [interviews, setInterviews] = useState<OrgInterview[]>([]);
   const [isLoadingList, setIsLoadingList] = useState(true);
   const [listError, setListError] = useState<string | null>(null);
@@ -193,6 +197,7 @@ const OrgDashboardPage: React.FC<OrgDashboardPageProps> = ({
             interviewId={activeInterviewId}
             token={token}
             tab={detailTab}
+            detailId={detailId}
             onTabChange={(t) => openTab(activeInterviewId, t)}
             onBack={goList}
           />
@@ -536,9 +541,12 @@ const InterviewDetailView: React.FC<{
   interviewId: number;
   token: string;
   tab: DetailTab;
+  /** Selects one candidate's detail page within the applications/leaderboard
+   * tab instead of that tab's list — null shows the list. */
+  detailId: number | null;
   onTabChange: (tab: DetailTab) => void;
   onBack: () => void;
-}> = ({ interviewId, token, tab, onTabChange, onBack }) => {
+}> = ({ interviewId, token, tab, detailId, onTabChange, onBack }) => {
   const [detail, setDetail] = useState<OrgInterviewDetail | null>(null);
   const [detailError, setDetailError] = useState<string | null>(null);
 
@@ -688,20 +696,38 @@ const InterviewDetailView: React.FC<{
           </div>
 
           {tab === "overview" && <OverviewTab detail={detail} />}
-          {tab === "applications" && (
-            <ApplicationsTab
-              key={`apps-${detail.id}`}
-              interviewId={detail.id}
-              token={token}
-            />
-          )}
-          {tab === "leaderboard" && (
-            <LeaderboardTab
-              key={`lb-${detail.id}`}
-              interviewId={detail.id}
-              token={token}
-            />
-          )}
+          {tab === "applications" &&
+            (detailId != null ? (
+              <ApplicationDetailPage
+                key={`app-${detailId}`}
+                interviewId={detail.id}
+                applicationId={detailId}
+                token={token}
+                onBack={() => onTabChange("applications")}
+              />
+            ) : (
+              <ApplicationsTab
+                key={`apps-${detail.id}`}
+                interviewId={detail.id}
+                token={token}
+              />
+            ))}
+          {tab === "leaderboard" &&
+            (detailId != null ? (
+              <CandidateResultPage
+                key={`candidate-${detailId}`}
+                interviewId={detail.id}
+                applicationId={detailId}
+                token={token}
+                onBack={() => onTabChange("leaderboard")}
+              />
+            ) : (
+              <LeaderboardTab
+                key={`lb-${detail.id}`}
+                interviewId={detail.id}
+                token={token}
+              />
+            ))}
         </>
       )}
     </>
@@ -913,7 +939,12 @@ const ApplicationsTab: React.FC<{ interviewId: number; token: string }> = ({
           <div style={{ textAlign: "center" }}>Action</div>
         </div>
         {data.map((a) => (
-          <ApplicationRow key={a.id} application={a} onToggle={handleToggle} />
+          <ApplicationRow
+            key={a.id}
+            application={a}
+            interviewId={interviewId}
+            onToggle={handleToggle}
+          />
         ))}
       </div>
     </div>
@@ -922,10 +953,11 @@ const ApplicationsTab: React.FC<{ interviewId: number; token: string }> = ({
 
 const ApplicationRow: React.FC<{
   application: ApplicationResponse;
+  interviewId: number;
   onToggle: (id: number) => Promise<void>;
-}> = ({ application, onToggle }) => {
+}> = ({ application, interviewId, onToggle }) => {
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
-  const [expanded, setExpanded] = useState(false);
 
   const handleClick = async (e: React.MouseEvent) => {
     e.stopPropagation(); // don't toggle the detail panel when shortlisting
@@ -945,7 +977,11 @@ const ApplicationRow: React.FC<{
   return (
     <div style={{ borderBottom: "1px solid var(--line)" }}>
       <div
-        onClick={() => setExpanded((v) => !v)}
+        onClick={() =>
+          navigate(
+            `/admin/interview/${interviewId}/applications/${application.id}`,
+          )
+        }
         style={{
           display: "grid",
           gridTemplateColumns: APPLICATIONS_GRID,
@@ -963,10 +999,8 @@ const ApplicationRow: React.FC<{
             fontFamily: "var(--font-mono)",
           }}
         >
-          <span style={{ color: "var(--muted-2)", marginRight: 4 }}>
-            {expanded ? "▾" : "▸"}
-          </span>
-          #{application.id}
+          <span style={{ color: "var(--muted-2)", marginRight: 4 }}>▸</span>#
+          {application.id}
         </div>
         <div>
           <div style={{ fontSize: 13, fontWeight: 700, color: "var(--ink)" }}>
@@ -1054,74 +1088,6 @@ const ApplicationRow: React.FC<{
           </button>
         </div>
       </div>
-
-      {expanded && (
-        <div
-          style={{
-            padding: "4px 18px 18px",
-            background: "var(--surface-2)",
-          }}
-        >
-          {application.feedback ? (
-            <NoteBox label="AI resume feedback" body={application.feedback} />
-          ) : (
-            <Muted>
-              No evaluation yet — the resume may still be processing.
-            </Muted>
-          )}
-
-          {application.extracted_resume && (
-            <div
-              style={{
-                background: "var(--surface)",
-                border: "1px solid var(--line)",
-                borderRadius: "var(--radius-sm)",
-                padding: "10px 14px",
-                marginBottom: 10,
-              }}
-            >
-              <div
-                style={{
-                  fontFamily: "var(--font-mono)",
-                  fontSize: 10.5,
-                  fontWeight: 700,
-                  color: "var(--muted-2)",
-                  textTransform: "uppercase",
-                  letterSpacing: "0.06em",
-                  marginBottom: 6,
-                }}
-              >
-                Extracted resume
-              </div>
-              <div
-                style={{
-                  maxHeight: 320,
-                  overflowY: "auto",
-                }}
-              >
-                <MarkdownView source={application.extracted_resume} />
-              </div>
-            </div>
-          )}
-
-          {application.resume && (
-            <a
-              href={application.resume}
-              target="_blank"
-              rel="noreferrer"
-              style={{
-                display: "inline-block",
-                fontSize: 12.5,
-                fontWeight: 700,
-                color: "var(--signal-strong)",
-                textDecoration: "none",
-              }}
-            >
-              Open resume PDF ↗
-            </a>
-          )}
-        </div>
-      )}
     </div>
   );
 };
@@ -1136,7 +1102,6 @@ const LeaderboardTab: React.FC<{ interviewId: number; token: string }> = ({
 }) => {
   const [data, setData] = useState<LeaderboardResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [expandedId, setExpandedId] = useState<number | null>(null);
 
   // Retry handler — event-driven, so sync resets are allowed here.
   const load = useCallback(() => {
@@ -1227,20 +1192,11 @@ const LeaderboardTab: React.FC<{ interviewId: number; token: string }> = ({
           </div>
 
           {data.entries.map((entry) => (
-            <React.Fragment key={entry.application_id}>
-              <LeaderboardRow
-                entry={entry}
-                expanded={expandedId === entry.application_id}
-                onToggle={() =>
-                  setExpandedId((p) =>
-                    p === entry.application_id ? null : entry.application_id,
-                  )
-                }
-              />
-              {expandedId === entry.application_id && (
-                <ExpandedEntry entry={entry} />
-              )}
-            </React.Fragment>
+            <LeaderboardRow
+              key={entry.application_id}
+              entry={entry}
+              interviewId={interviewId}
+            />
           ))}
         </div>
       </div>
@@ -1344,16 +1300,20 @@ const Podium: React.FC<{ entries: LeaderboardEntry[] }> = ({ entries }) => {
 
 const LeaderboardRow: React.FC<{
   entry: LeaderboardEntry;
-  expanded: boolean;
-  onToggle: () => void;
-}> = ({ entry, expanded, onToggle }) => {
+  interviewId: number;
+}> = ({ entry, interviewId }) => {
+  const navigate = useNavigate();
   // Row status and recommendation both come from the latest session, so they
-  // agree with the expanded detail below.
+  // agree with the candidate's full result page.
   const latestSession = entry.sessions[entry.sessions.length - 1];
 
   return (
     <div
-      onClick={onToggle}
+      onClick={() =>
+        navigate(
+          `/admin/interview/${interviewId}/leaderboard/${entry.application_id}`,
+        )
+      }
       style={{
         display: "grid",
         gridTemplateColumns: LEADERBOARD_GRID,
@@ -1362,8 +1322,13 @@ const LeaderboardRow: React.FC<{
         alignItems: "center",
         borderBottom: "1px solid var(--line)",
         cursor: "pointer",
-        background: expanded ? "var(--surface-2)" : "transparent",
         transition: "background 0.15s ease",
+      }}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.background = "var(--surface-2)";
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.background = "transparent";
       }}
     >
       <RankBadge rank={entry.rank} />
@@ -1394,45 +1359,15 @@ const LeaderboardRow: React.FC<{
       <div style={{ textAlign: "center" }}>
         <RecommendationCell recommendation={latestSession?.recommendation} />
       </div>
-      <div
-        style={{
-          color: "var(--muted-2)",
-          fontSize: 14,
-          transform: expanded ? "rotate(90deg)" : "rotate(0deg)",
-          transition: "transform 0.15s ease",
-        }}
-      >
-        ▸
-      </div>
+      <div style={{ color: "var(--muted-2)", fontSize: 14 }}>→</div>
     </div>
   );
 };
 
-const ExpandedEntry: React.FC<{ entry: LeaderboardEntry }> = ({ entry }) => (
-  <div
-    style={{
-      background: "var(--surface-2)",
-      borderBottom: "1px solid var(--line)",
-      padding: "16px 22px 22px",
-    }}
-  >
-    {entry.application_feedback && (
-      <NoteBox label="Resume feedback" body={entry.application_feedback} />
-    )}
-    {entry.sessions.length === 0 ? (
-      <Muted>No sessions completed.</Muted>
-    ) : (
-      entry.sessions.map((session, i) => (
-        <SessionDetail key={session.id} session={session} index={i + 1} />
-      ))
-    )}
-  </div>
-);
-
-const SessionDetail: React.FC<{ session: SessionResult; index: number }> = ({
-  session,
-  index,
-}) => (
+export const SessionDetail: React.FC<{
+  session: SessionResult;
+  index: number;
+}> = ({ session, index }) => (
   <div
     style={{
       background: "var(--surface)",
@@ -3336,7 +3271,7 @@ const FieldArea: React.FC<{
   </label>
 );
 
-const BadgePill: React.FC<{
+export const BadgePill: React.FC<{
   color: string;
   bg: string;
   label: string;
@@ -3366,7 +3301,7 @@ const STATUS_LABELS: Record<string, string> = {
   pending_review: "Pending review",
 };
 
-const StatusPill: React.FC<{ status: string }> = ({ status }) => {
+export const StatusPill: React.FC<{ status: string }> = ({ status }) => {
   const map: Record<string, { c: string; bg: string }> = {
     ongoing: { c: "var(--signal-strong)", bg: "var(--signal-tint)" },
     completed: { c: "var(--positive)", bg: "var(--positive-tint)" },
@@ -3386,7 +3321,7 @@ const StatusPill: React.FC<{ status: string }> = ({ status }) => {
   );
 };
 
-const RecommendationCell: React.FC<{
+export const RecommendationCell: React.FC<{
   recommendation: string | null | undefined;
 }> = ({ recommendation }) => {
   if (!recommendation) {
@@ -3428,7 +3363,7 @@ const DifficultyChip: React.FC<{ difficulty: string; inline?: boolean }> = ({
   );
 };
 
-const RankBadge: React.FC<{ rank: number }> = ({ rank }) => {
+export const RankBadge: React.FC<{ rank: number }> = ({ rank }) => {
   const top = rank <= 3;
   return (
     <div
@@ -3480,11 +3415,11 @@ const RoundBlock: React.FC<{
   </div>
 );
 
-const NoteBox: React.FC<{ label: string; body: string; accent?: string }> = ({
-  label,
-  body,
-  accent = "var(--muted-2)",
-}) => (
+export const NoteBox: React.FC<{
+  label: string;
+  body: string;
+  accent?: string;
+}> = ({ label, body, accent = "var(--muted-2)" }) => (
   <div
     style={{
       background: "var(--surface)",
@@ -3516,7 +3451,9 @@ const NoteBox: React.FC<{ label: string; body: string; accent?: string }> = ({
   </div>
 );
 
-const Muted: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+export const Muted: React.FC<{ children: React.ReactNode }> = ({
+  children,
+}) => (
   <div style={{ fontSize: 13, color: "var(--muted-2)", fontStyle: "italic" }}>
     {children}
   </div>
@@ -3612,7 +3549,10 @@ const DateChip: React.FC<{ label: string; date: string }> = ({
   </div>
 );
 
-const Pill: React.FC<{ text: string; light?: boolean }> = ({ text, light }) => (
+export const Pill: React.FC<{ text: string; light?: boolean }> = ({
+  text,
+  light,
+}) => (
   <span
     style={{
       display: "inline-block",
@@ -3638,7 +3578,7 @@ const Pill: React.FC<{ text: string; light?: boolean }> = ({ text, light }) => (
   </span>
 );
 
-const ErrorAlert: React.FC<{
+export const ErrorAlert: React.FC<{
   message: string;
   onRetry: () => void;
   retryLabel?: string;
@@ -3687,7 +3627,7 @@ const ErrorAlert: React.FC<{
   </div>
 );
 
-const EmptyState: React.FC<{
+export const EmptyState: React.FC<{
   title: string;
   body: string;
   action?: React.ReactNode;
@@ -3721,7 +3661,7 @@ const EmptyState: React.FC<{
   </div>
 );
 
-const SkeletonCard: React.FC<{ tall?: boolean }> = ({ tall }) => (
+export const SkeletonCard: React.FC<{ tall?: boolean }> = ({ tall }) => (
   <div
     style={{
       background: "var(--surface)",

@@ -266,6 +266,17 @@ function App() {
             </RequireOrg>
           }
         />
+        {/* One candidate's full result (leaderboard) or resume evaluation
+            (applications) as its own page instead of an inline dropdown —
+            same OrgDashboardPage, an extra URL segment selects the detail. */}
+        <Route
+          path="interview/:interviewId/:tab/:detailId"
+          element={
+            <RequireOrg>
+              <OrgDashboardRoute mode="detail" />
+            </RequireOrg>
+          }
+        />
       </Route>
 
       <Route path="*" element={<Navigate to="/" replace />} />
