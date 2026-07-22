@@ -91,7 +91,10 @@ export interface FollowUpTurn {
 }
 
 export interface QuestionInteractionResult {
-  id: number;
+  // null when the candidate never reached this question (no interaction row).
+  id: number | null;
+  question_id: number;
+  attempted: boolean;
   question: string | null;
   expected_answer: string | null;
   score: number | null;
@@ -108,6 +111,11 @@ export interface DsaInteractionResult {
   language: string | null;
   code: string | null;
   score: number | null;
+  // code/score/tallies describe the LAST submission (resubmission is allowed);
+  // attempts === 0 means the question was assigned but never submitted.
+  attempts: number;
+  passed_cases: number | null;
+  total_cases: number | null;
 }
 
 export interface ResumeQuestionResult {

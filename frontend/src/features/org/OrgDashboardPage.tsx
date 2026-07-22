@@ -1442,13 +1442,16 @@ export const SessionDetail: React.FC<{
       ) : (
         session.questions_round.map((q) => (
           <div
-            key={q.id}
+            key={q.question_id}
             style={{
               marginBottom: 12,
               padding: 12,
               borderRadius: "var(--radius-sm)",
               border: "1px solid var(--line)",
               background: "var(--surface-2)",
+              // Unattempted work is dimmed so a skipped question reads as a
+              // gap at a glance, not as a poor answer.
+              opacity: q.attempted ? 1 : 0.72,
             }}
           >
             <div
@@ -1469,7 +1472,11 @@ export const SessionDetail: React.FC<{
               >
                 {q.question ?? "(question deleted)"}
               </div>
-              <ScoreMeter score={q.score} size="sm" animate={false} />
+              {q.attempted ? (
+                <ScoreMeter score={q.score} size="sm" animate={false} />
+              ) : (
+                <UnattemptedChip />
+              )}
             </div>
             {q.feedback && (
               <div
@@ -1550,6 +1557,7 @@ export const SessionDetail: React.FC<{
               borderRadius: "var(--radius-sm)",
               border: "1px solid var(--line)",
               background: "var(--surface-2)",
+              opacity: dsa.attempts > 0 ? 1 : 0.72,
             }}
           >
             <div
@@ -1587,7 +1595,11 @@ export const SessionDetail: React.FC<{
                   · {dsa.language ?? "—"}
                 </div>
               </div>
-              <ScoreMeter score={dsa.score} size="sm" animate={false} />
+              {dsa.attempts > 0 ? (
+                <ScoreMeter score={dsa.score} size="sm" animate={false} />
+              ) : (
+                <UnattemptedChip label="Not submitted" />
+              )}
             </div>
             {dsa.code && (
               <pre
@@ -1615,69 +1627,78 @@ export const SessionDetail: React.FC<{
       {session.resume_round.length === 0 ? (
         <Muted>No resume conversations.</Muted>
       ) : (
-        session.resume_round.map((conv) => (
-          <div
-            key={conv.id}
-            style={{
-              marginBottom: 12,
-              padding: 12,
-              borderRadius: "var(--radius-sm)",
-              border: "1px solid var(--line)",
-              background: "var(--surface-2)",
-            }}
-          >
+        session.resume_round.map((conv) => {
+          const convAttempted = conv.questions.some((qq) => qq.answer);
+          return (
             <div
+              key={conv.id}
               style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                marginBottom: 8,
+                marginBottom: 12,
+                padding: 12,
+                borderRadius: "var(--radius-sm)",
+                border: "1px solid var(--line)",
+                background: "var(--surface-2)",
+                opacity: convAttempted ? 1 : 0.72,
               }}
             >
-              <span
-                style={{ fontSize: 12, fontWeight: 700, color: "var(--ink)" }}
-              >
-                Conversation #{conv.id}
-              </span>
-              <ScoreMeter score={conv.score} size="sm" animate={false} />
-            </div>
-            {conv.feedback && (
               <div
                 style={{
-                  fontSize: 12,
-                  color: "var(--muted)",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
                   marginBottom: 8,
-                  fontStyle: "italic",
                 }}
               >
-                {conv.feedback}
-              </div>
-            )}
-            {conv.questions.map((qq) => (
-              <div key={qq.id} style={{ marginBottom: 8 }}>
-                <div
-                  style={{
-                    fontSize: 12.5,
-                    fontWeight: 700,
-                    color: "var(--ink)",
-                  }}
+                <span
+                  style={{ fontSize: 12, fontWeight: 700, color: "var(--ink)" }}
                 >
-                  Q: {qq.question}
-                </div>
+                  Conversation #{conv.id}
+                </span>
+                {convAttempted ? (
+                  <ScoreMeter score={conv.score} size="sm" animate={false} />
+                ) : (
+                  <UnattemptedChip />
+                )}
+              </div>
+              {conv.feedback && (
                 <div
                   style={{
-                    fontSize: 12.5,
+                    fontSize: 12,
                     color: "var(--muted)",
-                    whiteSpace: "pre-wrap",
-                    marginTop: 2,
+                    marginBottom: 8,
+                    fontStyle: "italic",
                   }}
                 >
-                  A: {qq.answer ?? "(no answer)"}
+                  {conv.feedback}
                 </div>
-              </div>
-            ))}
-          </div>
-        ))
+              )}
+              {conv.questions.map((qq) => (
+                <div key={qq.id} style={{ marginBottom: 8 }}>
+                  <div
+                    style={{
+                      fontSize: 12.5,
+                      fontWeight: 700,
+                      color: "var(--ink)",
+                    }}
+                  >
+                    Q: {qq.question}
+                  </div>
+                  <div
+                    style={{
+                      fontSize: 12.5,
+                      color: qq.answer ? "var(--muted)" : "var(--muted-2)",
+                      whiteSpace: "pre-wrap",
+                      marginTop: 2,
+                      fontStyle: qq.answer ? "normal" : "italic",
+                    }}
+                  >
+                    {qq.answer ? `A: ${qq.answer}` : "Unattempted"}
+                  </div>
+                </div>
+              ))}
+            </div>
+          );
+        })
       )}
     </RoundBlock>
   </div>
@@ -3330,6 +3351,33 @@ export const RecommendationCell: React.FC<{
   const tone = recommendationTone(recommendation);
   return <BadgePill color={tone.color} bg={tone.bg} label={tone.label} />;
 };
+
+/**
+ * Replaces the score meter (rather than showing 0/10) where nothing was
+ * attempted: unattempted still counts as 0, but must not look like an answer
+ * that was given and judged poorly.
+ */
+const UnattemptedChip: React.FC<{ label?: string }> = ({
+  label = "Unattempted",
+}) => (
+  <span
+    style={{
+      fontFamily: "var(--font-mono)",
+      fontSize: 10.5,
+      fontWeight: 700,
+      color: "var(--muted)",
+      background: "var(--surface)",
+      border: "1px dashed var(--line-strong)",
+      borderRadius: 999,
+      padding: "3px 10px",
+      textTransform: "uppercase",
+      letterSpacing: "0.05em",
+      whiteSpace: "nowrap",
+    }}
+  >
+    {label}
+  </span>
+);
 
 const DifficultyChip: React.FC<{ difficulty: string; inline?: boolean }> = ({
   difficulty,
