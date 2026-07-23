@@ -13,6 +13,10 @@ class ApplicationResponse(BaseModel):
     extracted_resume: str | None = None
     status: str
     score: float
+    # What the resume screener recommended (never overwritten by the org).
+    # None = not screened yet, or screening failed.
+    ai_shortlist_recommendation: bool | None = None
+    # The effective decision — seeded from the AI, then owned by the org.
     shortlisting_decision: bool
     feedback: str | None = None
     created_at: datetime

@@ -8,6 +8,14 @@ class ResumeEvaluatorRequest(BaseModel):
     job_title: str = Field(description="The title of the job applied for")
     job_description: str = Field(description="The description of the job")
     experience: str = Field(description="The required years of experience")
+    shortlist_threshold: float = Field(
+        default=0,
+        description=(
+            "The org's configured resume score (0-10) a candidate must reach to be "
+            "shortlisted. Given to the model so its score and feedback are calibrated "
+            "to this bar; the actual decision is derived from score >= threshold."
+        ),
+    )
 
 
 class ResumeEvaluatorResponse(BaseModel):

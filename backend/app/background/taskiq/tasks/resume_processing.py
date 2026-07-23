@@ -43,20 +43,40 @@ async def process_resume_task(file_bytes_b64: str, file_name: str, application_i
             extracted_text = extract_pdf_content(file_bytes)
             evaluator = ResumeEvaluator(llm_provider=LiteLLMProvider())
 
+            threshold = float(interview.resume_shortlist_score or 0)
             req = ResumeEvaluatorRequest(
                 resume_text=extracted_text,
                 job_title=interview.position,
                 job_description=interview.description,
                 experience=interview.experience,
+                shortlist_threshold=threshold,
             )
 
             logger.info("Starting resume evaluation for application %d...", application_id)
             res = await evaluator.evaluate(req)
 
+            # The org's configured cutoff decides, not the model's own boolean —
+            # otherwise resume_shortlist_score would be collected in the wizard
+            # and silently ignored. The model still returns a decision; log when
+            # it disagrees, since a persistent gap means the prompt's rubric and
+            # the configured bar have drifted apart.
+            recommendation = res.score >= threshold
+            if recommendation != res.shortlisting_decision:
+                logger.info(
+                    "Application %d: model said shortlist=%s but score %.1f vs threshold %.1f "
+                    "gives %s — using the configured threshold",
+                    application_id,
+                    res.shortlisting_decision,
+                    res.score,
+                    threshold,
+                    recommendation,
+                )
+
             app_to_update.resume = public_url
             app_to_update.extracted_resume = res.extracted_standardized_resume
             app_to_update.score = res.score
-            app_to_update.shortlisting_decision = res.shortlisting_decision
+            app_to_update.ai_shortlist_recommendation = recommendation
+            app_to_update.shortlisting_decision = recommendation
             app_to_update.feedback = res.feedback
 
             await session.commit()

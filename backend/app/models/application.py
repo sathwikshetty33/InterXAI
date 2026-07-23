@@ -33,6 +33,12 @@ class Application(BaseTable):
     extracted_resume: Mapped[str | None] = mapped_column(Text, nullable=True)
     status: Mapped[str] = mapped_column(String(20), default="applied")
     score: Mapped[float] = mapped_column(Float, default=0)
+    # The resume screener's verdict, written ONCE and never overwritten, so the
+    # org can always see what the AI recommended even after overriding it.
+    # None = the resume hasn't been screened (yet, or it failed).
+    ai_shortlist_recommendation: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
+    # The EFFECTIVE decision — seeded from the AI recommendation, then owned by
+    # the org (the shortlist toggle). This is what gates starting an interview.
     shortlisting_decision: Mapped[bool] = mapped_column(Boolean, default=False)
     feedback: Mapped[str | None] = mapped_column(Text, nullable=True)
 

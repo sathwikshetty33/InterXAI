@@ -569,6 +569,9 @@ Below are the details you must use for strict evaluation:
 - **Job Title:** {job_title}
 - **Job Description:** {job_description}
 - **Required Experience:** {experience} years
+- **Shortlisting Bar:** {shortlist_threshold} out of 10 — the organisation shortlists
+  candidates scoring at or above this. Calibrate your score and feedback against
+  this bar, and make the feedback explain the gap when the candidate falls short.
 - **Resume Text:** {resume_text}
 
 ---
