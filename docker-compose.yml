@@ -13,6 +13,8 @@ services:
       # (which is set for running the API directly on the host instead).
       REDIS_URL: redis://redis:6379/0
       PISTON_URL: http://piston:2000
+      VISION_URL: http://vision:8000
+      VISION_SHARED_SECRET: ${VISION_SHARED_SECRET:-}
     volumes:
       - ./backend:/app
     depends_on:
@@ -20,6 +22,8 @@ services:
         condition: service_started
       piston_bootstrap:
         condition: service_completed_successfully
+      vision:
+        condition: service_started
 
   taskiq_worker:
     build:
@@ -30,6 +34,8 @@ services:
     environment:
       REDIS_URL: redis://redis:6379/0
       PISTON_URL: http://piston:2000
+      VISION_URL: http://vision:8000
+      VISION_SHARED_SECRET: ${VISION_SHARED_SECRET:-}
     volumes:
       - ./backend:/app
     depends_on:
@@ -71,6 +77,19 @@ services:
       - PISTON_COMPILE_TIMEOUT=15000
     volumes:
       - piston_data:/piston
+    restart: always
+
+  # Stateless proctoring inference (face/hand/pose). The API reaches it as
+  # http://vision:8000 on the compose network; the published port is for
+  # direct debugging only.
+  vision:
+    build:
+      context: ./vision
+      dockerfile: Dockerfile
+    ports:
+      - "8001:8000"
+    environment:
+      VISION_SHARED_SECRET: ${VISION_SHARED_SECRET:-}
     restart: always
 
   # One-shot: installs the DSA languages into piston_data (Piston ships with
