@@ -1,0 +1,29 @@
+[project]
+name = "interxai-vision"
+version = "0.1.0"
+description = "InterXAI proctoring vision service — stateless face/hand/pose inference over HTTP."
+readme = "README.md"
+# MediaPipe wheels lag new CPython; pin to 3.12 so resolution can't pick a
+# Python it has no wheel for.
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "fastapi>=0.115.0",
+    "uvicorn[standard]>=0.30.0",
+    "mediapipe>=0.10.14",
+    "pillow>=10.0.0",
+    "numpy>=1.26",
+    "pydantic-settings>=2.13.1",
+]
+
+[dependency-groups]
+dev = [
+    "ruff>=0.15.10",
+    "mypy>=1.20.1",
+]
+
+# Application, not a library — don't try to build/install this project itself,
+# just its dependencies.
+[tool.uv]
+package = false
+
+# Ruff and mypy config live in ruff.toml and mypy.ini (mirrors backend/).
