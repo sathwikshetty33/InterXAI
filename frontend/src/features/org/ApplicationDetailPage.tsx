@@ -9,6 +9,7 @@ import MarkdownView from "../interview/components/MarkdownView";
 import ScoreMeter from "../../ui/ScoreMeter";
 import Button from "../../ui/Button";
 import {
+  AiRecommendationPill,
   BadgePill,
   EmptyState,
   ErrorAlert,
@@ -229,6 +230,24 @@ export default function ApplicationDetailPage({
                   Resume score
                 </div>
                 <ScoreMeter score={application.score} />
+              </div>
+              <div>
+                <div
+                  style={{
+                    fontFamily: "var(--font-mono)",
+                    fontSize: 10.5,
+                    fontWeight: 700,
+                    color: "var(--muted-2)",
+                    textTransform: "uppercase",
+                    letterSpacing: "0.06em",
+                    marginBottom: 8,
+                  }}
+                >
+                  AI recommendation
+                </div>
+                <AiRecommendationPill
+                  recommendation={application.ai_shortlist_recommendation}
+                />
               </div>
               {application.resume && (
                 <a

@@ -76,6 +76,10 @@ export interface ApplicationResponse {
   extracted_resume: string | null;
   status: string;
   score: number;
+  // What the resume screener recommended, never overwritten by the org.
+  // null = not screened yet (or screening failed).
+  ai_shortlist_recommendation: boolean | null;
+  // The effective decision — seeded from the AI, then owned by the org.
   shortlisting_decision: boolean;
   feedback: string | null;
   created_at: string;

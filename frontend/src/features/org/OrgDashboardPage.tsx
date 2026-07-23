@@ -854,7 +854,7 @@ const OverviewTab: React.FC<{ detail: OrgInterviewDetail }> = ({ detail }) => (
 // ── Applications tab ────────────────────────────────────────────────────────
 
 const APPLICATIONS_GRID =
-  "64px minmax(150px,1fr) 200px 130px 110px 120px 110px";
+  "64px minmax(150px,1fr) 200px 120px 130px 110px 120px 110px";
 
 const ApplicationsTab: React.FC<{ interviewId: number; token: string }> = ({
   interviewId,
@@ -933,7 +933,18 @@ const ApplicationsTab: React.FC<{ interviewId: number; token: string }> = ({
           <div>App #</div>
           <div>Candidate</div>
           <div style={{ textAlign: "center" }}>Resume score</div>
-          <div style={{ textAlign: "center" }}>Shortlisted</div>
+          <div
+            style={{ textAlign: "center" }}
+            title="What the AI screener recommended"
+          >
+            AI rec
+          </div>
+          <div
+            style={{ textAlign: "center" }}
+            title="The effective decision — yours if you've acted on it"
+          >
+            Decision
+          </div>
           <div style={{ textAlign: "center" }}>Status</div>
           <div style={{ textAlign: "right" }}>Applied</div>
           <div style={{ textAlign: "center" }}>Action</div>
@@ -1029,16 +1040,21 @@ const ApplicationRow: React.FC<{
           <ScoreMeter score={application.score} size="sm" animate={false} />
         </div>
         <div style={{ textAlign: "center" }}>
+          <AiRecommendationPill
+            recommendation={application.ai_shortlist_recommendation}
+          />
+        </div>
+        <div style={{ textAlign: "center" }}>
           {approved ? (
             <BadgePill
               color="var(--positive)"
               bg="var(--positive-tint)"
-              label="Listed"
+              label="Shortlisted"
             />
           ) : evaluated ? (
             <BadgePill
-              color="var(--signal-strong)"
-              bg="var(--signal-tint)"
+              color="var(--muted)"
+              bg="var(--surface-2)"
               label="Not shortlisted"
             />
           ) : (
@@ -3350,6 +3366,39 @@ export const RecommendationCell: React.FC<{
   }
   const tone = recommendationTone(recommendation);
   return <BadgePill color={tone.color} bg={tone.bg} label={tone.label} />;
+};
+
+/**
+ * The resume screener's verdict, kept separate from the org's own decision so
+ * an override never erases what the AI recommended. null = never screened
+ * (approved manually, or screening failed), distinct from "the AI said no".
+ */
+export const AiRecommendationPill: React.FC<{
+  recommendation: boolean | null;
+}> = ({ recommendation }) => {
+  if (recommendation === null) {
+    return (
+      <span
+        title="Resume was never screened"
+        style={{ fontSize: 12, color: "var(--muted-2)" }}
+      >
+        —
+      </span>
+    );
+  }
+  return recommendation ? (
+    <BadgePill
+      color="var(--positive)"
+      bg="var(--positive-tint)"
+      label="Recommend"
+    />
+  ) : (
+    <BadgePill
+      color="var(--negative)"
+      bg="var(--negative-tint)"
+      label="Reject"
+    />
+  );
 };
 
 /**
