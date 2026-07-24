@@ -19,7 +19,10 @@ async def upload_violation_image_task(session_id: int, image_b64: str, violation
     which needs the count synchronously for the warn->escalate response.
     """
     try:
-        image_bytes = base64.b64decode(image_b64)
+        # The client sends a data URL ("data:image/jpeg;base64,..."); strip the
+        # prefix before decoding, or the JPEG bytes come out corrupted (black).
+        payload = image_b64.split(",", 1)[-1] if image_b64.startswith("data:") else image_b64
+        image_bytes = base64.b64decode(payload)
         file_name = f"violations/{session_id}/{uuid4().hex}.jpg"
         provider = default_storage_provider()
         public_url = await provider.upload(image_bytes, file_name, content_type="image/jpeg")
