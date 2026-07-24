@@ -10,13 +10,16 @@ from app.ai.follow_up_decider import FollowUpDecider
 from app.ai.lite_llm import LiteLLMProvider
 from app.ai.schema import FollowUpDeciderRequest
 from app.background.taskiq.tasks.dsa_execution import run_evaluate_submission
+from app.config import settings
 from app.database import get_db
 from app.exceptions.common import BadRequestError, ForbiddenError, NotFoundError
+from app.interfaces.vision import VisionError
 from app.logger import get_logger
 from app.models.application import CurrentRound, InterviewSession, InterviewStatus
 from app.models.dsa_question import DsaQuestion
 from app.models.interaction import DsaInteraction, FollowUpQuestion, Interaction
 from app.models.interview import CustomQuestion
+from app.models.proctoring import ViolationType
 from app.models.user import User
 from app.schemas.session import (
     AnswerRequest,
@@ -30,6 +33,8 @@ from app.schemas.session import (
     DsaTestCaseStatus,
     DsaTestRequest,
     DsaTestResponse,
+    FrameRequest,
+    FrameResponse,
     HeartbeatResponse,
     InterviewStateResponse,
     ResumeQuestionPayload,
@@ -59,6 +64,7 @@ from app.utils.session_lifecycle import (
     complete_if_time_exceeded,
     disqualify_if_stale,
 )
+from app.utils.vision_client import VisionClient
 
 logger = get_logger(__name__)
 
@@ -108,6 +114,86 @@ async def heartbeat(
     session.last_heartbeat_at = datetime.utcnow()
     await db.commit()
     return HeartbeatResponse(status=session.status, deadline=session.deadline)
+
+
+def _classify_violation(face_count: int) -> ViolationType | None:
+    if face_count == 1:
+        return None
+    return ViolationType.MULTIPLE_FACES if face_count > 1 else ViolationType.NO_FACE
+
+
+@router.post("/{session_id}/frame", response_model=FrameResponse)
+async def proctor_frame(
+    session_id: int,
+    payload: FrameRequest,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user),
+) -> FrameResponse:
+    """
+    Proctoring frame-beat. The client periodically posts a webcam frame; the
+    vision service counts faces, and a violation (0 or >1 faces) increments the
+    session's violation_count — escalating to CHEATED at
+    PROCTOR_VIOLATION_THRESHOLD. Doubles as camera liveness (refreshes
+    last_heartbeat_at). A terminal status tells the client to stop and route to
+    the "interview ended" screen.
+    """
+    session = await _load_owned_session(session_id, user, db)
+    threshold = settings.PROCTOR_VIOLATION_THRESHOLD
+
+    def _resp(violation: str | None = None) -> FrameResponse:
+        return FrameResponse(
+            status=session.status,
+            violation=violation,
+            violation_count=session.violation_count,
+            threshold=threshold,
+            deadline=session.deadline,
+        )
+
+    if session.status in TERMINAL_STATUSES:
+        return _resp()
+
+    # A flaky or unreachable vision service must never punish the candidate:
+    # treat a failed check as a clean frame.
+    try:
+        result = await VisionClient().detect([payload.frame])
+    except VisionError:
+        logger.warning("Vision check failed for session %d; treating frame as clean", session_id)
+        session.last_heartbeat_at = datetime.utcnow()
+        await db.commit()
+        return _resp()
+
+    violation = _classify_violation(result.face_count)
+    if violation is None:
+        session.last_heartbeat_at = datetime.utcnow()
+        await db.commit()
+        return _resp()
+
+    # Lock the row so concurrent violation beats can't lose an increment or
+    # double-escalate past the threshold.
+    locked = await db.execute(
+        select(InterviewSession)
+        .where(InterviewSession.id == session.id)
+        .with_for_update()
+        .execution_options(populate_existing=True)
+    )
+    session = locked.scalar_one()
+    if session.status in TERMINAL_STATUSES:
+        return _resp(violation.value)
+
+    session.violation_count += 1
+    session.last_heartbeat_at = datetime.utcnow()
+    if session.violation_count >= threshold:
+        session.status = InterviewStatus.CHEATED.value
+        logger.info(
+            "Session %d marked CHEATED after %d violations", session_id, session.violation_count
+        )
+    await db.commit()
+
+    # Persist the evidence frame off the request path.
+    await default_worker_provider().upload_violation_image_task(
+        session_id, payload.frame, violation.value
+    )
+    return _resp(violation.value)
 
 
 async def _handle_questions_answer(
