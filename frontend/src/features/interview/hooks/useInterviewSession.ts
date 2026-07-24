@@ -59,6 +59,7 @@ function parseServerDate(iso: string | null): Date | null {
 export function useInterviewSession(
   interviewId: number,
   token: string,
+  startFrame: string,
 ): UseInterviewSessionReturn {
   const [phase, setPhase] = useState<InterviewPhase>("loading");
   const [state, setState] = useState<InterviewStateResponse | null>(null);
@@ -154,7 +155,7 @@ export function useInterviewSession(
 
     (async () => {
       try {
-        const initial = await startInterview(interviewId, token);
+        const initial = await startInterview(interviewId, startFrame, token);
         if (cancelled) return;
         setState(initial);
         setDeadline(parseServerDate(initial.deadline));
@@ -181,7 +182,7 @@ export function useInterviewSession(
       stoppedRef.current = true;
       stopHeartbeat();
     };
-  }, [interviewId, token, startHeartbeat, stopHeartbeat]);
+  }, [interviewId, token, startFrame, startHeartbeat, stopHeartbeat]);
 
   // DSA round overview: fetch when the session enters the DSA round, and
   // keep polling while the backend reports "preparing".

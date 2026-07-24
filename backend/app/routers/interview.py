@@ -7,6 +7,7 @@ from sqlalchemy.orm import selectinload
 
 from app.database import get_db
 from app.exceptions.common import BadRequestError, ForbiddenError, NotFoundError
+from app.interfaces.vision import VisionError
 from app.logger import get_logger
 from app.models.application import (
     Application,
@@ -26,9 +27,14 @@ from app.schemas.interview import (
     CustomInterviewResponse,
     DsaTopicCatalogEntry,
 )
-from app.schemas.session import CustomQuestionPayload, InterviewStateResponse
+from app.schemas.session import (
+    CustomQuestionPayload,
+    InterviewStateResponse,
+    StartInterviewRequest,
+)
 from app.utils.authorization import get_current_user, is_organization
 from app.utils.default_providers import default_worker_provider
+from app.utils.vision_client import VisionClient
 
 logger = get_logger(__name__)
 
@@ -277,6 +283,7 @@ async def get_interview(
 )
 async def start_interview(
     interview_id: int,
+    payload: StartInterviewRequest,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ) -> InterviewStateResponse:
@@ -331,6 +338,24 @@ async def start_interview(
 
     if not interview.questions:
         raise BadRequestError("Interview has no questions defined")
+
+    # Camera gate: the candidate must be present and alone to start. A vision
+    # outage is lenient (it must not block every interview); a clear bad result
+    # is not.
+    try:
+        detection = await VisionClient().detect([payload.frame])
+    except VisionError:
+        logger.warning("Vision unavailable at start for interview %d; allowing start", interview_id)
+        detection = None
+    if detection is not None:
+        if detection.face_count == 0:
+            raise BadRequestError(
+                "No face detected — make sure you're clearly visible before starting."
+            )
+        if detection.face_count > 1:
+            raise BadRequestError(
+                "More than one person detected — you must be alone to start the interview."
+            )
 
     first_question = sorted(interview.questions, key=lambda q: q.id)[0]
 

@@ -1,8 +1,9 @@
-import React from "react";
+import React, { useState } from "react";
 import { useInterviewSession } from "./hooks/useInterviewSession";
 import TextQAPanel from "./components/TextQAPanel";
 import DsaPanel from "./components/DsaPanel";
 import ProctorWidget from "./components/ProctorWidget";
+import CameraGate from "./components/CameraGate";
 import Logo from "../../ui/Logo";
 import Button from "../../ui/Button";
 import type {
@@ -22,6 +23,30 @@ const InterviewSessionPage: React.FC<InterviewSessionPageProps> = ({
   token,
   onExit,
 }) => {
+  // The camera gate captures the first frame; only then does the interview
+  // start (the server re-checks it shows exactly one face).
+  const [startFrame, setStartFrame] = useState<string | null>(null);
+  if (startFrame === null) {
+    return <CameraGate onReady={setStartFrame} onExit={onExit} />;
+  }
+  return (
+    <InterviewRunner
+      interviewId={interviewId}
+      token={token}
+      startFrame={startFrame}
+      onExit={onExit}
+      onRetry={() => setStartFrame(null)}
+    />
+  );
+};
+
+const InterviewRunner: React.FC<{
+  interviewId: number;
+  token: string;
+  startFrame: string;
+  onExit: () => void;
+  onRetry: () => void;
+}> = ({ interviewId, token, startFrame, onExit, onRetry }) => {
   const {
     phase,
     state,
@@ -35,7 +60,7 @@ const InterviewSessionPage: React.FC<InterviewSessionPageProps> = ({
     refreshDsaRound,
     finishDsa,
     goTerminal,
-  } = useInterviewSession(interviewId, token);
+  } = useInterviewSession(interviewId, token, startFrame);
 
   return (
     <div
@@ -62,6 +87,7 @@ const InterviewSessionPage: React.FC<InterviewSessionPageProps> = ({
           <ErrorScreen
             message={error ?? "Unable to start interview."}
             onExit={onExit}
+            onRetry={onRetry}
           />
         )}
 
@@ -435,10 +461,11 @@ const LoadingScreen = () => (
   </div>
 );
 
-const ErrorScreen: React.FC<{ message: string; onExit: () => void }> = ({
-  message,
-  onExit,
-}) => (
+const ErrorScreen: React.FC<{
+  message: string;
+  onExit: () => void;
+  onRetry?: () => void;
+}> = ({ message, onExit, onRetry }) => (
   <div
     style={{
       maxWidth: 520,
@@ -496,9 +523,20 @@ const ErrorScreen: React.FC<{ message: string; onExit: () => void }> = ({
     >
       {message}
     </p>
-    <Button variant="primary" size="md" onClick={onExit}>
-      Back to dashboard
-    </Button>
+    <div style={{ display: "flex", gap: 10, justifyContent: "center" }}>
+      {onRetry && (
+        <Button variant="primary" size="md" onClick={onRetry}>
+          Try again
+        </Button>
+      )}
+      <Button
+        variant={onRetry ? "ghost" : "primary"}
+        size="md"
+        onClick={onExit}
+      >
+        Back to dashboard
+      </Button>
+    </div>
   </div>
 );
 

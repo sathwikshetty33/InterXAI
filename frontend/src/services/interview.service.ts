@@ -145,11 +145,13 @@ async function handle<T>(res: Response): Promise<T> {
 
 export async function startInterview(
   interviewId: number,
+  frame: string,
   token: string,
 ): Promise<InterviewStateResponse> {
   const res = await fetch(`${BASE_URL}/interviews/${interviewId}/start`, {
     method: "POST",
     headers: authHeaders(token),
+    body: JSON.stringify({ frame }),
   });
   return handle<InterviewStateResponse>(res);
 }

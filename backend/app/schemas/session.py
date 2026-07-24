@@ -25,6 +25,12 @@ class FrameResponse(BaseModel):
     deadline: datetime | None = None
 
 
+class StartInterviewRequest(BaseModel):
+    # Camera-gate frame captured just before starting; the server requires it to
+    # show exactly one face before creating the session.
+    frame: str
+
+
 class AnswerRequest(BaseModel):
     answer: str
 
