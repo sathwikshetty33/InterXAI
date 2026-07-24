@@ -11,6 +11,20 @@ class HeartbeatResponse(BaseModel):
     deadline: datetime | None = None
 
 
+class FrameRequest(BaseModel):
+    # Base64-encoded webcam frame (data-URL prefix tolerated by the vision service).
+    frame: str
+
+
+class FrameResponse(BaseModel):
+    status: str
+    # The violation this frame tripped, or null when it's clean.
+    violation: str | None = None
+    violation_count: int
+    threshold: int
+    deadline: datetime | None = None
+
+
 class AnswerRequest(BaseModel):
     answer: str
 
