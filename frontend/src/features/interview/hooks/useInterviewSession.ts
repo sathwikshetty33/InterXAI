@@ -35,6 +35,9 @@ export interface UseInterviewSessionReturn {
   refreshDsaRound: () => Promise<void>;
   finishDsa: () => Promise<void>;
   applyState: (next: InterviewStateResponse) => void;
+  /** End the session locally on a server-reported terminal status (e.g. the
+   *  proctor widget seeing "cheated"). */
+  goTerminal: (status: SessionStatus) => void;
 }
 
 const HEARTBEAT_MS = 5000;
@@ -324,5 +327,6 @@ export function useInterviewSession(
     refreshDsaRound,
     finishDsa,
     applyState,
+    goTerminal,
   };
 }

@@ -2,6 +2,7 @@ import React from "react";
 import { useInterviewSession } from "./hooks/useInterviewSession";
 import TextQAPanel from "./components/TextQAPanel";
 import DsaPanel from "./components/DsaPanel";
+import ProctorWidget from "./components/ProctorWidget";
 import Logo from "../../ui/Logo";
 import Button from "../../ui/Button";
 import type {
@@ -33,6 +34,7 @@ const InterviewSessionPage: React.FC<InterviewSessionPageProps> = ({
     answer,
     refreshDsaRound,
     finishDsa,
+    goTerminal,
   } = useInterviewSession(interviewId, token);
 
   return (
@@ -92,6 +94,14 @@ const InterviewSessionPage: React.FC<InterviewSessionPageProps> = ({
           <TerminalScreen status={terminalStatus} onExit={onExit} />
         )}
       </main>
+
+      {phase === "active" && state && (
+        <ProctorWidget
+          sessionId={state.session_id}
+          token={token}
+          onTerminal={goTerminal}
+        />
+      )}
     </div>
   );
 };

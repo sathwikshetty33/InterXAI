@@ -45,6 +45,16 @@ export interface HeartbeatResponse {
   deadline: string | null;
 }
 
+export interface FrameResponse {
+  status: SessionStatus;
+  // The violation this frame tripped ("multiple_faces" | "no_face" | ...), or
+  // null when it's clean.
+  violation: string | null;
+  violation_count: number;
+  threshold: number;
+  deadline: string | null;
+}
+
 export interface DsaCaseStatus {
   case: number;
   status: "passed" | "failed" | "error";
@@ -153,6 +163,19 @@ export async function sendHeartbeat(
     headers: authHeaders(token),
   });
   return handle<HeartbeatResponse>(res);
+}
+
+export async function sendFrame(
+  sessionId: number,
+  frame: string,
+  token: string,
+): Promise<FrameResponse> {
+  const res = await fetch(`${BASE_URL}/sessions/${sessionId}/frame`, {
+    method: "POST",
+    headers: authHeaders(token),
+    body: JSON.stringify({ frame }),
+  });
+  return handle<FrameResponse>(res);
 }
 
 export async function submitAnswer(
