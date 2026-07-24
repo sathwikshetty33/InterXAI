@@ -4,6 +4,7 @@ from app.background.taskiq.tasks import (
     dsa_generation,
     email,
     grading,
+    proctoring,
     resume_generation,
     resume_processing,
 )
@@ -55,6 +56,11 @@ class TaskiqWorker(BackgroundWorkerInterface):
 
     async def send_email_task(self, to_email: list[str], subject: str, body: str) -> None:
         await email.send_email_task.kiq(to_email, subject, body)
+
+    async def upload_violation_image_task(
+        self, session_id: int, image_b64: str, violation_type: str
+    ) -> None:
+        await proctoring.upload_violation_image_task.kiq(session_id, image_b64, violation_type)
 
 
 worker = TaskiqWorker()

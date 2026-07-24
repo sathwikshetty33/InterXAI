@@ -55,3 +55,9 @@ class BackgroundWorkerInterface(ABC):
     @abstractmethod
     async def send_email_task(self, to_email: list[str], subject: str, body: str) -> None:
         pass
+
+    @abstractmethod
+    async def upload_violation_image_task(
+        self, session_id: int, image_b64: str, violation_type: str
+    ) -> None:
+        pass
