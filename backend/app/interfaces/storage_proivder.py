@@ -3,7 +3,9 @@ from abc import ABC, abstractmethod
 
 class StorageProviderInterface(ABC):
     @abstractmethod
-    async def upload(self, file: bytes, file_name: str) -> str:
+    async def upload(
+        self, file: bytes, file_name: str, content_type: str = "application/pdf"
+    ) -> str:
         pass
 
     @abstractmethod

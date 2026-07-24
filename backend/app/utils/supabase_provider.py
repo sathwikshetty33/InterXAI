@@ -79,7 +79,9 @@ class SupabaseStorageProvider(StorageProviderInterface):
                 raise
         raise RuntimeError("unreachable")  # pragma: no cover
 
-    async def upload(self, file: bytes, file_name: str) -> str:
+    async def upload(
+        self, file: bytes, file_name: str, content_type: str = "application/pdf"
+    ) -> str:
         try:
             client = await self._get_client()
 
@@ -90,7 +92,7 @@ class SupabaseStorageProvider(StorageProviderInterface):
                 lambda: client.storage.from_(self.bucket_name).upload(
                     path=file_name,
                     file=file,
-                    file_options={"content-type": "application/pdf", "upsert": "true"},
+                    file_options={"content-type": content_type, "upsert": "true"},
                 ),
             )
             return await client.storage.from_(self.bucket_name).get_public_url(file_name)
