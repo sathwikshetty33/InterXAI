@@ -64,6 +64,15 @@ class ResumeConversationResult(BaseModel):
     questions: list[ResumeQuestionResult]
 
 
+class ViolationImageResult(BaseModel):
+    """One proctoring violation frame captured during a session."""
+
+    id: int
+    image_url: str
+    violation_type: str
+    created_at: datetime
+
+
 class SessionResult(BaseModel):
     """Everything captured during a single interview session, across all rounds."""
 
@@ -78,6 +87,8 @@ class SessionResult(BaseModel):
     questions_round: list[QuestionInteractionResult]
     dsa_round: list[DsaInteractionResult]
     resume_round: list[ResumeConversationResult]
+    violation_count: int
+    violations: list[ViolationImageResult]
 
 
 class LeaderboardEntry(BaseModel):

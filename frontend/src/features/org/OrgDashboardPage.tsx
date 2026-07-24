@@ -1380,6 +1380,12 @@ const LeaderboardRow: React.FC<{
   );
 };
 
+const VIOLATION_LABELS: Record<string, string> = {
+  multiple_faces: "Multiple people",
+  no_face: "No face visible",
+  camera_lost: "Camera lost",
+};
+
 export const SessionDetail: React.FC<{
   session: SessionResult;
   index: number;
@@ -1715,6 +1721,90 @@ export const SessionDetail: React.FC<{
             </div>
           );
         })
+      )}
+    </RoundBlock>
+
+    <RoundBlock title="Proctoring">
+      {session.violation_count === 0 ? (
+        <Muted>No violations flagged.</Muted>
+      ) : (
+        <>
+          <div
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 7,
+              padding: "3px 10px",
+              borderRadius: 99,
+              background: "var(--negative-tint)",
+              color: "var(--negative)",
+              fontFamily: "var(--font-mono)",
+              fontSize: 12,
+              fontWeight: 700,
+              marginBottom: 12,
+            }}
+          >
+            {session.violation_count} violation
+            {session.violation_count === 1 ? "" : "s"}
+          </div>
+          {session.violations.length === 0 ? (
+            <Muted>Violations were counted, but no snapshot was stored.</Muted>
+          ) : (
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 12 }}>
+              {session.violations.map((v) => (
+                <a
+                  key={v.id}
+                  href={v.image_url}
+                  target="_blank"
+                  rel="noreferrer"
+                  style={{
+                    width: 132,
+                    borderRadius: "var(--radius-sm)",
+                    overflow: "hidden",
+                    border: "1px solid var(--line)",
+                    background: "var(--surface-2)",
+                    textDecoration: "none",
+                    boxShadow: "var(--shadow-sm)",
+                  }}
+                >
+                  <img
+                    src={v.image_url}
+                    alt={v.violation_type}
+                    loading="lazy"
+                    style={{
+                      width: "100%",
+                      aspectRatio: "4 / 3",
+                      objectFit: "cover",
+                      display: "block",
+                      background: "var(--ink)",
+                    }}
+                  />
+                  <div style={{ padding: "6px 8px" }}>
+                    <div
+                      style={{
+                        fontSize: 11.5,
+                        fontWeight: 700,
+                        color: "var(--negative)",
+                      }}
+                    >
+                      {VIOLATION_LABELS[v.violation_type] ?? v.violation_type}
+                    </div>
+                    <div
+                      style={{
+                        fontFamily: "var(--font-mono)",
+                        fontSize: 10,
+                        color: "var(--muted-2)",
+                        marginTop: 1,
+                      }}
+                    >
+                      {formatDate(v.created_at)}
+                    </div>
+                  </div>
+                </a>
+              ))}
+            </div>
+          )}
+        </>
       )}
     </RoundBlock>
   </div>

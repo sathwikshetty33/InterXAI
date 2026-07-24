@@ -19,6 +19,7 @@ from app.schemas.leaderboard import (
     ResumeConversationResult,
     ResumeQuestionResult,
     SessionResult,
+    ViolationImageResult,
 )
 from app.utils.authorization import is_organization
 
@@ -114,6 +115,16 @@ def _build_session(
         questions_round=questions_round,
         dsa_round=dsa_round,
         resume_round=resume_round,
+        violation_count=session.violation_count,
+        violations=[
+            ViolationImageResult(
+                id=v.id,
+                image_url=v.image_url,
+                violation_type=v.violation_type,
+                created_at=v.created_at,
+            )
+            for v in sorted(session.violation_images, key=lambda v: v.id)
+        ],
     )
 
 
@@ -169,6 +180,7 @@ async def get_interview_leaderboard(
             .selectinload(InterviewSession.dsa_sessions)
             .selectinload(DsaInteraction.topic),
             selectinload(Application.sessions).selectinload(InterviewSession.resume_conversations),
+            selectinload(Application.sessions).selectinload(InterviewSession.violation_images),
         )
     )
     applications = list(applications_result.scalars().unique().all())

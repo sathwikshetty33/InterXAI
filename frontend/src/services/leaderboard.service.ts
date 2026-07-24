@@ -136,6 +136,13 @@ export interface ResumeConversationResult {
   questions: ResumeQuestionResult[];
 }
 
+export interface ViolationImageResult {
+  id: number;
+  image_url: string;
+  violation_type: string;
+  created_at: string;
+}
+
 export interface SessionResult {
   id: number;
   status: string;
@@ -148,6 +155,8 @@ export interface SessionResult {
   questions_round: QuestionInteractionResult[];
   dsa_round: DsaInteractionResult[];
   resume_round: ResumeConversationResult[];
+  violation_count: number;
+  violations: ViolationImageResult[];
 }
 
 export interface LeaderboardEntry {
