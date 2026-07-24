@@ -80,6 +80,8 @@ class InterviewSession(BaseTable):
     # "assignment done — this is all the questions there will be".
     dsa_assigned_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     status: Mapped[str] = mapped_column(String(20), default=InterviewStatus.SCHEDULED.value)
+    # Confirmed proctoring violations; escalates at PROCTOR_VIOLATION_THRESHOLD.
+    violation_count: Mapped[int] = mapped_column(Integer, default=0)
     feedback: Mapped[str | None] = mapped_column(Text, nullable=True)
     score: Mapped[float | None] = mapped_column(Float, nullable=True)
     recommendation: Mapped[str | None] = mapped_column(String(50), nullable=True)
@@ -103,6 +105,12 @@ class InterviewSession(BaseTable):
         back_populates="session",
         cascade="all, delete-orphan",
         foreign_keys="ResumeConversation.session_id",
+    )
+    violation_images = relationship(
+        "ViolationImage",
+        back_populates="session",
+        cascade="all, delete-orphan",
+        foreign_keys="ViolationImage.session_id",
     )
 
     def __repr__(self) -> str:

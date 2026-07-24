@@ -32,6 +32,8 @@ class Settings(BaseSettings):
     # Interview proctoring
     IMMEDIATE_DISQUALIFICATION: bool = False
     HEARTBEAT_THRESHOLD_S: int = 20
+    # Confirmed violations that mark a session cheated.
+    PROCTOR_VIOLATION_THRESHOLD: int = 3
 
     # Providers
     STORAGE_PROVIDER: str = "supabase"

@@ -15,6 +15,7 @@ from app.models import (
     interaction,
     interview,
     organization,
+    proctoring,
     user,
 )
 
@@ -24,5 +25,6 @@ __all__ = [
     "interaction",
     "interview",
     "organization",
+    "proctoring",
     "user",
 ]
