@@ -1,13 +1,28 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { FaceDetector, FilesetResolver } from "@mediapipe/tasks-vision";
 import { sendFrame } from "../../../services/interview.service";
 import type { SessionStatus } from "../../../services/interview.service";
 
-// One posted frame == one server-side face check. Keep this modest; the server
-// is authoritative, so the client just paces how often it asks.
-const FRAME_MS = 6000;
 const CAPTURE_W = 320;
 const CAPTURE_H = 240;
-const WARNING_MS = 4500;
+
+// Client-side face detection cadence (instant, local).
+const DETECT_MS = 800;
+// When the local detector flags a violation, verify with the server at most
+// this often — one flag shouldn't spam the /frame endpoint.
+const FLAG_POST_THROTTLE_MS = 4000;
+// Even with a clean local read, still beat the server this often (liveness +
+// tamper spot-check — the server can't trust a client that stopped flagging).
+const LIVENESS_MS = 12000;
+// Fallback when the local model fails to load: plain periodic server beat.
+const FALLBACK_FRAME_MS = 6000;
+
+// Same BlazeFace model the server uses; WASM version must match the installed
+// @mediapipe/tasks-vision (0.10.35).
+const WASM_URL =
+  "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.35/wasm";
+const MODEL_URL =
+  "https://storage.googleapis.com/mediapipe-models/face_detector/blaze_face_short_range/float16/1/blaze_face_short_range.tflite";
 
 const VIOLATION_COPY: Record<string, string> = {
   multiple_faces: "More than one person detected",
@@ -29,11 +44,14 @@ export default function ProctorWidget({
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const detectorRef = useRef<FaceDetector | null>(null);
   const busyRef = useRef(false);
   const stoppedRef = useRef(false);
+  const lastPostRef = useRef(0);
 
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
+  const [detectorReady, setDetectorReady] = useState(false);
   const [count, setCount] = useState(0);
   const [threshold, setThreshold] = useState(0);
   const [warning, setWarning] = useState<string | null>(null);
@@ -72,6 +90,45 @@ export default function ProctorWidget({
     };
   }, []);
 
+  // Load the in-browser face detector (best-effort). If the WASM/model can't
+  // load, we stay in fallback mode: the server still checks every posted frame.
+  useEffect(() => {
+    let cancelled = false;
+    let created: FaceDetector | null = null;
+    (async () => {
+      try {
+        const fileset = await FilesetResolver.forVisionTasks(WASM_URL);
+        for (const delegate of ["GPU", "CPU"] as const) {
+          try {
+            created = await FaceDetector.createFromOptions(fileset, {
+              baseOptions: { modelAssetPath: MODEL_URL, delegate },
+              runningMode: "VIDEO",
+              minDetectionConfidence: 0.5,
+            });
+            break;
+          } catch {
+            created = null;
+          }
+        }
+        if (cancelled) {
+          created?.close();
+          return;
+        }
+        if (created) {
+          detectorRef.current = created;
+          setDetectorReady(true);
+        }
+      } catch {
+        // FilesetResolver failed (offline / CDN blocked) — fallback mode.
+      }
+    })();
+    return () => {
+      cancelled = true;
+      detectorRef.current?.close();
+      detectorRef.current = null;
+    };
+  }, []);
+
   const captureFrame = useCallback((): string | null => {
     const video = videoRef.current;
     if (!video || video.readyState < 2) return null;
@@ -88,49 +145,89 @@ export default function ProctorWidget({
     return canvas.toDataURL("image/jpeg", 0.6);
   }, []);
 
-  // Frame-beat: capture and POST on an interval, skipping if a send is already
-  // in flight so a slow request can't stack up.
+  // Capture the current frame, POST it, and let the server's authoritative
+  // verdict drive the count / escalation. Skips if a send is already in flight.
+  const postFrame = useCallback(async () => {
+    if (stoppedRef.current || busyRef.current) return;
+    const frame = captureFrame();
+    if (!frame) return;
+    busyRef.current = true;
+    lastPostRef.current = performance.now();
+    try {
+      const res = await sendFrame(sessionId, frame, token);
+      setThreshold(res.threshold);
+      setCount(res.violation_count);
+      // Authoritative: this clears an optimistic local warning it disagrees with.
+      setWarning(
+        res.violation
+          ? (VIOLATION_COPY[res.violation] ?? "Proctoring violation")
+          : null,
+      );
+      if (res.status !== "ongoing") {
+        stoppedRef.current = true;
+        onTerminal(res.status);
+      }
+    } catch {
+      // transient network error — the next beat retries
+    } finally {
+      busyRef.current = false;
+    }
+  }, [captureFrame, sessionId, token, onTerminal]);
+
+  // Detection / beat loop. With a local detector: watch continuously, warn
+  // instantly, and only post on a flag (throttled) or a liveness interval.
+  // Without one: plain periodic server beat.
   useEffect(() => {
     if (!ready || cameraError) return;
     stoppedRef.current = false;
 
-    const beat = async () => {
-      if (stoppedRef.current || busyRef.current) return;
-      const frame = captureFrame();
-      if (!frame) return;
-      busyRef.current = true;
-      try {
-        const res = await sendFrame(sessionId, frame, token);
-        setThreshold(res.threshold);
-        setCount(res.violation_count);
-        if (res.violation) {
-          setWarning(VIOLATION_COPY[res.violation] ?? "Proctoring violation");
+    if (detectorReady) {
+      const tick = () => {
+        if (stoppedRef.current) return;
+        const detector = detectorRef.current;
+        const video = videoRef.current;
+        if (!detector || !video || video.readyState < 2) return;
+        let faces: number;
+        try {
+          faces = detector.detectForVideo(video, performance.now()).detections
+            .length;
+        } catch {
+          return;
         }
-        if (res.status !== "ongoing") {
-          stoppedRef.current = true;
-          onTerminal(res.status);
+        // Instant optimistic warning (the server may later clear it).
+        setWarning(
+          faces === 1
+            ? null
+            : faces === 0
+              ? VIOLATION_COPY.no_face
+              : VIOLATION_COPY.multiple_faces,
+        );
+        const elapsed = performance.now() - lastPostRef.current;
+        if (
+          (faces !== 1 && elapsed > FLAG_POST_THROTTLE_MS) ||
+          elapsed > LIVENESS_MS
+        ) {
+          void postFrame();
         }
-      } catch {
-        // transient network error — the next beat retries
-      } finally {
-        busyRef.current = false;
-      }
-    };
+      };
+      const primer = window.setTimeout(() => void postFrame(), 1200);
+      const interval = window.setInterval(tick, DETECT_MS);
+      return () => {
+        window.clearTimeout(primer);
+        window.clearInterval(interval);
+      };
+    }
 
-    const primer = window.setTimeout(beat, 1500);
-    const interval = window.setInterval(beat, FRAME_MS);
+    const primer = window.setTimeout(() => void postFrame(), 1500);
+    const interval = window.setInterval(
+      () => void postFrame(),
+      FALLBACK_FRAME_MS,
+    );
     return () => {
       window.clearTimeout(primer);
       window.clearInterval(interval);
     };
-  }, [ready, cameraError, sessionId, token, captureFrame, onTerminal]);
-
-  // Warnings are transient; fade one out after a few seconds.
-  useEffect(() => {
-    if (!warning) return;
-    const t = window.setTimeout(() => setWarning(null), WARNING_MS);
-    return () => window.clearTimeout(t);
-  }, [warning]);
+  }, [ready, cameraError, detectorReady, postFrame]);
 
   const alarm = Boolean(cameraError) || Boolean(warning);
   const accent = alarm ? "var(--negative)" : "var(--positive)";
