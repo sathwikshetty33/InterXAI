@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from app.database import get_db
 from app.exceptions.common import NotFoundError
@@ -19,6 +20,12 @@ from app.utils.jwt_auth import JwtAuth
 logger = get_logger(__name__)
 
 router: APIRouter = APIRouter(prefix="/organizations", tags=["organizations"])
+
+
+def _org_response(org: Organization, name: str | None) -> OrganizationResponse:
+    resp = OrganizationResponse.model_validate(org)
+    resp.name = name
+    return resp
 
 
 @router.post(
@@ -52,9 +59,24 @@ async def signup_organization(
     )
 
     return OrganizationSignupResponse(
-        organization=OrganizationResponse.model_validate(user.organization),
+        organization=_org_response(user.organization, user.username),
         access_token=token,
     )
+
+
+@router.get("/me", response_model=OrganizationResponse)
+async def get_my_organization(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> OrganizationResponse:
+    """The caller's own organization profile, resolved from the auth token."""
+    result = await db.execute(
+        select(Organization).where(Organization.account_id == current_user.id)
+    )
+    org = result.scalar_one_or_none()
+    if not org:
+        raise NotFoundError("Organization not found")
+    return _org_response(org, current_user.username)
 
 
 @router.get("/{org_id}", response_model=OrganizationResponse)
@@ -68,7 +90,11 @@ async def get_organization(
     """
     logger.info("Get organization request for org id: %d", org_id)
 
-    result = await db.execute(select(Organization).where(Organization.id == org_id))
+    result = await db.execute(
+        select(Organization)
+        .options(selectinload(Organization.owner))
+        .where(Organization.id == org_id)
+    )
     org = result.scalar_one_or_none()
 
     if not org:
@@ -76,7 +102,7 @@ async def get_organization(
         raise NotFoundError("Organization not found")
 
     logger.info("Organization retrieved successfully: %d", org_id)
-    return OrganizationResponse.model_validate(org)
+    return _org_response(org, org.owner.username if org.owner else None)
 
 
 @router.put("/{org_id}", response_model=OrganizationResponse)
@@ -85,6 +111,7 @@ async def update_organization(
     org_data: OrganizationUpdate,
     db: AsyncSession = Depends(get_db),
     org: Organization = Depends(verify_org_ownership),
+    current_user: User = Depends(get_current_user),
 ) -> OrganizationResponse:
     """
     Update organization by organization ID endpoint.
@@ -100,7 +127,7 @@ async def update_organization(
     await db.refresh(org)
 
     logger.info("Organization updated successfully: %d", org_id)
-    return OrganizationResponse.model_validate(org)
+    return _org_response(org, current_user.username)
 
 
 @router.delete("/{org_id}", status_code=status.HTTP_204_NO_CONTENT)

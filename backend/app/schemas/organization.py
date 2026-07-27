@@ -19,6 +19,7 @@ class OrganizationUpdate(BaseModel):
 class OrganizationResponse(BaseModel):
     id: int
     account_id: int
+    name: str | None = None  # the owner account's username — the company's display name
     address: str | None = None
     email: str | None = None
     url: str | None = None
