@@ -15,13 +15,16 @@ services:
       PISTON_URL: http://piston:2000
       VISION_URL: http://vision:8000
       VISION_SHARED_SECRET: ${VISION_SHARED_SECRET:-}
+      # Local Postgres instead of remote Neon — much lower query latency.
+      DATABASE_URL: postgresql://interxai:interxai@postgres:5432/interxai
+      DATABASE_SSL: disable
     volumes:
       - ./backend:/app
     depends_on:
+      postgres:
+        condition: service_healthy
       redis:
         condition: service_started
-      piston_bootstrap:
-        condition: service_completed_successfully
       vision:
         condition: service_started
 
@@ -36,15 +39,35 @@ services:
       PISTON_URL: http://piston:2000
       VISION_URL: http://vision:8000
       VISION_SHARED_SECRET: ${VISION_SHARED_SECRET:-}
+      DATABASE_URL: postgresql://interxai:interxai@postgres:5432/interxai
+      DATABASE_SSL: disable
     volumes:
       - ./backend:/app
     depends_on:
+      postgres:
+        condition: service_healthy
       redis:
         condition: service_started
       api:
         condition: service_started
-      piston_bootstrap:
-        condition: service_completed_successfully
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: interxai
+      POSTGRES_PASSWORD: interxai
+      POSTGRES_DB: interxai
+    # Host 5433 → container 5432, so it can't clash with a Postgres already
+    # running on the host's 5432. Services reach it as postgres:5432 internally.
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U interxai -d interxai"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
 
   redis:
     image: redis:7-alpine
@@ -92,18 +115,7 @@ services:
       VISION_SHARED_SECRET: ${VISION_SHARED_SECRET:-}
     restart: always
 
-  # One-shot: installs the DSA languages into piston_data (Piston ships with
-  # none), then exits. Skips already-installed ones, so reruns are a no-op.
-  piston_bootstrap:
-    image: python:3.12-alpine
-    depends_on:
-      - piston
-    environment:
-      PISTON_URL: http://piston:2000
-    volumes:
-      - ./tools/piston_bootstrap.py:/piston_bootstrap.py:ro
-    command: ["python", "/piston_bootstrap.py"]
-
 volumes:
+  postgres_data:
   redis_data:
   piston_data:
