@@ -94,6 +94,9 @@ Organizations create fully customized interviews with domain-specific questions 
                         │  ResumeEvaluator│
                         └─────────────────┘
 ```
+### System archietecture
+
+<img width="1199" height="765" alt="image" src="https://github.com/user-attachments/assets/33af8af3-52e2-4be8-96d1-a9597f723b84" />
 
 ### Request Lifecycle
 
