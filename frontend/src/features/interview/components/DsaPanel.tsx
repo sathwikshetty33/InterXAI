@@ -15,6 +15,19 @@ import type {
   DsaSubmitResponse,
   DsaTestResponse,
 } from "../../../services/interview.service";
+import CodeMirror from "@uiw/react-codemirror";
+import { keymap } from "@codemirror/view";
+import { indentWithTab } from "@codemirror/commands";
+import { StreamLanguage, indentUnit } from "@codemirror/language";
+import type { Extension } from "@codemirror/state";
+import { oneDark } from "@codemirror/theme-one-dark";
+import { python } from "@codemirror/lang-python";
+import { javascript } from "@codemirror/lang-javascript";
+import { java } from "@codemirror/lang-java";
+import { cpp } from "@codemirror/lang-cpp";
+import { go } from "@codemirror/lang-go";
+import { shell } from "@codemirror/legacy-modes/mode/shell";
+import { csharp } from "@codemirror/legacy-modes/mode/clike";
 
 interface Props {
   sessionId: number;
@@ -80,6 +93,33 @@ const LANGUAGES: { value: LangOpt; label: string; starter: string }[] = [
   },
   { value: "bash", label: "Bash", starter: "#!/bin/bash\n" },
 ];
+
+// CodeMirror language + editor extensions per language. Tab indents (IDE feel)
+// and indentation is 4 spaces; bracket close/match come from the default setup.
+function editorExtensions(lang: LangOpt): Extension[] {
+  const base: Extension[] = [keymap.of([indentWithTab]), indentUnit.of("    ")];
+  switch (lang) {
+    case "python":
+      return [python(), ...base];
+    case "javascript":
+      return [javascript(), ...base];
+    case "typescript":
+      return [javascript({ typescript: true }), ...base];
+    case "java":
+      return [java(), ...base];
+    case "c":
+    case "c++":
+      return [cpp(), ...base];
+    case "go":
+      return [go(), ...base];
+    case "bash":
+      return [StreamLanguage.define(shell), ...base];
+    case "csharp":
+      return [StreamLanguage.define(csharp), ...base];
+    default:
+      return base;
+  }
+}
 
 type ConsoleState =
   | { kind: "idle" }
@@ -560,39 +600,25 @@ export default function DsaPanel({
               </div>
             </div>
 
-            <textarea
-              value={editor.source}
-              onChange={(e) => patchEditor({ source: e.target.value })}
-              spellCheck={false}
+            <div
               style={{
                 flex: 1,
                 minHeight: 320,
-                background: "var(--ink)",
-                color: "var(--paper)",
                 border: "1px solid var(--ink-2)",
                 borderRadius: "var(--radius)",
-                padding: "14px 16px",
-                fontFamily: "var(--font-mono)",
-                fontSize: 13,
-                lineHeight: 1.6,
-                outline: "none",
-                resize: "vertical",
-                tabSize: 4,
+                overflow: "hidden",
               }}
-              onKeyDown={(e) => {
-                if (e.key === "Tab") {
-                  e.preventDefault();
-                  const t = e.currentTarget;
-                  const s = t.selectionStart;
-                  const next =
-                    editor.source.slice(0, s) + "    " + editor.source.slice(s);
-                  patchEditor({ source: next });
-                  requestAnimationFrame(() => {
-                    t.selectionStart = t.selectionEnd = s + 4;
-                  });
-                }
-              }}
-            />
+            >
+              <CodeMirror
+                value={editor.source}
+                onChange={(value) => patchEditor({ source: value })}
+                theme={oneDark}
+                height="100%"
+                extensions={editorExtensions(editor.language)}
+                editable={!isBusy}
+                style={{ height: "100%", fontSize: 13 }}
+              />
+            </div>
 
             <div
               style={{
