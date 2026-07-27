@@ -17,10 +17,10 @@ pg() { docker compose exec -T postgres psql -U "$PG_USER" -d "$PG_DB" -v ON_ERRO
 echo "▶ Ensuring demo accounts via the API (duplicates 4xx and are ignored)..."
 curl -s -o /dev/null -X POST "$API_URL/users/signup" \
   -H 'Content-Type: application/json' \
-  -d '{"username":"demo-candidate","password":"Candidate#2026!","email":"demo-candidate@interxai.test"}' || true
+  -d '{"username":"demo-candidate","password":"Candidate#2026!","email":"demo-candidate@example.com"}' || true
 curl -s -o /dev/null -X POST "$API_URL/organizations/signup" \
   -H 'Content-Type: application/json' \
-  -d '{"username":"demo-company","password":"Company#2026!","email":"demo-company@interxai.test"}' || true
+  -d '{"username":"demo-company","password":"Company#2026!","email":"demo-company@example.com"}' || true
 
 count="$(pg -tAc "SELECT count(*) FROM users WHERE username IN ('demo-candidate','demo-company')" | tr -d '[:space:]')"
 if [ "${count:-0}" -lt 2 ]; then
