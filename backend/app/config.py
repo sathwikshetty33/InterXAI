@@ -8,6 +8,8 @@ class Settings(BaseSettings):
     API_V1_PREFIX: str = "/api/v1"
     # Database
     DATABASE_URL: str = "sqlite+aiosqlite:///./dev.db"
+    # asyncpg sslmode: "require" for Neon, "disable" for a local Postgres.
+    DATABASE_SSL: str = "require"
 
     # Security
     SECRET_KEY: str = "secret"
