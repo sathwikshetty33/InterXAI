@@ -19,12 +19,22 @@ export interface OrgSignupRequest {
 export interface OrganizationResponse {
   id: number;
   account_id: number;
+  name: string | null;
   address: string | null;
   email: string | null;
   url: string | null;
   linkedin: string | null;
   photo: string | null;
   description: string | null;
+}
+
+export interface OrganizationUpdate {
+  address?: string | null;
+  email?: string | null;
+  url?: string | null;
+  linkedin?: string | null;
+  photo?: string | null;
+  description?: string | null;
 }
 
 export interface OrgSignupResponse {
@@ -44,6 +54,13 @@ export class OrgServiceError extends Error {
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
+
+function authHeaders(token: string) {
+  return {
+    "Content-Type": "application/json",
+    Authorization: `Bearer ${token}`,
+  };
+}
 
 async function handleResponse<T>(response: Response): Promise<T> {
   if (!response.ok) {
@@ -85,4 +102,57 @@ export async function loginOrganization(credentials: {
   });
   const data = await handleResponse<{ token: string; user: unknown }>(response);
   return { token: data.token };
+}
+
+/** GET /organizations/:id — any authenticated user (e.g. a candidate) may view. */
+export async function getOrganization(
+  orgId: number,
+  token: string,
+): Promise<OrganizationResponse> {
+  const response = await fetch(`${BASE_URL}/organizations/${orgId}`, {
+    headers: authHeaders(token),
+  });
+  return handleResponse<OrganizationResponse>(response);
+}
+
+/** GET /organizations/me — the caller's own organization. */
+export async function getMyOrganization(
+  token: string,
+): Promise<OrganizationResponse> {
+  const response = await fetch(`${BASE_URL}/organizations/me`, {
+    headers: authHeaders(token),
+  });
+  return handleResponse<OrganizationResponse>(response);
+}
+
+/** PUT /organizations/:id */
+export async function updateOrganization(
+  orgId: number,
+  data: OrganizationUpdate,
+  token: string,
+): Promise<OrganizationResponse> {
+  const response = await fetch(`${BASE_URL}/organizations/${orgId}`, {
+    method: "PUT",
+    headers: authHeaders(token),
+    body: JSON.stringify(data),
+  });
+  return handleResponse<OrganizationResponse>(response);
+}
+
+/** DELETE /organizations/:id */
+export async function deleteOrganization(
+  orgId: number,
+  token: string,
+): Promise<void> {
+  const response = await fetch(`${BASE_URL}/organizations/${orgId}`, {
+    method: "DELETE",
+    headers: authHeaders(token),
+  });
+  if (!response.ok) {
+    const data = await response.json().catch(() => ({}));
+    throw new OrgServiceError(
+      response.status,
+      extractErrorDetail(data, "Failed to delete organization."),
+    );
+  }
 }

@@ -85,6 +85,17 @@ export interface AppliedInterview extends InterviewBasic {
 
 // ── Endpoints ─────────────────────────────────────────────────────────────────
 
+/** GET /users/:id */
+export async function getUserById(
+  userId: number,
+  token: string,
+): Promise<UserResponse> {
+  const res = await fetch(`${BASE_URL}/users/${userId}`, {
+    headers: authHeaders(token),
+  });
+  return handleResponse<UserResponse>(res);
+}
+
 /** PUT /users/:id  — update profile fields */
 export async function updateUserProfile(
   userId: number,
@@ -97,6 +108,24 @@ export async function updateUserProfile(
     body: JSON.stringify(data),
   });
   return handleResponse<UserResponse>(res);
+}
+
+/** DELETE /users/:id */
+export async function deleteAccount(
+  userId: number,
+  token: string,
+): Promise<void> {
+  const res = await fetch(`${BASE_URL}/users/${userId}`, {
+    method: "DELETE",
+    headers: authHeaders(token),
+  });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new UserServiceError(
+      res.status,
+      extractErrorDetail(data, "Failed to delete account."),
+    );
+  }
 }
 
 /** GET /interviews/ — available interviews for this user */
