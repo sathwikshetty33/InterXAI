@@ -12,13 +12,13 @@ import LoginPage from "./features/auth/LoginPage";
 import SignupPage from "./features/auth/SignupPage";
 import OrgAuthPage from "./features/org/OrgAuthPage";
 import OrgDashboardPage from "./features/org/OrgDashboardPage";
-import ProfileSetupPage from "./features/user/ProfileSetupPage";
+import CandidateProfilePage from "./features/user/CandidateProfilePage";
+import CompanyProfilePage from "./features/org/CompanyProfilePage";
 import DashboardPage from "./features/user/DashboardPage";
 import InterviewSessionPage from "./features/interview/InterviewSessionPage";
 import { useAuth } from "./auth/context";
 import type { TokenResponse } from "./services/auth.service";
 import type { OrgSignupResponse } from "./services/organization.service";
-import type { UserResponse } from "./services/user.service";
 
 function FullLoader({ label = "Loading…" }: { label?: string }) {
   return (
@@ -99,17 +99,35 @@ function SignupRoute() {
 
 function ProfileRoute() {
   const navigate = useNavigate();
-  const { token, user, updateUser } = useAuth();
+  const { token, user, updateUser, logoutCandidate } = useAuth();
   // Guarded by RequireCandidate, so token/user are present here.
   return (
-    <ProfileSetupPage
+    <CandidateProfilePage
       userId={user!.id}
       token={token!}
-      username={user!.username}
-      onComplete={(updated: UserResponse) => {
-        updateUser(updated);
-        navigate("/dashboard", { replace: true });
+      editable
+      onBack={() => navigate("/dashboard")}
+      onSaved={(updated) => updateUser(updated)}
+      onDeleted={() => {
+        logoutCandidate();
+        navigate("/", { replace: true });
       }}
+    />
+  );
+}
+
+function CompanyViewRoute() {
+  const navigate = useNavigate();
+  const { token } = useAuth();
+  const { orgId } = useParams();
+  const id = Number(orgId);
+  if (!Number.isFinite(id)) return <Navigate to="/dashboard" replace />;
+  return (
+    <CompanyProfilePage
+      token={token!}
+      editable={false}
+      orgId={id}
+      onBack={() => navigate(-1)}
     />
   );
 }
@@ -195,6 +213,38 @@ function OrgDashboardRoute({ mode }: { mode: "list" | "create" | "detail" }) {
   );
 }
 
+function OrgProfileRoute() {
+  const navigate = useNavigate();
+  const { orgToken, logoutOrg } = useAuth();
+  return (
+    <CompanyProfilePage
+      token={orgToken!}
+      editable
+      onBack={() => navigate("/admin/dashboard")}
+      onDeleted={() => {
+        logoutOrg();
+        navigate("/admin/auth", { replace: true });
+      }}
+    />
+  );
+}
+
+function OrgCandidateRoute() {
+  const navigate = useNavigate();
+  const { orgToken } = useAuth();
+  const { userId } = useParams();
+  const id = Number(userId);
+  if (!Number.isFinite(id)) return <Navigate to="/admin/dashboard" replace />;
+  return (
+    <CandidateProfilePage
+      userId={id}
+      token={orgToken!}
+      editable={false}
+      onBack={() => navigate(-1)}
+    />
+  );
+}
+
 // ── Route table ───────────────────────────────────────────────────────────────
 
 function App() {
@@ -225,6 +275,14 @@ function App() {
         element={
           <RequireCandidate>
             <InterviewRoute />
+          </RequireCandidate>
+        }
+      />
+      <Route
+        path="/company/:orgId"
+        element={
+          <RequireCandidate>
+            <CompanyViewRoute />
           </RequireCandidate>
         }
       />
@@ -274,6 +332,22 @@ function App() {
           element={
             <RequireOrg>
               <OrgDashboardRoute mode="detail" />
+            </RequireOrg>
+          }
+        />
+        <Route
+          path="profile"
+          element={
+            <RequireOrg>
+              <OrgProfileRoute />
+            </RequireOrg>
+          }
+        />
+        <Route
+          path="candidate/:userId"
+          element={
+            <RequireOrg>
+              <OrgCandidateRoute />
             </RequireOrg>
           }
         />
