@@ -146,6 +146,8 @@ function DashboardRoute() {
       onAttemptInterview={(interviewId: number) =>
         navigate(`/interview/${interviewId}`)
       }
+      onOpenProfile={() => navigate("/profile")}
+      onViewCompany={(orgId: number) => navigate(`/company/${orgId}`)}
     />
   );
 }

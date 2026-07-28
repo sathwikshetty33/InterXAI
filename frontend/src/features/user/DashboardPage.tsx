@@ -13,6 +13,8 @@ export interface DashboardPageProps {
   token: string;
   onLogout: () => void;
   onAttemptInterview?: (interviewId: number) => void;
+  onOpenProfile?: () => void;
+  onViewCompany?: (orgId: number) => void;
 }
 
 type Tab = "available" | "applied";
@@ -71,6 +73,8 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
   token,
   onLogout,
   onAttemptInterview,
+  onOpenProfile,
+  onViewCompany,
 }) => {
   const [tab, setTab] = useState<Tab>("available");
   const [query, setQuery] = useState("");
@@ -230,6 +234,9 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
               </div>
             </div>
 
+            <Button variant="ghost" size="sm" onClick={onOpenProfile}>
+              Profile
+            </Button>
             <Button
               variant="ghost"
               size="sm"
@@ -384,7 +391,7 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
                   Add your bio and links so organizations can find you.
                 </div>
               </div>
-              <Button variant="primary" size="sm">
+              <Button variant="primary" size="sm" onClick={onOpenProfile}>
                 Complete profile
                 <ArrowIcon />
               </Button>
@@ -596,6 +603,25 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
             >
               {selectedInterview.experience} experience
             </p>
+            {onViewCompany && (
+              <button
+                onClick={() => onViewCompany(selectedInterview.org_id)}
+                style={{
+                  display: "block",
+                  background: "transparent",
+                  border: "none",
+                  color: "var(--signal-strong)",
+                  fontSize: 12.5,
+                  fontWeight: 700,
+                  fontFamily: "var(--font-body)",
+                  cursor: "pointer",
+                  padding: 0,
+                  margin: "0 0 18px",
+                }}
+              >
+                View company profile →
+              </button>
+            )}
             <div
               style={{
                 fontSize: 13,
