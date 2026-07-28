@@ -155,6 +155,7 @@ const OrgDashboardPage: React.FC<OrgDashboardPageProps> = ({
       <AdminHeader
         displayName={displayName}
         onHome={goList}
+        onProfile={() => navigate("/admin/profile")}
         onLogout={onLogout}
       />
 
@@ -1014,9 +1015,25 @@ const ApplicationRow: React.FC<{
           {application.id}
         </div>
         <div>
-          <div style={{ fontSize: 13, fontWeight: 700, color: "var(--ink)" }}>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              navigate(`/admin/candidate/${application.user_id}`);
+            }}
+            style={{
+              fontSize: 13,
+              fontWeight: 700,
+              color: "var(--signal-strong)",
+              background: "transparent",
+              border: "none",
+              padding: 0,
+              cursor: "pointer",
+              fontFamily: "var(--font-body)",
+              textAlign: "left",
+            }}
+          >
             {application.username ?? `User #${application.user_id}`}
-          </div>
+          </button>
           <div
             style={{
               fontSize: 11.5,
@@ -1349,9 +1366,25 @@ const LeaderboardRow: React.FC<{
     >
       <RankBadge rank={entry.rank} />
       <div>
-        <div style={{ fontSize: 13.5, fontWeight: 700, color: "var(--ink)" }}>
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            navigate(`/admin/candidate/${entry.user_id}`);
+          }}
+          style={{
+            fontSize: 13.5,
+            fontWeight: 700,
+            color: "var(--signal-strong)",
+            background: "transparent",
+            border: "none",
+            padding: 0,
+            cursor: "pointer",
+            fontFamily: "var(--font-body)",
+            textAlign: "left",
+          }}
+        >
           {entry.username}
-        </div>
+        </button>
         <div style={{ fontSize: 11.5, color: "var(--muted-2)" }}>
           {entry.email}
         </div>
@@ -2995,8 +3028,9 @@ const SparkleIcon = () => (
 const AdminHeader: React.FC<{
   displayName: string;
   onHome: () => void;
+  onProfile: () => void;
   onLogout: () => void;
-}> = ({ displayName, onHome, onLogout }) => (
+}> = ({ displayName, onHome, onProfile, onLogout }) => (
   <header
     style={{
       position: "sticky",
@@ -3085,6 +3119,9 @@ const AdminHeader: React.FC<{
             {displayName}
           </span>
         </div>
+        <Button variant="ghost" size="sm" onClick={onProfile}>
+          Profile
+        </Button>
         <Button variant="ghost" size="sm" onClick={onLogout}>
           Sign out
         </Button>
