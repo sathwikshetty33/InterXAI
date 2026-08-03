@@ -10,6 +10,7 @@ from app.exceptions.auth import register_auth_exception_handlers
 from app.exceptions.common import register_common_exception_handlers
 from app.exceptions.sql_alchemy import register_sql_alchemy_exception_handlers
 from app.logger import get_logger
+from app.mcp.server import mcp_lifespan, mount_mcp
 from app.models.application import Application, InterviewSession
 from app.models.interaction import (
     DsaInteraction,
@@ -28,21 +29,24 @@ from app.routers.organization import router as organization_router
 from app.routers.session import router as session_router
 from app.routers.user import router as user_router
 from app.utils.default_providers import default_worker_provider
+from app.utils.lifespan import combine_lifespans
 
 logger = get_logger(__name__)
 
 
 @asynccontextmanager
-async def lifespan(_: FastAPI) -> AsyncGenerator[None, None]:
+async def worker_lifespan(_: FastAPI) -> AsyncGenerator[None, None]:
     await default_worker_provider().startup()
     yield
     await default_worker_provider().shutdown()
 
 
+# Compose the worker lifespan with the mounted MCP app's own lifespan instead of
+# reaching into its session manager.
 app = FastAPI(
     title=settings.APP_NAME,
     debug=settings.DEBUG,
-    lifespan=lifespan,
+    lifespan=combine_lifespans(worker_lifespan, mcp_lifespan),
 )
 
 app.add_middleware(
@@ -64,6 +68,9 @@ app.include_router(interview_router)
 app.include_router(application_router)
 app.include_router(session_router)
 app.include_router(leaderboard_router)
+
+# Mount the MCP server onto this same app/port (see app.mcp.server).
+mount_mcp(app)
 
 logger.info("Application initialized: %s", settings.APP_NAME)
 
