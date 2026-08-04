@@ -54,6 +54,7 @@ Organizations create fully customized interviews with domain-specific questions 
 | **Database** | PostgreSQL via Neon (production) / SQLite (development) |
 | **ORM & Migrations** | SQLAlchemy 2.0 (async), Alembic |
 | **Background Jobs** | TaskIQ + Redis |
+| **MCP Server** | Model Context Protocol (`mcp` SDK), mounted on the API |
 | **AI / LLM** | LangChain, LiteLLM, Groq |
 | **File Storage** | Supabase Storage |
 | **Auth** | JWT (PyJWT), bcrypt |
@@ -140,6 +141,7 @@ InterXAI-re/
 │   │   │   └── celery/         # Legacy (deprecated)
 │   │   ├── exceptions/         # Custom exception hierarchy
 │   │   ├── interfaces/         # Abstract base classes
+│   │   ├── mcp/                # MCP server: tools mounted on the API
 │   │   ├── models/             # SQLAlchemy ORM models
 │   │   ├── routers/            # API route handlers
 │   │   ├── schemas/            # Pydantic request/response schemas
@@ -266,6 +268,31 @@ FastAPI auto-generates interactive documentation:
 | `GET` | `/interviews/{interview_id}` | Org | Get full interview details |
 | `POST` | `/applications/{interview_id}` | User | Apply with resume (PDF) |
 | `GET` | `/applications/{interview_id}` | Org | Get all applications |
+
+
+## MCP Server
+
+InterXAI exposes a subset of its capabilities as [Model Context Protocol](https://modelcontextprotocol.io) tools, so AI agents can drive the platform directly. The server is **mounted on the FastAPI app** (not a separate service) and served over Streamable HTTP at `/mcp` — same origin and port as the REST API, started automatically with `uv run uvicorn app.main:app`.
+
+**Authentication reuses the platform JWT**, resource-server style (like GitHub's remote MCP server): every request to `/mcp` must carry an organization access token as `Authorization: Bearer <token>` — the same JWT issued by `/users/login`. Missing or invalid tokens get a `401` with a `WWW-Authenticate` hint; discovery metadata is served, unauthenticated, at `/.well-known/oauth-protected-resource` (RFC 9728). Each tool resolves the caller's organization from the token, so tools never take it as an argument.
+
+Every tool is a thin wrapper that reuses the matching REST router handler and Pydantic schema — no business logic is duplicated.
+
+| Tool | Input | Reuses | Description |
+|---|---|---|---|
+| `create_interview` | `interview` | `POST /interviews/` | Create an interview (questions, DSA topics, score split) |
+| `get_applications` | `interview_id` | `GET /applications/{id}` | List an interview's applicants |
+| `shortlist_application` | `application_id` | `PATCH /applications/{id}/shortlist` | Approve/reject an applicant (toggles the decision) |
+| `get_leaderboard` | `interview_id` | `GET /leaderboard/{id}` | Ranked results with per-round scores and feedback |
+
+**Connecting a client** (any MCP client supporting Streamable HTTP with a bearer token):
+
+```
+URL:     http://localhost:8000/mcp
+Header:  Authorization: Bearer <org JWT from /users/login>
+```
+
+Implementation lives in `backend/app/mcp/`. Add a tool by writing a `register(mcp)` in `app/mcp/tools/` and calling it in `server.py`; its session-manager lifespan is composed into the app's lifespan via `combine_lifespans`.
 
 
 ## Data Models
