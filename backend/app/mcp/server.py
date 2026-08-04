@@ -21,7 +21,7 @@ from app.mcp.auth import (
     BearerAuthMiddleware,
     protected_resource_metadata,
 )
-from app.mcp.tools import interview
+from app.mcp.tools import application, interview
 
 MCP_MOUNT_PATH = "/mcp"
 
@@ -30,6 +30,7 @@ MCP_MOUNT_PATH = "/mcp"
 # the endpoint is exactly MCP_MOUNT_PATH once mounted.
 mcp = FastMCP("interxai", stateless_http=True, streamable_http_path="/")
 interview.register(mcp)
+application.register(mcp)
 
 # Built once so the mount and the lifespan reference the same instance, and
 # bearer-gated at the transport layer.
