@@ -6,6 +6,8 @@ import {
   getMyOrganization,
   updateOrganization,
   deleteOrganization,
+  generateMcpToken,
+  MCP_SERVER_URL,
   OrgServiceError,
   type OrganizationResponse,
 } from "../../services/organization.service";
@@ -313,6 +315,8 @@ export default function CompanyProfilePage({
             )}
           </div>
         )}
+
+        {org && editable && <McpAccessCard token={token} />}
       </main>
     </div>
   );
@@ -358,6 +362,100 @@ const ReadField = ({
 const Muted = ({ children }: { children: React.ReactNode }) => (
   <span style={{ color: "var(--muted-2)" }}>{children}</span>
 );
+
+function McpAccessCard({ token }: { token: string }) {
+  const [minted, setMinted] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+
+  const generate = async () => {
+    setLoading(true);
+    setErr(null);
+    setCopied(false);
+    try {
+      const res = await generateMcpToken(token);
+      setMinted(res.token);
+    } catch (e) {
+      setErr(
+        e instanceof OrgServiceError ? e.message : "Failed to generate token.",
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const copy = async () => {
+    if (!minted) return;
+    try {
+      await navigator.clipboard.writeText(minted);
+      setCopied(true);
+    } catch {
+      setErr("Couldn't copy — select the token and copy manually.");
+    }
+  };
+
+  return (
+    <div style={{ ...cardStyle, marginTop: 20 }}>
+      <h2 style={sectionTitleStyle}>MCP access for agents</h2>
+      <p style={sectionDescStyle}>
+        Generate a bearer token to connect an AI agent (an MCP client) to your
+        workspace. With it, the agent can create interviews, review
+        applications, and read leaderboards on your behalf.
+      </p>
+
+      <div style={{ marginTop: 16 }}>
+        <ReadField label="MCP server URL">
+          <code style={codeStyle}>{MCP_SERVER_URL}</code>
+        </ReadField>
+      </div>
+
+      {minted && (
+        <div style={{ marginTop: 16 }}>
+          <div style={fieldLabelStyle}>Access token</div>
+          <div style={tokenRowStyle}>
+            <input
+              readOnly
+              value={minted}
+              onFocus={(e) => e.currentTarget.select()}
+              style={tokenInputStyle}
+            />
+            <Button variant="ghost" size="sm" onClick={copy}>
+              {copied ? "Copied" : "Copy"}
+            </Button>
+          </div>
+          <p style={warnStyle}>
+            Treat this like a password — anyone with it can act as your
+            organization. Send it as{" "}
+            <code style={codeStyle}>Authorization: Bearer &lt;token&gt;</code>.
+            It follows the app's token expiry; regenerate when it stops working.
+          </p>
+        </div>
+      )}
+
+      {err && (
+        <div style={{ ...errorStyle, marginTop: 16, marginBottom: 0 }}>
+          {err}
+        </div>
+      )}
+
+      <div style={{ marginTop: 16 }}>
+        <Button
+          variant="primary"
+          size="sm"
+          onClick={generate}
+          disabled={loading}
+        >
+          {loading
+            ? "Generating…"
+            : minted
+              ? "Regenerate token"
+              : "Generate token"}
+        </Button>
+      </div>
+    </div>
+  );
+}
 
 const pageStyle: CSSProperties = {
   minHeight: "100vh",
@@ -461,4 +559,50 @@ const dangerLinkStyle: CSSProperties = {
   fontFamily: "var(--font-body)",
   cursor: "pointer",
   padding: 0,
+};
+const sectionTitleStyle: CSSProperties = {
+  fontFamily: "var(--font-display)",
+  fontSize: 18,
+  fontWeight: 600,
+  color: "var(--ink)",
+  letterSpacing: "-0.4px",
+  margin: 0,
+};
+const sectionDescStyle: CSSProperties = {
+  fontSize: 14,
+  color: "var(--muted)",
+  lineHeight: 1.6,
+  margin: "8px 0 0",
+};
+const codeStyle: CSSProperties = {
+  fontFamily: "var(--font-mono)",
+  fontSize: 12.5,
+  color: "var(--ink-2)",
+  background: "var(--surface-2)",
+  border: "1px solid var(--line)",
+  borderRadius: 6,
+  padding: "1px 6px",
+};
+const tokenRowStyle: CSSProperties = {
+  display: "flex",
+  gap: 8,
+  alignItems: "center",
+};
+const tokenInputStyle: CSSProperties = {
+  flex: 1,
+  minWidth: 0,
+  fontFamily: "var(--font-mono)",
+  fontSize: 12,
+  background: "var(--surface-2)",
+  border: "1px solid var(--line-strong)",
+  borderRadius: "var(--radius-sm)",
+  padding: "8px 10px",
+  color: "var(--ink)",
+  outline: "none",
+};
+const warnStyle: CSSProperties = {
+  fontSize: 12.5,
+  color: "var(--muted)",
+  lineHeight: 1.55,
+  margin: "10px 0 0",
 };

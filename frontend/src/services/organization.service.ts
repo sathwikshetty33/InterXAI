@@ -8,6 +8,13 @@ import { extractErrorDetail } from "./apiError";
 
 const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
 
+/** The MCP server endpoint (mounted on the API). */
+export const MCP_SERVER_URL = `${BASE_URL}/mcp`;
+
+export interface McpTokenResponse {
+  token: string;
+}
+
 // ── Types (mirrors backend schemas) ─────────────────────────────────────────
 
 export interface OrgSignupRequest {
@@ -155,4 +162,15 @@ export async function deleteOrganization(
       extractErrorDetail(data, "Failed to delete organization."),
     );
   }
+}
+
+/** POST /organizations/mcp-token — mint a bearer token for MCP/agent use. */
+export async function generateMcpToken(
+  token: string,
+): Promise<McpTokenResponse> {
+  const response = await fetch(`${BASE_URL}/organizations/mcp-token`, {
+    method: "POST",
+    headers: authHeaders(token),
+  });
+  return handleResponse<McpTokenResponse>(response);
 }
