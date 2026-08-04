@@ -4,11 +4,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.database import get_db
-from app.exceptions.common import NotFoundError
+from app.exceptions.common import ForbiddenError, NotFoundError
 from app.logger import get_logger
 from app.models.organization import Organization
 from app.models.user import User
 from app.schemas.organization import (
+    McpTokenResponse,
     OrganizationCreate,
     OrganizationResponse,
     OrganizationSignupResponse,
@@ -77,6 +78,24 @@ async def get_my_organization(
     if not org:
         raise NotFoundError("Organization not found")
     return _org_response(org, current_user.username)
+
+
+@router.post("/mcp-token", response_model=McpTokenResponse)
+async def create_mcp_token(
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+) -> McpTokenResponse:
+    """Mint a bearer token this organization can configure in an MCP client.
+
+    It is a standard organization access token (the same kind issued at login),
+    reused as the MCP server's bearer credential. Only organization accounts may
+    mint one.
+    """
+    if not current_user.is_organization:
+        raise ForbiddenError("Only organizations can generate MCP tokens")
+    token = await JwtAuth(db_session=db).generate_token(current_user)
+    logger.info("Minted MCP token for org account %d", current_user.id)
+    return McpTokenResponse(token=token)
 
 
 @router.get("/{org_id}", response_model=OrganizationResponse)

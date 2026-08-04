@@ -34,3 +34,7 @@ class OrganizationResponse(BaseModel):
 class OrganizationSignupResponse(BaseModel):
     organization: OrganizationResponse
     access_token: str
+
+
+class McpTokenResponse(BaseModel):
+    token: str
