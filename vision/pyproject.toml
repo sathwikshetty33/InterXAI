@@ -10,6 +10,10 @@ dependencies = [
     "fastapi>=0.115.0",
     "uvicorn[standard]>=0.30.0",
     "mediapipe>=0.10.14",
+    # cv2 arrives with mediapipe, but YuNet imports it directly, so declare it.
+    # Must stay the contrib build mediapipe pins — two opencv distributions in
+    # one env shadow each other.
+    "opencv-contrib-python>=5.0.0",
     "pillow>=10.0.0",
     "numpy>=1.26",
     "pydantic-settings>=2.13.1",
