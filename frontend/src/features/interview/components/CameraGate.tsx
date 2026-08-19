@@ -2,8 +2,10 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import Logo from "../../../ui/Logo";
 import Button from "../../../ui/Button";
 
-const CAPTURE_W = 320;
-const CAPTURE_H = 240;
+// Matches ProctorWidget: the server checks this frame with the same detector,
+// and a bigger frame is what lets it resolve someone standing further back.
+const CAPTURE_W = 640;
+const CAPTURE_H = 480;
 
 const RULES = [
   "Stay alone in the frame — a second person ends the interview.",

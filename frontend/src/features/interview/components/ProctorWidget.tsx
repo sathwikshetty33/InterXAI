@@ -3,8 +3,8 @@ import { FaceDetector, FilesetResolver } from "@mediapipe/tasks-vision";
 import { sendFrame } from "../../../services/interview.service";
 import type { SessionStatus } from "../../../services/interview.service";
 
-const CAPTURE_W = 320;
-const CAPTURE_H = 240;
+const CAPTURE_W = 640;
+const CAPTURE_H = 480;
 
 // Client-side face detection cadence (instant, local).
 const DETECT_MS = 800;
@@ -17,12 +17,34 @@ const LIVENESS_MS = 12000;
 // Fallback when the local model fails to load: plain periodic server beat.
 const FALLBACK_FRAME_MS = 6000;
 
-// Same BlazeFace model the server uses; WASM version must match the installed
-// @mediapipe/tasks-vision (0.10.35).
+// This detector is a cheap local *trigger*, never the verdict — the server runs
+// YuNet and still sees faces this one can't. So a clean local read must keep
+// posting on the liveness interval.
+// WASM version must match the installed @mediapipe/tasks-vision EXACTLY — the JS
+// glue and the .wasm are one unit. That's also why package.json pins the version
+// with no caret: a float to 1.1.x would silently desync it from this URL.
 const WASM_URL =
-  "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.35/wasm";
-const MODEL_URL =
-  "https://storage.googleapis.com/mediapipe-models/face_detector/blaze_face_short_range/float16/1/blaze_face_short_range.tflite";
+  "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.0.1/wasm";
+// Best model first. Full-range reaches about twice as far as short-range:
+// measured at 640x480, it resolves a background face down to ~14% of frame
+// height where short-range needs ~28%, costing ~3ms per tick. Short-range stays
+// as a fallback because the browser runtime is the one place we can't verify the
+// bundle loads — a rejected model must degrade, not break.
+const MODEL_URLS = [
+  "https://storage.googleapis.com/mediapipe-models/face_detector/blaze_face_full_range/float16/1/blaze_face_full_range.tflite",
+  "https://storage.googleapis.com/mediapipe-models/face_detector/blaze_face_short_range/float16/1/blaze_face_short_range.tflite",
+];
+// Left at 0.5 deliberately. Lowering it does not extend full-range's reach, and
+// on short-range it invents faces — at 0.3 it reported two on a frame holding
+// one person, which would fire warnings at a candidate sitting alone.
+const MIN_CONFIDENCE = 0.5;
+// CPU before GPU, which is not the usual preference. Verified in-browser on the
+// same model and frames: the CPU delegate detected a background face the GPU
+// delegate missed (identical under both IMAGE and VIDEO modes), and inference is
+// only ~5ms per tick either way. Sensitivity that doesn't vary with the
+// candidate's GPU driver is worth more here than offloading 5ms. GPU stays as a
+// fallback in case the WASM CPU path won't initialise.
+const DELEGATES = ["CPU", "GPU"] as const;
 
 const VIOLATION_COPY: Record<string, string> = {
   multiple_faces: "More than one person detected",
@@ -98,17 +120,20 @@ export default function ProctorWidget({
     (async () => {
       try {
         const fileset = await FilesetResolver.forVisionTasks(WASM_URL);
-        for (const delegate of ["GPU", "CPU"] as const) {
-          try {
-            created = await FaceDetector.createFromOptions(fileset, {
-              baseOptions: { modelAssetPath: MODEL_URL, delegate },
-              runningMode: "VIDEO",
-              minDetectionConfidence: 0.5,
-            });
-            break;
-          } catch {
-            created = null;
+        for (const modelAssetPath of MODEL_URLS) {
+          for (const delegate of DELEGATES) {
+            try {
+              created = await FaceDetector.createFromOptions(fileset, {
+                baseOptions: { modelAssetPath, delegate },
+                runningMode: "VIDEO",
+                minDetectionConfidence: MIN_CONFIDENCE,
+              });
+              break;
+            } catch {
+              created = null;
+            }
           }
+          if (created) break;
         }
         if (cancelled) {
           created?.close();
