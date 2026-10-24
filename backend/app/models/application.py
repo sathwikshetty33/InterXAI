@@ -82,6 +82,7 @@ class InterviewSession(BaseTable):
     status: Mapped[str] = mapped_column(String(20), default=InterviewStatus.SCHEDULED.value)
     # Confirmed proctoring violations; escalates at PROCTOR_VIOLATION_THRESHOLD.
     violation_count: Mapped[int] = mapped_column(Integer, default=0)
+    fullscreen_exit_count: Mapped[int] = mapped_column(Integer, default=0)
     feedback: Mapped[str | None] = mapped_column(Text, nullable=True)
     score: Mapped[float | None] = mapped_column(Float, nullable=True)
     recommendation: Mapped[str | None] = mapped_column(String(50), nullable=True)

@@ -23,6 +23,7 @@ export default function CameraGate({ onReady, onExit }: CameraGateProps) {
   const streamRef = useRef<MediaStream | null>(null);
   const [live, setLive] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [fullscreenError, setFullscreenError] = useState<string | null>(null);
   const [attempt, setAttempt] = useState(0);
 
   useEffect(() => {
@@ -58,7 +59,7 @@ export default function CameraGate({ onReady, onExit }: CameraGateProps) {
     };
   }, [attempt]);
 
-  const begin = useCallback(() => {
+  const begin = useCallback(async () => {
     const video = videoRef.current;
     if (!video || video.readyState < 2) return;
     const canvas = document.createElement("canvas");
@@ -67,6 +68,17 @@ export default function CameraGate({ onReady, onExit }: CameraGateProps) {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
     ctx.drawImage(video, 0, 0, CAPTURE_W, CAPTURE_H);
+    try {
+      if (!document.fullscreenElement) {
+        await document.documentElement.requestFullscreen();
+      }
+    } catch {
+      setFullscreenError(
+        "Fullscreen mode couldn't start. Please allow fullscreen in your browser and try again.",
+      );
+      return;
+    }
+    setFullscreenError(null);
     onReady(canvas.toDataURL("image/jpeg", 0.6));
   }, [onReady]);
 
@@ -214,6 +226,20 @@ export default function CameraGate({ onReady, onExit }: CameraGateProps) {
             ))}
           </ul>
 
+          {fullscreenError && (
+            <p
+              role="alert"
+              style={{
+                color: "var(--negative)",
+                fontSize: 13,
+                lineHeight: 1.5,
+                margin: "-10px 0 18px",
+              }}
+            >
+              {fullscreenError}
+            </p>
+          )}
+
           {error ? (
             <Button
               variant="primary"
@@ -233,7 +259,11 @@ export default function CameraGate({ onReady, onExit }: CameraGateProps) {
               disabled={!live}
               onClick={begin}
             >
-              {live ? "Begin interview" : "Waiting for camera…"}
+              {live
+                ? fullscreenError
+                  ? "Try fullscreen again"
+                  : "Begin interview"
+                : "Waiting for camera…"}
             </Button>
           )}
         </div>

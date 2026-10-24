@@ -36,6 +36,8 @@ class Settings(BaseSettings):
     HEARTBEAT_THRESHOLD_S: int = 20
     # Confirmed violations that mark a session cheated.
     PROCTOR_VIOLATION_THRESHOLD: int = 3
+    # A fourth fullscreen exit marks the interview as cheated.
+    FULLSCREEN_EXIT_LIMIT: int = 3
     # Proctoring vision service (docker-compose overrides VISION_URL to http://vision:8000).
     VISION_URL: str = "http://localhost:8001"
     VISION_SHARED_SECRET: str = ""

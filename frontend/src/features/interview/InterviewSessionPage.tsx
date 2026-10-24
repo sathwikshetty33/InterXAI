@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useInterviewSession } from "./hooks/useInterviewSession";
 import TextQAPanel from "./components/TextQAPanel";
 import DsaPanel from "./components/DsaPanel";
@@ -6,6 +6,7 @@ import ProctorWidget from "./components/ProctorWidget";
 import CameraGate from "./components/CameraGate";
 import Logo from "../../ui/Logo";
 import Button from "../../ui/Button";
+import { recordFullscreenExit } from "../../services/interview.service";
 import type {
   InterviewStateResponse,
   Round,
@@ -47,6 +48,15 @@ const InterviewRunner: React.FC<{
   onExit: () => void;
   onRetry: () => void;
 }> = ({ interviewId, token, startFrame, onExit, onRetry }) => {
+  const [showEndTestConfirm, setShowEndTestConfirm] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(
+    () => document.fullscreenElement !== null,
+  );
+  const wasFullscreenRef = useRef(document.fullscreenElement !== null);
+  const [needsFullscreen, setNeedsFullscreen] = useState(false);
+  const [fullscreenExitCount, setFullscreenExitCount] = useState(0);
+  const [fullscreenExitLimit, setFullscreenExitLimit] = useState(3);
+  const [fullscreenError, setFullscreenError] = useState<string | null>(null);
   const {
     phase,
     state,
@@ -59,8 +69,73 @@ const InterviewRunner: React.FC<{
     answer,
     refreshDsaRound,
     finishDsa,
+    endTest,
     goTerminal,
   } = useInterviewSession(interviewId, token, startFrame);
+
+  useEffect(() => {
+    const sessionId = state?.session_id;
+    const handleFullscreenChange = () => {
+      const fullscreen = document.fullscreenElement !== null;
+      setIsFullscreen(fullscreen);
+      const exited = wasFullscreenRef.current && !fullscreen;
+      wasFullscreenRef.current = fullscreen;
+
+      if (fullscreen) {
+        setNeedsFullscreen(false);
+        return;
+      }
+      if (!exited || phase !== "active" || sessionId === undefined) return;
+
+      setNeedsFullscreen(true);
+      setFullscreenError(null);
+
+      // Try to recover immediately. Browsers may reject this because leaving
+      // fullscreen via Escape does not grant a fresh user gesture.
+      try {
+        void document.documentElement.requestFullscreen().catch(() => {});
+      } catch {
+        // The re-entry prompt below remains available as a user-gesture fallback.
+      }
+
+      void recordFullscreenExit(sessionId, token)
+        .then((result) => {
+          setFullscreenExitCount(result.fullscreen_exit_count);
+          setFullscreenExitLimit(result.threshold);
+          if (result.status !== "ongoing") {
+            goTerminal(result.status);
+            if (document.fullscreenElement) {
+              wasFullscreenRef.current = false;
+              void document.exitFullscreen().catch(() => {});
+            }
+          }
+        })
+        .catch(() => {
+          setFullscreenError(
+            "We couldn't record the fullscreen exit. Check your connection before continuing.",
+          );
+        });
+    };
+
+    document.addEventListener("fullscreenchange", handleFullscreenChange);
+    return () =>
+      document.removeEventListener("fullscreenchange", handleFullscreenChange);
+  }, [goTerminal, phase, state?.session_id, token]);
+
+  const toggleFullscreen = async () => {
+    setFullscreenError(null);
+    try {
+      if (document.fullscreenElement) {
+        await document.exitFullscreen();
+      } else {
+        await document.documentElement.requestFullscreen();
+      }
+    } catch {
+      setFullscreenError(
+        "Fullscreen mode couldn't be changed. Please use your browser's fullscreen controls.",
+      );
+    }
+  };
 
   return (
     <div
@@ -78,7 +153,70 @@ const InterviewRunner: React.FC<{
         phase={phase}
         remainingMs={remainingMs}
         onExit={onExit}
+        onEndTest={() => setShowEndTestConfirm(true)}
+        isSubmitting={isSubmitting}
+        isFullscreen={isFullscreen}
+        onToggleFullscreen={() => void toggleFullscreen()}
       />
+
+      {fullscreenError && !needsFullscreen && (
+        <div
+          role="alert"
+          style={{
+            position: "fixed",
+            left: "50%",
+            bottom: 24,
+            transform: "translateX(-50%)",
+            zIndex: 110,
+            maxWidth: "calc(100vw - 32px)",
+            padding: "12px 16px",
+            borderRadius: "var(--radius)",
+            background: "var(--surface)",
+            border: "1px solid var(--line)",
+            boxShadow: "var(--shadow-lg)",
+            color: "var(--negative)",
+            fontSize: 13,
+          }}
+        >
+          {fullscreenError}
+        </div>
+      )}
+
+      {needsFullscreen && phase === "active" && (
+        <div
+          role="alert"
+          style={{
+            position: "fixed",
+            left: "50%",
+            bottom: 24,
+            transform: "translateX(-50%)",
+            zIndex: 110,
+            maxWidth: "calc(100vw - 32px)",
+            padding: "12px 16px",
+            borderRadius: "var(--radius)",
+            background: "var(--surface)",
+            border: "1px solid var(--line)",
+            boxShadow: "var(--shadow-lg)",
+            color: "var(--ink)",
+            fontSize: 13,
+            display: "flex",
+            alignItems: "center",
+            gap: 14,
+          }}
+        >
+          <span>
+            {fullscreenError ??
+              `Fullscreen exited (${fullscreenExitCount}/${fullscreenExitLimit}). Return to fullscreen to continue.`}
+          </span>
+          <Button
+            variant="signal"
+            size="sm"
+            onClick={() => void toggleFullscreen()}
+          >
+            Re-enter fullscreen
+          </Button>
+        </div>
+      )}
 
       <main style={{ position: "relative", zIndex: 5 }}>
         {phase === "loading" && <LoadingScreen />}
@@ -121,6 +259,15 @@ const InterviewRunner: React.FC<{
         )}
       </main>
 
+      {showEndTestConfirm && phase === "active" && (
+        <EndTestConfirmModal
+          error={error}
+          isSubmitting={isSubmitting}
+          onCancel={() => setShowEndTestConfirm(false)}
+          onConfirm={() => void endTest()}
+        />
+      )}
+
       {phase === "active" && state && (
         <ProctorWidget
           sessionId={state.session_id}
@@ -131,6 +278,126 @@ const InterviewRunner: React.FC<{
     </div>
   );
 };
+
+const EndTestConfirmModal: React.FC<{
+  error: string | null;
+  isSubmitting: boolean;
+  onCancel: () => void;
+  onConfirm: () => void;
+}> = ({ error, isSubmitting, onCancel, onConfirm }) => (
+  <div
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="end-test-title"
+    aria-describedby="end-test-description"
+    onMouseDown={(event) => {
+      if (event.target === event.currentTarget && !isSubmitting) onCancel();
+    }}
+    style={{
+      position: "fixed",
+      inset: 0,
+      background: "color-mix(in srgb, var(--ink) 55%, transparent)",
+      backdropFilter: "blur(6px)",
+      WebkitBackdropFilter: "blur(6px)",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      zIndex: 100,
+      padding: 20,
+    }}
+  >
+    <div
+      style={{
+        background: "var(--surface)",
+        border: "1px solid var(--line)",
+        borderRadius: "var(--radius-lg)",
+        padding: 28,
+        maxWidth: 440,
+        width: "100%",
+        boxShadow: "var(--shadow-lg)",
+      }}
+    >
+      <div
+        style={{
+          width: 44,
+          height: 44,
+          borderRadius: "var(--radius-sm)",
+          background: "var(--signal-tint)",
+          color: "var(--signal-strong)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          marginBottom: 14,
+        }}
+      >
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+          <path
+            d="M12 9v4M12 17h.01M10.3 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.7 3.86a2 2 0 00-3.4 0z"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+        </svg>
+      </div>
+      <h2
+        id="end-test-title"
+        style={{
+          fontFamily: "var(--font-display)",
+          fontSize: 20,
+          fontWeight: 600,
+          color: "var(--ink)",
+          letterSpacing: "-0.5px",
+          margin: "0 0 6px",
+        }}
+      >
+        End this test?
+      </h2>
+      <p
+        id="end-test-description"
+        style={{
+          fontSize: 13.5,
+          color: "var(--muted)",
+          lineHeight: 1.6,
+          margin: "0 0 22px",
+        }}
+      >
+        Your interview will be marked as completed. You won’t be able to
+        continue after ending it.
+      </p>
+      {error && (
+        <p
+          role="alert"
+          style={{
+            color: "var(--danger, #b42318)",
+            fontSize: 13,
+            margin: "-8px 0 16px",
+          }}
+        >
+          {error}
+        </p>
+      )}
+      <div style={{ display: "flex", gap: 10, justifyContent: "flex-end" }}>
+        <Button
+          variant="ghost"
+          size="md"
+          onClick={onCancel}
+          disabled={isSubmitting}
+        >
+          Continue test
+        </Button>
+        <Button
+          variant="signal"
+          size="md"
+          onClick={onConfirm}
+          disabled={isSubmitting}
+        >
+          {isSubmitting ? "Ending…" : "End test"}
+        </Button>
+      </div>
+    </div>
+  </div>
+);
 
 interface RenderArgs {
   question: NonNullable<InterviewStateResponse["question"]>;
@@ -187,7 +454,21 @@ const SessionHeader: React.FC<{
   phase: string;
   remainingMs: number | null;
   onExit: () => void;
-}> = ({ round, sessionId, phase, remainingMs, onExit }) => (
+  onEndTest: () => void;
+  isSubmitting: boolean;
+  isFullscreen: boolean;
+  onToggleFullscreen: () => void;
+}> = ({
+  round,
+  sessionId,
+  phase,
+  remainingMs,
+  onExit,
+  onEndTest,
+  isSubmitting,
+  isFullscreen,
+  onToggleFullscreen,
+}) => (
   <header
     style={{
       position: "sticky",
@@ -233,8 +514,22 @@ const SessionHeader: React.FC<{
           <CountdownChip remainingMs={remainingMs} />
         )}
         <LiveDot phase={phase} />
-        <Button variant="ghost" size="sm" onClick={onExit}>
-          Exit
+        {phase === "active" ? (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={onEndTest}
+            disabled={isSubmitting}
+          >
+            End test
+          </Button>
+        ) : (
+          <Button variant="ghost" size="sm" onClick={onExit}>
+            Exit
+          </Button>
+        )}
+        <Button variant="ghost" size="sm" onClick={onToggleFullscreen}>
+          {isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}
         </Button>
       </div>
     </div>
@@ -621,7 +916,7 @@ const TERMINAL_COPY: Partial<
   },
   cheated: {
     title: "Interview ended",
-    body: "Your session was flagged and ended early. Please contact the hiring team if you have any questions.",
+    body: "Your session was flagged for malpractice after fullscreen was exited more than three times. Please contact the hiring team if you have any questions.",
     tone: "bad",
   },
 };

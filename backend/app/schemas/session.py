@@ -11,6 +11,12 @@ class HeartbeatResponse(BaseModel):
     deadline: datetime | None = None
 
 
+class FullscreenExitResponse(BaseModel):
+    status: str
+    fullscreen_exit_count: int
+    threshold: int
+
+
 class FrameRequest(BaseModel):
     # Base64-encoded webcam frame (data-URL prefix tolerated by the vision service).
     frame: str

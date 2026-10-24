@@ -35,6 +35,7 @@ from app.schemas.session import (
     DsaTestResponse,
     FrameRequest,
     FrameResponse,
+    FullscreenExitResponse,
     HeartbeatResponse,
     InterviewStateResponse,
     ResumeQuestionPayload,
@@ -114,6 +115,91 @@ async def heartbeat(
     session.last_heartbeat_at = datetime.utcnow()
     await db.commit()
     return HeartbeatResponse(status=session.status, deadline=session.deadline)
+
+
+@router.post("/{session_id}/fullscreen-exit", response_model=FullscreenExitResponse)
+async def record_fullscreen_exit(
+    session_id: int,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user),
+) -> FullscreenExitResponse:
+    """Count fullscreen exits and flag the session after the allowed limit."""
+    session = await _load_owned_session(session_id, user, db)
+    locked = await db.execute(
+        select(InterviewSession)
+        .where(InterviewSession.id == session.id)
+        .with_for_update()
+        .execution_options(populate_existing=True)
+    )
+    session = locked.scalar_one()
+    limit = settings.FULLSCREEN_EXIT_LIMIT
+
+    def _response() -> FullscreenExitResponse:
+        return FullscreenExitResponse(
+            status=session.status,
+            fullscreen_exit_count=session.fullscreen_exit_count,
+            threshold=limit,
+        )
+
+    if session.status in TERMINAL_STATUSES:
+        return _response()
+    if await complete_if_time_exceeded(session, db):
+        return _response()
+    if await disqualify_if_stale(session, db):
+        return _response()
+
+    session.fullscreen_exit_count += 1
+    session.last_heartbeat_at = datetime.utcnow()
+    if session.fullscreen_exit_count > limit:
+        session.status = InterviewStatus.CHEATED.value
+        logger.info(
+            "Session %d marked CHEATED after %d fullscreen exits",
+            session_id,
+            session.fullscreen_exit_count,
+        )
+    await db.commit()
+    return _response()
+
+
+@router.post("/{session_id}/end", response_model=InterviewStateResponse)
+async def end_session(
+    session_id: int,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user),
+) -> InterviewStateResponse:
+    """End the candidate's test early and finalize its score exactly once."""
+    session = await _load_owned_session(session_id, user, db)
+    locked = await db.execute(
+        select(InterviewSession)
+        .where(InterviewSession.id == session.id)
+        .with_for_update()
+        .execution_options(populate_existing=True)
+    )
+    session = locked.scalar_one()
+
+    if session.status == InterviewStatus.COMPLETED.value:
+        return InterviewStateResponse(
+            session_id=session.id,
+            round=session.current_round,
+            completed=True,
+            question=None,
+            deadline=session.deadline,
+        )
+
+    if await complete_if_time_exceeded(session, db):
+        return InterviewStateResponse(
+            session_id=session.id,
+            round=session.current_round,
+            completed=True,
+            question=None,
+            deadline=session.deadline,
+        )
+    if await disqualify_if_stale(session, db):
+        raise ForbiddenError(f"Session is {session.status} and cannot be ended normally")
+    if session.status in TERMINAL_STATUSES:
+        raise ForbiddenError(f"Session is {session.status} and cannot be ended normally")
+
+    return await mark_session_completed(session, db)
 
 
 def _classify_violation(face_count: int) -> ViolationType | None:

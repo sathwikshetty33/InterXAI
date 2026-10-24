@@ -45,6 +45,12 @@ export interface HeartbeatResponse {
   deadline: string | null;
 }
 
+export interface FullscreenExitResponse {
+  status: SessionStatus;
+  fullscreen_exit_count: number;
+  threshold: number;
+}
+
 export interface FrameResponse {
   status: SessionStatus;
   // The violation this frame tripped ("multiple_faces" | "no_face" | ...), or
@@ -165,6 +171,28 @@ export async function sendHeartbeat(
     headers: authHeaders(token),
   });
   return handle<HeartbeatResponse>(res);
+}
+
+export async function recordFullscreenExit(
+  sessionId: number,
+  token: string,
+): Promise<FullscreenExitResponse> {
+  const res = await fetch(`${BASE_URL}/sessions/${sessionId}/fullscreen-exit`, {
+    method: "POST",
+    headers: authHeaders(token),
+  });
+  return handle<FullscreenExitResponse>(res);
+}
+
+export async function endInterviewSession(
+  sessionId: number,
+  token: string,
+): Promise<InterviewStateResponse> {
+  const res = await fetch(`${BASE_URL}/sessions/${sessionId}/end`, {
+    method: "POST",
+    headers: authHeaders(token),
+  });
+  return handle<InterviewStateResponse>(res);
 }
 
 export async function sendFrame(

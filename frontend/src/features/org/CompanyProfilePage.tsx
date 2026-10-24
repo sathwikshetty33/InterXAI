@@ -236,7 +236,11 @@ export default function CompanyProfilePage({
                   />
                 </Field>
                 {form.photo && (
-                  <img src={form.photo} alt="Company logo preview" style={photoPreviewStyle} />
+                  <img
+                    src={form.photo}
+                    alt="Company logo preview"
+                    style={photoPreviewStyle}
+                  />
                 )}
                 <Muted>JPG, PNG, or WebP · up to 2 MB</Muted>
                 <div style={{ display: "flex", gap: 10, marginTop: 4 }}>

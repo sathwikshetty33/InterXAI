@@ -3,6 +3,7 @@ import {
   startInterview,
   submitAnswer,
   sendHeartbeat,
+  endInterviewSession,
   getDsaRound,
   dsaFinish,
   InterviewServiceError,
@@ -34,6 +35,7 @@ export interface UseInterviewSessionReturn {
   answer: (text: string) => Promise<void>;
   refreshDsaRound: () => Promise<void>;
   finishDsa: () => Promise<void>;
+  endTest: () => Promise<void>;
   applyState: (next: InterviewStateResponse) => void;
   /** End the session locally on a server-reported terminal status (e.g. the
    *  proctor widget seeing "cheated"). */
@@ -315,6 +317,24 @@ export function useInterviewSession(
     }
   }, [state, isSubmitting, token, applyState, goTerminal]);
 
+  const endTest = useCallback(async () => {
+    if (!state || isSubmitting) return;
+    setIsSubmitting(true);
+    setError(null);
+    try {
+      const completed = await endInterviewSession(state.session_id, token);
+      applyState(completed);
+    } catch (e) {
+      setError(
+        e instanceof InterviewServiceError
+          ? e.message
+          : "Could not end the test. Please try again.",
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
+  }, [state, isSubmitting, token, applyState]);
+
   return {
     phase,
     state,
@@ -327,6 +347,7 @@ export function useInterviewSession(
     answer,
     refreshDsaRound,
     finishDsa,
+    endTest,
     applyState,
     goTerminal,
   };
