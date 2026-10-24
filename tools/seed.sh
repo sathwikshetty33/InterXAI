@@ -1,10 +1,12 @@
 #!/usr/bin/env bash
 # Seed a demo candidate, a demo company, and one attendable interview the
-# candidate is already approved for. Idempotent — safe to re-run.
+# candidate is already approved for, plus the predefined DSA question bank.
+# Idempotent — safe to re-run.
 #
 # Accounts are created via the HTTP API (so passwords are hashed by the app);
-# the interview graph + approved application go in via psql, since the real
-# apply flow needs a resume upload + LLM scoring we don't want in a seed.
+# DSA questions are maintained in backend/scripts/seed_dsa_questions.py. The
+# interview graph + approved application go in via psql, since the real apply
+# flow needs a resume upload + LLM scoring we don't want in a seed.
 set -euo pipefail
 cd "$(dirname "$0")/.."  # repo root (for docker compose)
 
@@ -27,6 +29,9 @@ if [ "${count:-0}" -lt 2 ]; then
   echo "✘ Expected both demo accounts to exist (found ${count:-0}). Is the API up at $API_URL?" >&2
   exit 1
 fi
+
+echo "▶ Seeding predefined DSA questions..."
+docker compose exec -T api python -m scripts.seed_dsa_questions
 
 echo "▶ Seeding an attendable interview + approved application (idempotent)..."
 pg <<'SQL'
