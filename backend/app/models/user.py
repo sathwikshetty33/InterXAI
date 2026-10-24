@@ -39,7 +39,7 @@ class UserProfile(BaseTable):
     leetcode: Mapped[str] = mapped_column(String(100), nullable=True)
     github: Mapped[str] = mapped_column(String(100), nullable=True)
     linkedin: Mapped[str | None] = mapped_column(String(255), nullable=True)
-    photo: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    photo: Mapped[str | None] = mapped_column(Text, nullable=True)
     bio: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     user = relationship("User", back_populates="profile")

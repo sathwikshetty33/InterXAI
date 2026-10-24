@@ -221,23 +221,38 @@ const DashboardPage: React.FC<DashboardPageProps> = ({
                 borderRadius: 99,
               }}
             >
-              <div
-                style={{
-                  width: 30,
-                  height: 30,
-                  borderRadius: "50%",
-                  background: "var(--ink)",
-                  color: "var(--paper)",
-                  fontSize: 12,
-                  fontWeight: 700,
-                  fontFamily: "var(--font-mono)",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
-              >
-                {initials}
-              </div>
+              {user.profile?.photo ? (
+                <img
+                  src={user.profile.photo}
+                  alt={`${displayName}'s profile`}
+                  style={{
+                    width: 30,
+                    height: 30,
+                    borderRadius: "50%",
+                    objectFit: "cover",
+                    flexShrink: 0,
+                  }}
+                />
+              ) : (
+                <div
+                  style={{
+                    width: 30,
+                    height: 30,
+                    borderRadius: "50%",
+                    background: "var(--ink)",
+                    color: "var(--paper)",
+                    fontSize: 12,
+                    fontWeight: 700,
+                    fontFamily: "var(--font-mono)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    flexShrink: 0,
+                  }}
+                >
+                  {initials}
+                </div>
+              )}
               <div style={{ display: "flex", flexDirection: "column" }}>
                 <span
                   style={{

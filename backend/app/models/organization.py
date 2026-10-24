@@ -14,7 +14,7 @@ class Organization(BaseTable):
     email: Mapped[str | None] = mapped_column(String(255), unique=True, nullable=True)
     url: Mapped[str | None] = mapped_column(String(255), nullable=True)
     linkedin: Mapped[str | None] = mapped_column(String(255), nullable=True)
-    photo: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    photo: Mapped[str | None] = mapped_column(Text, nullable=True)
     description: Mapped[str] = mapped_column(Text, nullable=True)
 
     owner = relationship("User", back_populates="organization")

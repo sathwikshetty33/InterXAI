@@ -1,6 +1,7 @@
 import { useEffect, useState, type CSSProperties } from "react";
 import Button from "../../ui/Button";
 import Logo from "../../ui/Logo";
+import { readProfilePhoto } from "../../utils/profilePhoto";
 import {
   getUserById,
   updateUserProfile,
@@ -209,14 +210,26 @@ export default function CandidateProfilePage({
                     style={inputStyle}
                   />
                 </Field>
-                <Field label="Photo URL">
+                <Field label="Profile photo">
                   <input
-                    value={form.photo}
-                    onChange={(e) => patch({ photo: e.target.value })}
-                    placeholder="https://…"
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    onChange={(e) => {
+                      const file = e.currentTarget.files?.[0];
+                      e.currentTarget.value = "";
+                      if (!file) return;
+                      setError(null);
+                      void readProfilePhoto(file)
+                        .then((photo) => patch({ photo }))
+                        .catch((e: Error) => setError(e.message));
+                    }}
                     style={inputStyle}
                   />
                 </Field>
+                {form.photo && (
+                  <img src={form.photo} alt="Profile photo preview" style={photoPreviewStyle} />
+                )}
+                <Muted>JPG, PNG, or WebP · up to 2 MB</Muted>
                 <div style={{ display: "flex", gap: 10, marginTop: 4 }}>
                   <Button
                     variant="primary"
@@ -406,6 +419,12 @@ const avatarStyle: CSSProperties = {
   borderRadius: "50%",
   objectFit: "cover",
   flexShrink: 0,
+};
+const photoPreviewStyle: CSSProperties = {
+  width: 96,
+  height: 96,
+  borderRadius: "50%",
+  objectFit: "cover",
 };
 const avatarFallbackStyle: CSSProperties = {
   background: "var(--signal-tint)",
